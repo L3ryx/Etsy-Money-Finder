@@ -10,6 +10,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+/* =============================== */
+/* MIDDLEWARE */
+/* =============================== */
+
 const upload = multer({
   storage: multer.memoryStorage()
 });
@@ -18,9 +22,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ========================================= */
+/* =============================== */
 /* SOCKET LOG SYSTEM */
-/* ========================================= */
+/* =============================== */
 
 function sendLog(socket, message) {
 
@@ -34,11 +38,13 @@ function sendLog(socket, message) {
   }
 }
 
-/* ========================================= */
-/* ETSY SEARCH VIA SCRAPAPI */
-/* ========================================= */
+/* ===================================================== */
+/* 🔎 ETSY SEARCH VIA SCRAPAPI */
+/* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
+
+  console.log("🔥 Search route called");
 
   const { keyword, limit } = req.body;
 
@@ -86,9 +92,9 @@ app.post("/search-etsy", async (req, res) => {
 
 });
 
-/* ========================================= */
-/* IMAGE ANALYSIS PIPELINE */
-/* ========================================= */
+/* ===================================================== */
+/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
@@ -103,9 +109,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    /* ===================================== */
+    /* =============================== */
     /* UPLOAD TO IMGBB */
-    /* ===================================== */
+    /* =============================== */
 
     let publicImageUrl;
 
@@ -129,13 +135,13 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ===================================== */
+    /* =============================== */
     /* OPENAI VISION ANALYSIS */
-    /* ===================================== */
+    /* =============================== */
 
     try {
 
-      const visionResponse = await axios.post(
+      const vision = await axios.post(
         "https://api.openai.com/v1/chat/completions",
         {
           model: "gpt-4o-mini",
@@ -143,10 +149,15 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
             {
               role: "user",
               content: [
-                { type: "text", text: "Return similarity score between 0 and 100." },
+                {
+                  type: "text",
+                  text: "Return a similarity score between 0 and 100 comparing the image."
+                },
                 {
                   type: "image_url",
-                  image_url: { url: publicImageUrl }
+                  image_url: {
+                    url: publicImageUrl
+                  }
                 }
               ]
             }
@@ -160,12 +171,12 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
         }
       );
 
-      const aiText = visionResponse.data.choices[0].message.content;
+      const text = vision.data.choices[0].message.content;
+      const match = text.match(/\d+/);
 
-      const similarityMatch = aiText.match(/\d+/);
-      const similarity = similarityMatch ? parseInt(similarityMatch[0]) : 0;
+      const similarity = match ? parseInt(match[0]) : 0;
 
-      sendLog(socket, `AI similarity: ${similarity}%`);
+      sendLog(socket, `AI Similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
@@ -188,9 +199,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
 });
 
-/* ========================================= */
+/* ===================================================== */
 /* SOCKET CONNECTION */
-/* ========================================= */
+/* ===================================================== */
 
 io.on("connection", (socket) => {
 
@@ -201,9 +212,9 @@ io.on("connection", (socket) => {
   console.log("🟢 Client connected");
 });
 
-/* ========================================= */
+/* ===================================================== */
 /* SERVER START */
-/* ========================================= */
+/* ===================================================== */
 
 const PORT = process.env.PORT || 10000;
 
