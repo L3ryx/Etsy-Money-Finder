@@ -37,7 +37,7 @@ io.on("connection", (socket) => {
 });
 
 /* ===================================================== */
-/* ETSY SEARCH */
+/* 🔎 ETSY SEARCH → RETURN ONLY LISTING LINKS */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -70,23 +70,22 @@ app.post("/search-etsy", async (req, res) => {
 
     const html = scraperResponse.data;
 
-    /* ===================================================== */
-    /* EXTRACTION IMAGE + LIEN PROPRE */
-/* ===================================================== */
+    /* ================================================= */
+    /* ✅ EXTRACT ONLY LISTING LINKS */
+/* ================================================= */
+
+    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+
+    const linksFound = [...html.matchAll(linkRegex)];
 
     const results = [];
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+    for (let i = 0; i < Math.min(maxItems, linksFound.length); i++) {
 
-    const images = html.match(imageRegex) || [];
-    const links = html.match(linkRegex) || [];
-
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+      const link = linksFound[i][0];
 
       results.push({
-        image: images[i],
-        link: links[i] || null
+        link
       });
 
     }
@@ -105,7 +104,7 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ===================================================== */
-/* IMAGE ANALYSIS */
+/* 🧠 IMAGE ANALYSIS PIPELINE */
 /* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
@@ -126,9 +125,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    /* ===================================================== */
-    /* UPLOAD TO IMGBB */
-/* ===================================================== */
+    /* ================================================= */
+    /* UPLOAD IMAGE TO IMGBB */
+/* ================================================= */
 
     let imageUrl;
 
@@ -163,9 +162,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ===================================================== */
+    /* ================================================= */
     /* OPENAI VISION */
-/* ===================================================== */
+/* ================================================= */
 
     try {
 
@@ -214,7 +213,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
         image: file.originalname,
         matches: [
           {
-            url: imageUrl,
             similarity
           }
         ]
@@ -244,7 +242,5 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-
   console.log("🚀 Server running on port", PORT);
-
 });
