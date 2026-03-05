@@ -23,21 +23,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* SOCKET CONNECTION */
+/* SOCKET LOG SYSTEM */
 /* ===================================================== */
 
-io.on("connection", (socket) => {
+function sendLog(socket, message) {
 
-  console.log("🟢 Client connected");
+  console.log(message);
 
-  socket.emit("connected", {
-    socketId: socket.id
-  });
-
-});
+  if (socket) {
+    socket.emit("log", {
+      message,
+      time: new Date().toISOString()
+    });
+  }
+}
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH → RETURN ONLY LISTING LINKS */
+/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -57,6 +59,7 @@ app.post("/search-etsy", async (req, res) => {
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
+    /* ✅ SCRAPERAPI CALL */
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -71,21 +74,22 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ================================================= */
-    /* ✅ EXTRACT ONLY LISTING LINKS */
-/* ================================================= */
+    /* EXTRACT IMAGE + LINKS FROM HTML */
+    /* ================================================= */
 
+    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
     const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
-    const linksFound = [...html.matchAll(linkRegex)];
+    const images = [...html.matchAll(imageRegex)];
+    const links = [...html.matchAll(linkRegex)];
 
     const results = [];
 
-    for (let i = 0; i < Math.min(maxItems, linksFound.length); i++) {
-
-      const link = linksFound[i][0];
+    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
 
       results.push({
-        link
+        image: images[i][0],
+        link: links[i] ? links[i][0] : etsyUrl
       });
 
     }
@@ -94,7 +98,7 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.message);
+    console.error("ScraperAPI Error:", err.response?.data || err.message);
 
     res.status(500).json({
       error: "Scraping failed"
@@ -116,18 +120,13 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   for (const file of req.files) {
 
-    if (socket) {
-      socket.emit("log", {
-        message: `Processing ${file.originalname}`,
-        time: new Date().toISOString()
-      });
-    }
+    sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
 
     /* ================================================= */
     /* UPLOAD IMAGE TO IMGBB */
-/* ================================================= */
+    /* ================================================= */
 
     let imageUrl;
 
@@ -143,28 +142,17 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       imageUrl = uploadRes.data.data.url;
 
-      if (socket) {
-        socket.emit("log", {
-          message: "Uploaded to IMGBB",
-          time: new Date().toISOString()
-        });
-      }
+      sendLog(socket, "Uploaded to IMGBB");
 
     } catch (err) {
 
-      if (socket) {
-        socket.emit("log", {
-          message: "IMGBB upload failed",
-          time: new Date().toISOString()
-        });
-      }
-
+      sendLog(socket, "IMGBB upload failed");
       continue;
     }
 
     /* ================================================= */
-    /* OPENAI VISION */
-/* ================================================= */
+    /* OPENAI VISION ANALYSIS */
+    /* ================================================= */
 
     try {
 
@@ -202,17 +190,13 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       const match = text.match(/\d+/);
       const similarity = match ? parseInt(match[0]) : 0;
 
-      if (socket) {
-        socket.emit("log", {
-          message: `AI Similarity: ${similarity}%`,
-          time: new Date().toISOString()
-        });
-      }
+      sendLog(socket, `AI Similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
         matches: [
           {
+            url: "AI_ANALYSIS",
             similarity
           }
         ]
@@ -220,19 +204,25 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     } catch (err) {
 
-      if (socket) {
-        socket.emit("log", {
-          message: "OpenAI Vision failed",
-          time: new Date().toISOString()
-        });
-      }
-
+      sendLog(socket, "OpenAI Vision failed");
     }
-
   }
 
   res.json({ results });
 
+});
+
+/* ===================================================== */
+/* SOCKET CONNECTION */
+/* ===================================================== */
+
+io.on("connection", (socket) => {
+
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+
+  console.log("🟢 Client connected");
 });
 
 /* ===================================================== */
