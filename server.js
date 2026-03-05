@@ -39,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
+/* 🔎 ETSY SEARCH VIA SCRAPERAPI */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -59,7 +59,10 @@ app.post("/search-etsy", async (req, res) => {
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    /* ✅ SCRAPERAPI CALL */
+    /* =============================== */
+    /* CALL SCRAPERAPI */
+    /* =============================== */
+
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -73,23 +76,26 @@ app.post("/search-etsy", async (req, res) => {
 
     const html = scraperResponse.data;
 
-    /* ================================================= */
-    /* EXTRACT IMAGE + LINKS FROM HTML */
-    /* ================================================= */
-
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-    const images = [...html.matchAll(imageRegex)];
-    const links = [...html.matchAll(linkRegex)];
+    /* ===================================================== */
+    /* EXTRACTION IMAGE + LIEN EXACT DE L'ANNONCE */
+    /* ===================================================== */
 
     const results = [];
 
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+    const matches = [
+      ...html.matchAll(
+        /href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)".*?(https:\/\/i\.etsystatic\.com[^"]+)/gs
+      )
+    ];
+
+    for (let i = 0; i < Math.min(maxItems, matches.length); i++) {
+
+      const link = matches[i][1];
+      const image = matches[i][2];
 
       results.push({
-        image: images[i][0],
-        link: links[i] ? links[i][0] : etsyUrl
+        link,
+        image
       });
 
     }
@@ -98,7 +104,10 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.response?.data || err.message);
+    console.error(
+      "ScraperAPI Error:",
+      err.response?.data || err.message
+    );
 
     res.status(500).json({
       error: "Scraping failed"
@@ -124,9 +133,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    /* ================================================= */
+    /* ===================================================== */
     /* UPLOAD IMAGE TO IMGBB */
-    /* ================================================= */
+    /* ===================================================== */
 
     let imageUrl;
 
@@ -150,9 +159,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ================================================= */
+    /* ===================================================== */
     /* OPENAI VISION ANALYSIS */
-    /* ================================================= */
+    /* ===================================================== */
 
     try {
 
@@ -188,6 +197,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       const text = vision.data.choices[0].message.content;
       const match = text.match(/\d+/);
+
       const similarity = match ? parseInt(match[0]) : 0;
 
       sendLog(socket, `AI Similarity: ${similarity}%`);
@@ -206,6 +216,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       sendLog(socket, "OpenAI Vision failed");
     }
+
   }
 
   res.json({ results });
