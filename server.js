@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* LOG SYSTEM */
+/* SOCKET LOG SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket, message) {
@@ -48,6 +48,10 @@ app.post("/search-etsy", async (req, res) => {
 
   const { keyword, limit } = req.body;
 
+  if (!keyword) {
+    return res.status(400).json({ error: "Keyword required" });
+  }
+
   const maxItems = Math.min(parseInt(limit) || 10, 50);
 
   try {
@@ -69,27 +73,27 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ================================================= */
-    /* EXTRACTION IMAGE + LIEN CORRECTE */
+    /* EXTRACTION SIMPLE QUI FONCTIONNE */
 /* ================================================= */
 
-const productRegex = /<a[^>]*href="(\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="(https:\/\/i\.etsystatic\.com[^"]+)"/g;
+const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+
+const images = html.match(imageRegex) || [];
+const links = html.match(linkRegex) || [];
 
 const results = [];
-let match;
 
-while ((match = productRegex.exec(html)) !== null && results.length < maxItems) {
-
-  const link = "https://www.etsy.com" + match[1];
-  const image = match[2];
+for (let i = 0; i < Math.min(maxItems, images.length); i++) {
 
   results.push({
-    image,
-    link
+    image: images[i],
+    link: links[i] || null
   });
 
 }
 
-    console.log("Images trouvées :", results.length);
+console.log("Images trouvées :", results.length);
 
     res.json({ results });
 
@@ -169,7 +173,8 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json"
           }
         }
       );
@@ -177,6 +182,8 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       const text = vision.data.choices[0].message.content;
       const match = text.match(/\d+/);
       const similarity = match ? parseInt(match[0]) : 0;
+
+      sendLog(socket, `AI Similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
