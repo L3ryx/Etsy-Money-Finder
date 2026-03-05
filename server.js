@@ -17,21 +17,31 @@ app.use(express.static("public"));
 
 /*
 ====================================================
+LOG SYSTEM
+====================================================
+*/
+
+function sendLog(socket, message) {
+  const logMessage = {
+    message,
+    time: new Date().toISOString()
+  };
+
+  console.log("LOG:", message);
+
+  if (socket) {
+    socket.emit("log", logMessage);
+  }
+}
+
+/*
+====================================================
 UTILS
 ====================================================
 */
 
 function toBase64(buffer) {
   return buffer.toString("base64");
-}
-
-function emitProgress(socket, message) {
-  if (socket) {
-    socket.emit("progress", {
-      message,
-      time: new Date().toISOString()
-    });
-  }
 }
 
 /*
@@ -52,7 +62,7 @@ async function calculateSimilarity(base64A, base64B) {
             content: [
               {
                 type: "text",
-                text: "Compare these two product images and return ONLY a similarity score between 0 and 1."
+                text: "Return ONLY a similarity score between 0 and 1 for these two images."
               },
               {
                 type: "image_url",
@@ -97,8 +107,6 @@ ANALYSIS ROUTE
 
 app.post("/analyze", upload.array("images"), async (req, res) => {
 
-  console.log("🟢 Analysis request received");
-
   const socketId = req.body.socketId;
   const socket = io.sockets.sockets.get(socketId);
 
@@ -108,19 +116,21 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
     return res.status(400).json({ error: "No images uploaded" });
   }
 
+  sendLog(socket, "📥 Images received");
+
   for (const file of req.files) {
 
-    emitProgress(socket, "📥 Image received");
+    sendLog(socket, `🖼 Processing image: ${file.originalname}`);
 
     const base64Input = toBase64(file.buffer);
 
     /*
     ====================================================
-    SEARCH IMAGE ON ALIEXPRESS
+    ALIEXPRESS IMAGE SEARCH
     ====================================================
     */
 
-    emitProgress(socket, "🔎 Searching AliExpress image search");
+    sendLog(socket, "🔎 Searching AliExpress image search");
 
     const searchResponse = await axios.get(
       "http://api.scraperapi.com",
@@ -137,20 +147,20 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     /*
     ====================================================
-    EXTRACT TOP 10 PRODUCTS
+    EXTRACT PRODUCTS (TOP 10)
     ====================================================
     */
 
     const matches = [...html.matchAll(/"productId":"(.*?)"/g)]
       .slice(0, 10);
 
-    emitProgress(socket, `📦 ${matches.length} products found`);
+    sendLog(socket, `📦 ${matches.length} products extracted`);
 
     const products = [];
 
     /*
     ====================================================
-    PROCESS PRODUCTS IN PARALLEL
+    PROCESS PRODUCTS PARALLEL
     ====================================================
     */
 
@@ -166,7 +176,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
         try {
 
-          emitProgress(socket, "🔍 Loading product page");
+          sendLog(socket, `🔍 Loading product ${productId}`);
 
           const productPage = await axios.get(
             "http://api.scraperapi.com",
@@ -188,7 +198,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           const productImageUrl =
             imageMatch[1].replace(/\\\//g, "/");
 
-          emitProgress(socket, "🖼 Downloading product image");
+          sendLog(socket, "🖼 Downloading product image");
 
           const imgResponse = await axios.get(productImageUrl, {
             responseType: "arraybuffer"
@@ -197,7 +207,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           const base64Product =
             Buffer.from(imgResponse.data).toString("base64");
 
-          emitProgress(socket, "🤖 AI Comparing images");
+          sendLog(socket, "🤖 AI Comparing images");
 
           const similarityRaw = await calculateSimilarity(
             base64Input,
@@ -208,31 +218,31 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
           if (similarity >= 60) {
 
+            sendLog(socket, `✅ Match found (${similarity}%)`);
+
             products.push({
               url: productUrl,
               similarity
             });
 
+          } else {
+
+            sendLog(socket, `❌ Product rejected (${similarity}%)`);
+
           }
 
         } catch (err) {
-          console.log("Product processing failed");
+          sendLog(socket, "⚠ Product processing failed");
         }
 
       })
     );
 
-    /*
-    ====================================================
-    SORT BY BEST MATCH
-    ====================================================
-    */
-
     const sorted = products.sort(
       (a, b) => b.similarity - a.similarity
     );
 
-    emitProgress(socket, "✅ Analysis finished");
+    sendLog(socket, "🏁 Image finished");
 
     results.push({
       image: file.originalname,
@@ -247,7 +257,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
 /*
 ====================================================
-SOCKET.IO CONNECTION
+SOCKET.IO
 ====================================================
 */
 
@@ -257,6 +267,10 @@ io.on("connection", (socket) => {
 
   socket.emit("connected", {
     socketId: socket.id
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Client disconnected:", socket.id);
   });
 
 });
