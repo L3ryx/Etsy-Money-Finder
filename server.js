@@ -10,6 +10,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+/* ========================================= */
+/* MIDDLEWARE */
+/* ========================================= */
+
 const upload = multer({
   storage: multer.memoryStorage()
 });
@@ -19,11 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ========================================= */
-/* SOCKET LOG SYSTEM */
+/* SOCKET SYSTEM */
 /* ========================================= */
 
 function sendLog(socket, message) {
-
   console.log(message);
 
   if (socket) {
@@ -35,7 +38,7 @@ function sendLog(socket, message) {
 }
 
 /* ========================================= */
-/* SCRAPAPI ROUTE */
+/* SCRAPAPI ETSY SEARCH */
 /* ========================================= */
 
 app.post("/search-etsy", async (req, res) => {
@@ -51,14 +54,17 @@ app.post("/search-etsy", async (req, res) => {
   try {
 
     const response = await axios.post(
-      "https://api.scrapapi.com/etsy/search",
+      /* 🔥 CHANGE CETTE URL SI TON DASHBOARD DONNE AUTRE CHOSE */
+      "https://api.scrapapi.com/etsy",
+
       {
         query: keyword,
         limit: maxItems
       },
+
       {
         headers: {
-          Authorization: `Bearer ${process.env.SCRAPAPI_KEY}`,
+          Authorization: process.env.SCRAPAPI_KEY,
           "Content-Type": "application/json"
         }
       }
@@ -66,26 +72,18 @@ app.post("/search-etsy", async (req, res) => {
 
     const listings = response.data?.results || [];
 
-    const results = [];
-
-    listings.forEach(item => {
-
-      const image = item.images?.[0];
-
-      if (image) {
-        results.push({
-          link: item.url,
-          image
-        });
-      }
-
-    });
+    const results = listings
+      .map(item => ({
+        link: item.url,
+        image: item.images?.[0] || null
+      }))
+      .filter(item => item.image);
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScrapAPI error:", err.message);
+    console.error("ScrapAPI Error:", err.response?.data || err.message);
 
     res.status(500).json({
       error: "ScrapAPI request failed"
@@ -95,7 +93,7 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ========================================= */
-/* IMAGE ANALYSIS ROUTE (TON SYSTEM EXISTANT) */
+/* IMAGE ANALYSIS ROUTE */
 /* ========================================= */
 
 app.post("/analyze", upload.array("images"), async (req, res) => {
@@ -109,10 +107,11 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     sendLog(socket, `Processing ${file.originalname}`);
 
-    // 🔥 Upload vers IMGBB
     const base64 = file.buffer.toString("base64");
 
-    let publicUrl;
+    let imageUrl;
+
+    /* 🔥 UPLOAD IMAGE TO IMGBB */
 
     try {
 
@@ -124,7 +123,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
         })
       );
 
-      publicUrl = uploadRes.data.data.url;
+      imageUrl = uploadRes.data.data.url;
 
       sendLog(socket, "Image uploaded to IMGBB");
 
@@ -134,7 +133,8 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    // 🔥 Recherche reverse image
+    /* 🔥 REVERSE IMAGE SEARCH */
+
     try {
 
       const serp = await axios.get(
@@ -142,7 +142,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
         {
           params: {
             engine: "google_reverse_image",
-            image_url: publicUrl,
+            image_url: imageUrl,
             api_key: process.env.SERPAPI_KEY
           }
         }
@@ -150,19 +150,20 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
       const links = serp.data?.image_results || [];
 
-      const aliexpress = links
+      const matches = links
         .filter(l => l.link?.includes("aliexpress"))
-        .slice(0, 10);
-
-      const matches = aliexpress.map(item => ({
-        url: item.link,
-        similarity: 70
-      }));
+        .slice(0, 10)
+        .map(item => ({
+          url: item.link,
+          similarity: 70
+        }));
 
       results.push({
         image: file.originalname,
         matches
       });
+
+      sendLog(socket, "Reverse search completed");
 
     } catch (err) {
 
@@ -176,7 +177,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 });
 
 /* ========================================= */
-/* SOCKET */
+/* SOCKET CONNECTION */
 /* ========================================= */
 
 io.on("connection", (socket) => {
@@ -185,14 +186,15 @@ io.on("connection", (socket) => {
     socketId: socket.id
   });
 
-  console.log("Client connected");
-
+  console.log("🟢 Client connected");
 });
 
 /* ========================================= */
 /* START SERVER */
 /* ========================================= */
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
 });
