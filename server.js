@@ -2,7 +2,6 @@
 /* SOCKET CONNECTION (SI TU UTILISES LES LOGS) */
 /* ===================================================== */
 
-const socket = io();
 let socketId = null;
 
 socket.on("connected", (data) => {
