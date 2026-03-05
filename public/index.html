@@ -1,20 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <title>Image Product Finder</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AliExpress Image Finder Pro</title>
+
+<link rel="stylesheet" href="style.css" />
+
+<!-- Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
+
 </head>
 <body>
 
-<h2>Upload Image</h2>
+<div class="container">
+
+<h1>🖼 AliExpress Image Finder</h1>
+
+<!-- ================= UPLOAD FORM ================= -->
+
+<div class="card">
+
+<h2>Upload Image(s)</h2>
 
 <form id="uploadForm">
-  <input type="file" name="images" multiple />
-  <button type="submit">Analyze</button>
+
+<input type="file" name="images" multiple accept="image/*" />
+
+<button type="submit">
+🚀 Analyze
+</button>
+
 </form>
+
+</div>
+
+<!-- ================= LIVE PROGRESS ================= -->
+
+<div class="card">
+
+<h2>📊 Live Process</h2>
+
+<div id="progress" class="progress-box">
+<p>Waiting for analysis...</p>
+</div>
+
+</div>
+
+<!-- ================= RESULTS ================= -->
+
+<div class="card">
+
+<h2>🎯 Results</h2>
 
 <div id="results"></div>
 
-<script src="script.js"></script>
+</div>
+
+</div>
+
+<!-- ================= SCRIPT ================= -->
+
+<script>
+
+const socket = io();
+let socketId = null;
+
+/*
+=========================================
+SOCKET CONNECTION
+=========================================
+*/
+
+socket.on("connected", (data) => {
+  socketId = data.socketId;
+});
+
+/*
+=========================================
+LIVE PROGRESS
+=========================================
+*/
+
+socket.on("progress", (data) => {
+
+  const progressDiv = document.getElementById("progress");
+
+  const message = document.createElement("p");
+  message.textContent = data.message;
+
+  progressDiv.appendChild(message);
+  progressDiv.scrollTop = progressDiv.scrollHeight;
+
+});
+
+/*
+=========================================
+FORM SUBMIT
+=========================================
+*/
+
+const form = document.getElementById("uploadForm");
+const resultsDiv = document.getElementById("results");
+
+form.addEventListener("submit", async (e) => {
+
+  e.preventDefault();
+
+  resultsDiv.innerHTML = "";
+  document.getElementById("progress").innerHTML =
+    "<p>🚀 Starting analysis...</p>";
+
+  const formData = new FormData(form);
+  formData.append("socketId", socketId);
+
+  const response = await fetch("/analyze", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await response.json();
+
+  displayResults(data.results);
+
+});
+
+/*
+=========================================
+DISPLAY RESULTS
+=========================================
+*/
+
+function displayResults(results) {
+
+  const resultsDiv = document.getElementById("results");
+
+  results.forEach(result => {
+
+    const card = document.createElement("div");
+    card.className = "result-card";
+
+    let html = `<h3>📷 ${result.image}</h3>`;
+
+    if (!result.products || result.products.length === 0) {
+
+      html += `<p class="no-match">❌ No product matched (≥60%)</p>`;
+
+    } else {
+
+      result.products.forEach(product => {
+
+        html += `
+          <div class="product">
+            <p>🔥 Similarity: ${product.similarity}%</p>
+            <a href="${product.url}" target="_blank">
+              🔗 Open Product
+            </a>
+          </div>
+        `;
+      });
+
+    }
+
+    card.innerHTML = html;
+    resultsDiv.appendChild(card);
+
+  });
+}
+
+</script>
+
 </body>
 </html>
