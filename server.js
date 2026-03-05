@@ -10,10 +10,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-/* ========================================= */
-/* MIDDLEWARE */
-/* ========================================= */
-
 const upload = multer({
   storage: multer.memoryStorage()
 });
@@ -23,10 +19,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ========================================= */
-/* SOCKET SYSTEM */
+/* SOCKET LOG SYSTEM */
 /* ========================================= */
 
 function sendLog(socket, message) {
+
   console.log(message);
 
   if (socket) {
@@ -38,7 +35,7 @@ function sendLog(socket, message) {
 }
 
 /* ========================================= */
-/* SCRAPAPI ETSY SEARCH */
+/* ETSY SEARCH VIA SCRAPAPI */
 /* ========================================= */
 
 app.post("/search-etsy", async (req, res) => {
@@ -54,14 +51,11 @@ app.post("/search-etsy", async (req, res) => {
   try {
 
     const response = await axios.post(
-      /* 🔥 CHANGE CETTE URL SI TON DASHBOARD DONNE AUTRE CHOSE */
-      "https://api.scrapapi.com/etsy",
-
+      "https://api.scrapapi.com/etsy", // 🔥 CHANGE SI TON DASHBOARD DONNE AUTRE URL
       {
         query: keyword,
         limit: maxItems
       },
-
       {
         headers: {
           Authorization: process.env.SCRAPAPI_KEY,
@@ -86,17 +80,17 @@ app.post("/search-etsy", async (req, res) => {
     console.error("ScrapAPI Error:", err.response?.data || err.message);
 
     res.status(500).json({
-      error: "ScrapAPI request failed"
+      error: "ScrapAPI search failed"
     });
   }
 
 });
 
 /* ========================================= */
-/* IMAGE ANALYSIS ROUTE */
+/* IMAGE ANALYSIS PIPELINE */
 /* ========================================= */
 
-app.post("/analyze", upload.array("images"), async (req, res) => {
+app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   const socketId = req.body.socketId;
   const socket = io.sockets.sockets.get(socketId);
@@ -109,9 +103,11 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    let imageUrl;
+    /* ===================================== */
+    /* UPLOAD TO IMGBB */
+    /* ===================================== */
 
-    /* 🔥 UPLOAD IMAGE TO IMGBB */
+    let publicImageUrl;
 
     try {
 
@@ -123,9 +119,9 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
         })
       );
 
-      imageUrl = uploadRes.data.data.url;
+      publicImageUrl = uploadRes.data.data.url;
 
-      sendLog(socket, "Image uploaded to IMGBB");
+      sendLog(socket, "Uploaded to IMGBB");
 
     } catch (err) {
 
@@ -133,41 +129,57 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* 🔥 REVERSE IMAGE SEARCH */
+    /* ===================================== */
+    /* OPENAI VISION ANALYSIS */
+    /* ===================================== */
 
     try {
 
-      const serp = await axios.get(
-        "https://serpapi.com/search",
+      const visionResponse = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
         {
-          params: {
-            engine: "google_reverse_image",
-            image_url: imageUrl,
-            api_key: process.env.SERPAPI_KEY
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Return similarity score between 0 and 100." },
+                {
+                  type: "image_url",
+                  image_url: { url: publicImageUrl }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json"
           }
         }
       );
 
-      const links = serp.data?.image_results || [];
+      const aiText = visionResponse.data.choices[0].message.content;
 
-      const matches = links
-        .filter(l => l.link?.includes("aliexpress"))
-        .slice(0, 10)
-        .map(item => ({
-          url: item.link,
-          similarity: 70
-        }));
+      const similarityMatch = aiText.match(/\d+/);
+      const similarity = similarityMatch ? parseInt(similarityMatch[0]) : 0;
+
+      sendLog(socket, `AI similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
-        matches
+        matches: [
+          {
+            url: "AI_ANALYSIS",
+            similarity
+          }
+        ]
       });
-
-      sendLog(socket, "Reverse search completed");
 
     } catch (err) {
 
-      sendLog(socket, "Reverse search failed");
+      sendLog(socket, "OpenAI Vision failed");
     }
 
   }
@@ -190,7 +202,7 @@ io.on("connection", (socket) => {
 });
 
 /* ========================================= */
-/* START SERVER */
+/* SERVER START */
 /* ========================================= */
 
 const PORT = process.env.PORT || 10000;
