@@ -10,9 +10,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-/* =============================== */
+/* ===================================================== */
 /* MIDDLEWARE */
-/* =============================== */
+/* ===================================================== */
 
 const upload = multer({
   storage: multer.memoryStorage()
@@ -22,9 +22,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* =============================== */
+/* ===================================================== */
 /* SOCKET LOG SYSTEM */
-/* =============================== */
+/* ===================================================== */
 
 function sendLog(socket, message) {
 
@@ -39,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPAPI */
+/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -52,41 +52,56 @@ app.post("/search-etsy", async (req, res) => {
     return res.status(400).json({ error: "Keyword required" });
   }
 
-  const maxItems = Math.min(parseInt(limit) || 10, 300);
+  const maxItems = Math.min(parseInt(limit) || 10, 50);
 
   try {
 
-    const response = await axios.post(
-      "https://api.scrapapi.com/etsy", // 🔥 CHANGE SI TON DASHBOARD DONNE AUTRE URL
+    const etsyUrl =
+      `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+    /* ✅ SCRAPERAPI CALL */
+    const scraperResponse = await axios.get(
+      "https://api.scraperapi.com/",
       {
-        query: keyword,
-        limit: maxItems
-      },
-      {
-        headers: {
-          Authorization: process.env.SCRAPAPI_KEY,
-          "Content-Type": "application/json"
+        params: {
+          api_key: process.env.SCRAPAPI_KEY,
+          url: etsyUrl,
+          render: true
         }
       }
     );
 
-    const listings = response.data?.results || [];
+    const html = scraperResponse.data;
 
-    const results = listings
-      .map(item => ({
-        link: item.url,
-        image: item.images?.[0] || null
-      }))
-      .filter(item => item.image);
+    /* ================================================= */
+    /* EXTRACT IMAGE + LINKS FROM HTML */
+    /* ================================================= */
+
+    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+
+    const images = [...html.matchAll(imageRegex)];
+    const links = [...html.matchAll(linkRegex)];
+
+    const results = [];
+
+    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+
+      results.push({
+        image: images[i][0],
+        link: links[i] ? links[i][0] : etsyUrl
+      });
+
+    }
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScrapAPI Error:", err.response?.data || err.message);
+    console.error("ScraperAPI Error:", err.response?.data || err.message);
 
     res.status(500).json({
-      error: "ScrapAPI search failed"
+      error: "Scraping failed"
     });
   }
 
@@ -109,11 +124,11 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    /* =============================== */
-    /* UPLOAD TO IMGBB */
-    /* =============================== */
+    /* ================================================= */
+    /* UPLOAD IMAGE TO IMGBB */
+    /* ================================================= */
 
-    let publicImageUrl;
+    let imageUrl;
 
     try {
 
@@ -125,7 +140,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
         })
       );
 
-      publicImageUrl = uploadRes.data.data.url;
+      imageUrl = uploadRes.data.data.url;
 
       sendLog(socket, "Uploaded to IMGBB");
 
@@ -135,9 +150,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* =============================== */
+    /* ================================================= */
     /* OPENAI VISION ANALYSIS */
-    /* =============================== */
+    /* ================================================= */
 
     try {
 
@@ -151,12 +166,12 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
               content: [
                 {
                   type: "text",
-                  text: "Return a similarity score between 0 and 100 comparing the image."
+                  text: "Return similarity score between 0 and 100."
                 },
                 {
                   type: "image_url",
                   image_url: {
-                    url: publicImageUrl
+                    url: imageUrl
                   }
                 }
               ]
@@ -173,7 +188,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       const text = vision.data.choices[0].message.content;
       const match = text.match(/\d+/);
-
       const similarity = match ? parseInt(match[0]) : 0;
 
       sendLog(socket, `AI Similarity: ${similarity}%`);
@@ -192,7 +206,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       sendLog(socket, "OpenAI Vision failed");
     }
-
   }
 
   res.json({ results });
