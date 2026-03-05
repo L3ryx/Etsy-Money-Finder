@@ -3,199 +3,275 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AliExpress Image Finder Pro</title>
+<title>Etsy Money Finder</title>
 
-<link rel="stylesheet" href="style.css" />
-
-<!-- Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 
+<style>
+
+/* ============================= */
+/* MATRIX BACKGROUND */
+/* ============================= */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: black;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* ============================= */
+/* CENTER CONTAINER */
+/* ============================= */
+
+.container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* ============================= */
+/* TITLE 3D ANIMATION */
+/* ============================= */
+
+h1 {
+    font-size: 60px;
+    font-weight: bold;
+    color: white;
+    text-shadow:
+        0 1px 0 #00ff88,
+        0 2px 0 #00cc66,
+        0 3px 0 #009944,
+        0 4px 20px #00ff88;
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+    from { transform: translateY(0px); }
+    to { transform: translateY(-5px); }
+}
+
+/* ============================= */
+/* BIG GREEN START BUTTON */
+/* ============================= */
+
+.start-btn {
+    background: #00ff88;
+    color: black;
+    font-size: 28px;
+    font-weight: bold;
+    padding: 20px 60px;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 40px;
+}
+
+.start-btn:hover {
+    background: #00cc66;
+    transform: scale(1.1);
+}
+
+/* Hide cards for now (you can show them later after click) */
+.card {
+    display: none;
+}
+
+</style>
 </head>
 <body>
 
+<canvas id="matrix"></canvas>
+
 <div class="container">
 
-<h1>🖼 AliExpress Image Finder</h1>
+<h1>Etsy Money Finder</h1>
 
-<!-- ========================================= -->
-<!-- UPLOAD FORM -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>📤 Upload Image(s)</h2>
-
-<form id="uploadForm">
-
-<input type="file"
-       name="images"
-       multiple
-       accept="image/*" />
-
-<button type="submit">
-🚀 Analyze
+<button class="start-btn" onclick="startApp()">
+🚀 START
 </button>
 
+<!-- ============================= -->
+<!-- YOUR ORIGINAL CONTENT -->
+<!-- ============================= -->
+
+<div class="card">
+
+<form id="uploadForm">
+<input type="file" name="images" multiple accept="image/*" />
+<button type="submit">🚀 Analyze</button>
 </form>
 
-</div>
-
-<!-- ========================================= -->
-<!-- LIVE LOGS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>📊 Live Logs</h2>
-
-<div id="logs" class="log-box">
-<p>Waiting for analysis...</p>
-</div>
-
-</div>
-
-<!-- ========================================= -->
-<!-- RESULTS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>🎯 Results</h2>
-
+<div id="logs"></div>
 <div id="results"></div>
 
 </div>
 
 </div>
 
-<!-- ========================================= -->
-<!-- SCRIPT -->
-<!-- ========================================= -->
-
 <script>
+
+/* ============================= */
+/* MATRIX ANIMATION */
+/* ============================= */
+
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const letters = "01";
+const fontSize = 16;
+const columns = canvas.width / fontSize;
+const drops = [];
+
+for (let x = 0; x < columns; x++) {
+    drops[x] = 1;
+}
+
+function drawMatrix() {
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#00ff88";
+    ctx.font = fontSize + "px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+
+        const text = letters[Math.floor(Math.random() * letters.length)];
+
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+        }
+
+        drops[i]++;
+    }
+}
+
+setInterval(drawMatrix, 50);
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+/* ============================= */
+/* START BUTTON ACTION */
+/* ============================= */
+
+function startApp() {
+
+    document.querySelector(".start-btn").style.display = "none";
+    document.querySelector(".card").style.display = "block";
+
+}
+
+/* ============================= */
+/* SOCKET LOGIC (KEEP YOUR ORIGINAL) */
+/* ============================= */
 
 const socket = io();
 let socketId = null;
 
-/*
-====================================================
-SOCKET CONNECTION
-====================================================
-*/
-
 socket.on("connected", (data) => {
-  socketId = data.socketId;
-  console.log("Socket connected:", socketId);
+    socketId = data.socketId;
 });
-
-/*
-====================================================
-LIVE LOGS
-====================================================
-*/
 
 socket.on("log", (data) => {
 
-  const logsDiv = document.getElementById("logs");
+    const logsDiv = document.getElementById("logs");
+    const line = document.createElement("p");
 
-  const line = document.createElement("p");
+    line.innerHTML = `
+        <span style="color:#00ff88">
+        [${new Date(data.time).toLocaleTimeString()}]
+        </span>
+        ${data.message}
+    `;
 
-  line.innerHTML = `
-    <span style="color:#888">
-      [${new Date(data.time).toLocaleTimeString()}]
-    </span>
-    ${data.message}
-  `;
-
-  logsDiv.appendChild(line);
-  logsDiv.scrollTop = logsDiv.scrollHeight;
-
+    logsDiv.appendChild(line);
 });
 
-/*
-====================================================
-FORM SUBMIT
-====================================================
-*/
+/* ============================= */
+/* FORM SUBMIT */
+/* ============================= */
 
 const form = document.getElementById("uploadForm");
 const resultsDiv = document.getElementById("results");
 
 form.addEventListener("submit", async (e) => {
 
-  e.preventDefault();
+    e.preventDefault();
 
-  resultsDiv.innerHTML = "";
-  document.getElementById("logs").innerHTML =
-    "<p>🚀 Starting analysis...</p>";
+    resultsDiv.innerHTML = "";
+    document.getElementById("logs").innerHTML =
+        "<p>🚀 Starting analysis...</p>";
 
-  const formData = new FormData(form);
-  formData.append("socketId", socketId);
-
-  try {
+    const formData = new FormData(form);
+    formData.append("socketId", socketId);
 
     const response = await fetch("/analyze", {
-      method: "POST",
-      body: formData
+        method: "POST",
+        body: formData
     });
 
     const data = await response.json();
-
     displayResults(data.results);
-
-  } catch (err) {
-
-    console.error("Request failed", err);
-
-  }
 
 });
 
-/*
-====================================================
-DISPLAY RESULTS
-====================================================
-*/
-
 function displayResults(results) {
 
-  const resultsDiv = document.getElementById("results");
+    results.forEach(result => {
 
-  results.forEach(result => {
+        const card = document.createElement("div");
 
-    const card = document.createElement("div");
-    card.className = "result-card";
-
-    let html = `
-      <h3>📷 ${result.image}</h3>
-    `;
-
-    if (!result.matches || result.matches.length === 0) {
-
-      html += `<p class="no-match">
-        ❌ No matches found (≥60%)
-      </p>`;
-
-    } else {
-
-      result.matches.forEach(product => {
-
-        html += `
-          <div class="product">
-            <p>🔥 Similarity: ${product.similarity}%</p>
-            <a href="${product.url}" target="_blank">
-              🔗 Open Product
-            </a>
-          </div>
+        card.innerHTML = `
+            <h3>📷 ${result.image}</h3>
         `;
-      });
 
-    }
+        if (!result.matches || result.matches.length === 0) {
 
-    card.innerHTML = html;
-    resultsDiv.appendChild(card);
+            card.innerHTML += `
+            <p style="color:red">
+            ❌ No matches found
+            </p>`;
 
-  });
+        } else {
+
+            result.matches.forEach(product => {
+
+                card.innerHTML += `
+                <div>
+                    🔥 ${product.similarity}%
+                    <a href="${product.url}" target="_blank">
+                    Open
+                    </a>
+                </div>
+                `;
+            });
+        }
+
+        resultsDiv.appendChild(card);
+    });
 }
 
 </script>
