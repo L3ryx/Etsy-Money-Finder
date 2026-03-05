@@ -5,44 +5,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Etsy Money Finder</title>
+<title>Etsy Finder</title>
 
 <link rel="stylesheet" href="style.css">
-
 <script src="/socket.io/socket.io.js"></script>
 
 </head>
 <body>
 
-<!-- MATRIX -->
 <canvas id="matrix"></canvas>
 
-<!-- TITLE -->
 <h1 class="title">Etsy Money Finder</h1>
 
 <div class="main-center">
 
-<!-- FORM -->
-<form id="uploadForm">
+<!-- SEARCH MODULE -->
 
-<input type="file" name="images" multiple accept="image/*">
+<div class="search-box">
 
-<br><br>
+<input type="text" id="keyword" placeholder="Keyword">
 
-<button type="submit" class="big-start-btn">
-🚀 START
+<select id="limit">
+<option value="1">1</option>
+<option value="10">10</option>
+<option value="50">50</option>
+<option value="100">100</option>
+<option value="300">300</option>
+</select>
+
+<button onclick="searchEtsy()" class="big-start-btn">
+🔎 Search
 </button>
 
-</form>
+</div>
 
-<!-- 🔥 LOADING BAR -->
+<!-- LOADING BAR -->
+
 <div class="loading-container">
-  <div class="flame-bar" id="progressBar"></div>
+<div class="flame-bar" id="progressBar"></div>
 </div>
 
 <div id="results"></div>
-
-<div id="logs"></div>
 
 </div>
 
