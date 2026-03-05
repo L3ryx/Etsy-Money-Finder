@@ -1,12 +1,56 @@
+const socket = io();
+let socketId = null;
+
+/*
+=========================================
+SOCKET CONNECTION
+=========================================
+*/
+
+socket.on("connected", (data) => {
+  socketId = data.socketId;
+  console.log("Socket connected:", socketId);
+});
+
+/*
+=========================================
+LIVE LOGS
+=========================================
+*/
+
+socket.on("log", (data) => {
+
+  const logsDiv = document.getElementById("logs");
+
+  const line = document.createElement("p");
+
+  line.innerHTML = `
+    <span style="color:#888">
+      [${new Date(data.time).toLocaleTimeString()}]
+    </span>
+    ${data.message}
+  `;
+
+  logsDiv.appendChild(line);
+  logsDiv.scrollTop = logsDiv.scrollHeight;
+});
+
+/*
+=========================================
+FORM SUBMIT
+=========================================
+*/
+
 const form = document.getElementById("uploadForm");
-const resultsDiv = document.getElementById("results");
 
 form.addEventListener("submit", async (e) => {
+
   e.preventDefault();
 
-  resultsDiv.innerHTML = "Analyzing...";
-
   const formData = new FormData(form);
+  formData.append("socketId", socketId);
+
+  document.getElementById("logs").innerHTML = "";
 
   const response = await fetch("/analyze", {
     method: "POST",
@@ -15,29 +59,5 @@ form.addEventListener("submit", async (e) => {
 
   const data = await response.json();
 
-  resultsDiv.innerHTML = "";
-
-  data.results.forEach(result => {
-
-    const card = document.createElement("div");
-    card.className = "card";
-
-    let html = `<h3>${result.image}</h3>`;
-
-    if (result.products.length > 0) {
-      result.products.forEach(product => {
-        html += `
-          <p><b>${product.title}</b></p>
-          <p>Price: ${product.price}</p>
-          <a href="${product.url}" target="_blank">Open</a>
-          <hr/>
-        `;
-      });
-    } else {
-      html += "<p>No products found</p>";
-    }
-
-    card.innerHTML = html;
-    resultsDiv.appendChild(card);
-  });
+  console.log("Results:", data);
 });
