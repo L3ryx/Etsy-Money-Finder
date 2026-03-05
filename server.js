@@ -51,7 +51,7 @@ app.post("/search-etsy", async (req, res) => {
   try {
 
     const response = await axios.post(
-      "https://api.scrapapi.com/v1/etsy/search",
+      "https://api.scrapapi.com/etsy/search",
       {
         query: keyword,
         limit: maxItems
