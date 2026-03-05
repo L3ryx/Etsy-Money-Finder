@@ -10,9 +10,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-/* ============================= */
+/* ===================================================== */
 /* MIDDLEWARE */
-/* ============================= */
+/* ===================================================== */
 
 const upload = multer({
   storage: multer.memoryStorage()
@@ -22,9 +22,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ============================= */
+/* ===================================================== */
 /* SOCKET LOG SYSTEM */
-/* ============================= */
+/* ===================================================== */
 
 function sendLog(socket, message) {
 
@@ -39,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH — IMAGE + LINK EXTRACTION PROPRE */
+/* 🔎 ETSY SEARCH VIA SCRAPERAPI */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -70,37 +70,37 @@ app.post("/search-etsy", async (req, res) => {
       }
     );
 
-    const html = scraperResponse.data || "";
+    const html = scraperResponse.data;
+
+    /* ===================================================== */
+    /* EXTRACTION IMAGES + LIENS */
+/* ===================================================== */
+
+    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+
+    const images = [...html.matchAll(imageRegex)];
+    const links = [...html.matchAll(linkRegex)];
 
     const results = [];
 
-    /* ===================================================== */
-    /* ✅ EXTRACTION IMAGE + LINK ENSEMBLE */
-/* ===================================================== */
-
-    const regex =
-      /href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)".*?(https:\/\/i\.etsystatic\.com[^"]+)/g;
-
-    let match;
-
-    while ((match = regex.exec(html)) !== null) {
-
-      if (results.length >= maxItems) break;
+    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
 
       results.push({
-        link: match[1],
-        image: match[2]
+        image: images[i][0],
+        link: links[i] ? links[i][0] : null
       });
 
     }
 
-    console.log("✅ Results found:", results.length);
+    console.log("Images found:", images.length);
+    console.log("Links found:", links.length);
 
     res.json({ results });
 
   } catch (err) {
 
-    console.log("❌ Search error:", err.message);
+    console.error("ScraperAPI Error:", err.message);
 
     res.json({ results: [] });
   }
@@ -108,13 +108,14 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ===================================================== */
-/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* 🧠 IMAGE ANALYSIS */
 /* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   const socketId = req.body.socketId;
   const listingLink = req.body.listingLink;
+
   const socket = io.sockets.sockets.get(socketId);
 
   const results = [];
@@ -124,10 +125,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
-
-    /* ============================= */
-    /* UPLOAD TO IMGBB */
-    /* ============================= */
 
     let imageUrl;
 
@@ -151,10 +148,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ============================= */
-    /* OPENAI VISION */
-    /* ============================= */
-
     try {
 
       const vision = await axios.post(
@@ -171,9 +164,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
                 },
                 {
                   type: "image_url",
-                  image_url: {
-                    url: imageUrl
-                  }
+                  image_url: { url: imageUrl }
                 }
               ]
             }
@@ -188,7 +179,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       );
 
       const text = vision.data.choices[0].message.content;
+
       const match = text.match(/\d+/);
+
       const similarity = match ? parseInt(match[0]) : 0;
 
       sendLog(socket, `Similarity: ${similarity}%`);
@@ -205,7 +198,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     } catch (err) {
 
-      sendLog(socket, "OpenAI failed");
+      sendLog(socket, "OpenAI Vision failed");
     }
   }
 
@@ -233,5 +226,7 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
+
   console.log("🚀 Server running on port", PORT);
+
 });
