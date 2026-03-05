@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* SOCKET SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket, message) {
@@ -38,28 +38,43 @@ function sendLog(socket, message) {
   }
 }
 
+io.on("connection", (socket) => {
+
+  console.log("🟢 Client connected");
+
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+
+});
+
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
+/* 🔎 ETSY SEARCH → IMAGE + LINK PROPER MATCH */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
 
   console.log("🔥 Search route called");
 
-  const { keyword, limit } = req.body;
+  const { keyword, limit, socketId } = req.body;
 
   if (!keyword) {
     return res.status(400).json({ error: "Keyword required" });
   }
 
+  const socket = io.sockets.sockets.get(socketId);
+
   const maxItems = Math.min(parseInt(limit) || 10, 50);
 
   try {
 
+    if (socket) {
+      socket.emit("progress", { percent: 10 });
+    }
+
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    /* ✅ SCRAPERAPI CALL */
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -73,32 +88,47 @@ app.post("/search-etsy", async (req, res) => {
 
     const html = scraperResponse.data;
 
-    /* ================================================= */
-    /* EXTRACT IMAGE + LINKS FROM HTML */
-    /* ================================================= */
+    if (socket) {
+      socket.emit("progress", { percent: 40 });
+    }
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+    /* ===================================================== */
+    /* ✅ EXTRACTION IMAGE + LISTING DANS LE MEME BLOC */
+/* ===================================================== */
 
-    const images = [...html.matchAll(imageRegex)];
-    const links = [...html.matchAll(linkRegex)];
+    const productRegex =
+      /<a[^>]+href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]+src="(https:\/\/i\.etsystatic\.com[^"]*)"/g;
 
     const results = [];
 
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+    let match;
+
+    while ((match = productRegex.exec(html)) !== null) {
+
+      const listingLink = match[1];
+      const imageLink = match[2];
 
       results.push({
-        image: images[i][0],
-        link: links[i] ? links[i][0] : etsyUrl
+        image: imageLink,
+        link: listingLink
       });
 
+      if (results.length >= maxItems) break;
+    }
+
+    if (socket) {
+      socket.emit("progress", { percent: 100 });
     }
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.response?.data || err.message);
+    console.error("ScraperAPI Error:", err.message);
+
+    if (socket) {
+      socket.emit("progress", { percent: 0 });
+    }
 
     res.status(500).json({
       error: "Scraping failed"
@@ -126,7 +156,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     /* ================================================= */
     /* UPLOAD IMAGE TO IMGBB */
-    /* ================================================= */
+/* ================================================= */
 
     let imageUrl;
 
@@ -151,8 +181,8 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     }
 
     /* ================================================= */
-    /* OPENAI VISION ANALYSIS */
-    /* ================================================= */
+    /* OPENAI VISION */
+/* ================================================= */
 
     try {
 
@@ -210,19 +240,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   res.json({ results });
 
-});
-
-/* ===================================================== */
-/* SOCKET CONNECTION */
-/* ===================================================== */
-
-io.on("connection", (socket) => {
-
-  socket.emit("connected", {
-    socketId: socket.id
-  });
-
-  console.log("🟢 Client connected");
 });
 
 /* ===================================================== */
