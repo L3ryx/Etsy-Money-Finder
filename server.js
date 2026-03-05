@@ -1,16 +1,21 @@
+// =============================
+// SERVER.JS — SERPAPI VERSION
+// =============================
+
 require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
-const FormData = require("form-data");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage()
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -22,12 +27,14 @@ LOG SYSTEM
 ====================================================
 */
 
-function sendLog(socket, message) {
-  console.log("LOG:", message);
+function sendLog(socket, message, type = "info") {
+
+  console.log(`[${type.toUpperCase()}] ${message}`);
 
   if (socket) {
     socket.emit("log", {
       message,
+      type,
       time: new Date().toISOString()
     });
   }
@@ -35,12 +42,14 @@ function sendLog(socket, message) {
 
 /*
 ====================================================
-IMAGE SIMILARITY (OPENAI)
+SIMILARITY WITH OPENAI
 ====================================================
 */
 
-async function calculateSimilarity(base64A, base64B) {
+async function calculateSimilarity(base64A, base64B, socket) {
+
   try {
+
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
@@ -51,7 +60,7 @@ async function calculateSimilarity(base64A, base64B) {
             content: [
               {
                 type: "text",
-                text: "Return ONLY a similarity score between 0 and 1 for these two images."
+                text: "Return ONLY a similarity score between 0 and 1."
               },
               {
                 type: "image_url",
@@ -82,7 +91,9 @@ async function calculateSimilarity(base64A, base64B) {
     return match ? parseFloat(match[0]) : 0;
 
   } catch (err) {
-    console.log("Similarity error:", err.message);
+
+    sendLog(socket, `❌ Similarity failed`, "error");
+
     return 0;
   }
 }
@@ -98,131 +109,131 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
   const socketId = req.body.socketId;
   const socket = io.sockets.sockets.get(socketId);
 
-  const results = [];
-
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "No images uploaded" });
   }
 
-  sendLog(socket, "📥 Images received");
+  const results = [];
 
   for (const file of req.files) {
 
-    sendLog(socket, `🖼 Processing image ${file.originalname}`);
+    sendLog(socket, `🖼 Processing ${file.originalname}`);
 
     const base64Input = file.buffer.toString("base64");
 
     /*
-    ====================================================
-    1️⃣ CALL OFFICIAL ALIEXPRESS IMAGE SEARCH API
-    ====================================================
+    =====================================================
+    STEP 1 — SERPAPI REVERSE IMAGE SEARCH
+    =====================================================
     */
 
-    sendLog(socket, "🔎 Calling AliExpress image search API");
+    sendLog(socket, "🔎 Calling SerpAPI");
 
-    let productsData = [];
+    let serpResults = [];
 
     try {
 
-      const form = new FormData();
-      form.append("image", file.buffer, {
-        filename: "image.jpg"
-      });
-
-      const searchResponse = await axios.post(
-        "https://www.aliexpress.com/aer-api/search/image",
-        form,
+      const response = await axios.get(
+        "https://serpapi.com/search",
         {
-          headers: {
-            ...form.getHeaders()
+          params: {
+            engine: "google_reverse_image",
+            image_url: `data:image/jpeg;base64,${base64Input}`,
+            api_key: process.env.SERPAPI_KEY
           }
         }
       );
 
-      productsData = searchResponse.data?.data?.products || [];
+      serpResults = response.data?.image_results || [];
 
-      sendLog(socket, `📦 ${productsData.length} products returned`);
+      sendLog(socket, `📦 ${serpResults.length} Google results found`, "success");
 
     } catch (err) {
 
-      sendLog(socket, "❌ Image search API failed");
-      productsData = [];
+      sendLog(
+        socket,
+        `❌ SerpAPI error | ${err.response?.status} | ${err.message}`,
+        "error"
+      );
 
+      results.push({
+        image: file.originalname,
+        matches: []
+      });
+
+      continue;
     }
 
-    const matchedProducts = [];
-
     /*
-    ====================================================
-    2️⃣ PROCESS TOP 10 PRODUCTS
-    ====================================================
+    =====================================================
+    STEP 2 — FILTER ALIEXPRESS LINKS
+    =====================================================
     */
 
-    const topProducts = productsData.slice(0, 10);
+    const aliexpressLinks = serpResults
+      .filter(r => r.link && r.link.includes("aliexpress.com"))
+      .slice(0, 10);
 
-    await Promise.all(
-      topProducts.map(async (product) => {
+    sendLog(socket, `🛒 ${aliexpressLinks.length} AliExpress links filtered`);
 
-        const productId = product.productId;
+    /*
+    =====================================================
+    STEP 3 — DOWNLOAD PRODUCT IMAGE + COMPARE
+    =====================================================
+    */
 
-        const productUrl =
-          "https://www.aliexpress.com/item/" +
-          productId +
-          ".html";
+    const matches = [];
 
-        try {
+    for (const item of aliexpressLinks) {
 
-          sendLog(socket, `🔍 Checking product ${productId}`);
+      sendLog(socket, `🔍 Checking ${item.link}`);
 
-          const productImageUrl = product.imageUrl;
+      try {
 
-          if (!productImageUrl) return;
+        if (!item.thumbnail) continue;
 
-          const imgResponse = await axios.get(productImageUrl, {
-            responseType: "arraybuffer"
+        const imgResponse = await axios.get(item.thumbnail, {
+          responseType: "arraybuffer"
+        });
+
+        const base64Product =
+          Buffer.from(imgResponse.data).toString("base64");
+
+        const similarity = Math.round(
+          (await calculateSimilarity(
+            base64Input,
+            base64Product,
+            socket
+          )) * 100
+        );
+
+        if (similarity >= 60) {
+
+          sendLog(socket, `✅ Match ${similarity}%`, "success");
+
+          matches.push({
+            url: item.link,
+            similarity
           });
 
-          const base64Product =
-            Buffer.from(imgResponse.data).toString("base64");
+        } else {
 
-          sendLog(socket, "🤖 AI comparing images");
-
-          const similarityRaw = await calculateSimilarity(
-            base64Input,
-            base64Product
-          );
-
-          const similarity = Math.round(similarityRaw * 100);
-
-          if (similarity >= 60) {
-
-            sendLog(socket, `✅ Match found ${similarity}%`);
-
-            matchedProducts.push({
-              url: productUrl,
-              similarity
-            });
-          } else {
-
-            sendLog(socket, `❌ Rejected ${similarity}%`);
-          }
-
-        } catch {
-          sendLog(socket, "⚠ Product processing failed");
+          sendLog(socket, `❌ Rejected ${similarity}%`, "info");
         }
 
-      })
-    );
+      } catch (err) {
 
-    const sorted = matchedProducts.sort(
-      (a, b) => b.similarity - a.similarity
-    );
-
-    sendLog(socket, "🏁 Image finished");
+        sendLog(
+          socket,
+          `❌ Product image failed | ${err.message}`,
+          "error"
+        );
+      }
+    }
 
     results.push({
       image: file.originalname,
-      matches: sorted
+      matches: matches.sort((a, b) => b.similarity - a.similarity)
     });
   }
 
@@ -237,14 +248,10 @@ SOCKET.IO
 
 io.on("connection", (socket) => {
 
-  console.log("🟢 Client connected:", socket.id);
+  console.log("🟢 Client connected");
 
   socket.emit("connected", {
     socketId: socket.id
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Client disconnected:", socket.id);
   });
 
 });
@@ -255,8 +262,6 @@ START SERVER
 ====================================================
 */
 
-const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
+server.listen(process.env.PORT || 3000, () => {
+  console.log("🚀 Server running");
 });
