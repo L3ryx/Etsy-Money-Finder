@@ -59,10 +59,6 @@ app.post("/search-etsy", async (req, res) => {
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    /* =============================== */
-    /* CALL SCRAPERAPI */
-    /* =============================== */
-
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -74,28 +70,26 @@ app.post("/search-etsy", async (req, res) => {
       }
     );
 
-    const html = scraperResponse.data;
-
-    /* ===================================================== */
-    /* EXTRACTION IMAGE + LIEN EXACT DE L'ANNONCE */
-    /* ===================================================== */
+    const html = scraperResponse.data || "";
 
     const results = [];
 
-    const matches = [
-      ...html.matchAll(
-        /href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)".*?(https:\/\/i\.etsystatic\.com[^"]+)/gs
-      )
-    ];
+    /* ===================================================== */
+    /* EXTRACTION LIEN + IMAGE EXACT */
+/* ===================================================== */
 
-    for (let i = 0; i < Math.min(maxItems, matches.length); i++) {
+    const regex =
+      /href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)".*?(https:\/\/i\.etsystatic\.com[^"]+)/g;
 
-      const link = matches[i][1];
-      const image = matches[i][2];
+    let match;
+
+    while ((match = regex.exec(html)) !== null) {
+
+      if (results.length >= maxItems) break;
 
       results.push({
-        link,
-        image
+        link: match[1],
+        image: match[2]
       });
 
     }
@@ -104,14 +98,9 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error(
-      "ScraperAPI Error:",
-      err.response?.data || err.message
-    );
+    console.error("ScraperAPI Error:", err.message);
 
-    res.status(500).json({
-      error: "Scraping failed"
-    });
+    res.json({ results: [] });
   }
 
 });
@@ -123,6 +112,7 @@ app.post("/search-etsy", async (req, res) => {
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   const socketId = req.body.socketId;
+  const listingLink = req.body.listingLink; // 🔥 LIEN ETSY REÇU
   const socket = io.sockets.sockets.get(socketId);
 
   const results = [];
@@ -197,16 +187,19 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       const text = vision.data.choices[0].message.content;
       const match = text.match(/\d+/);
-
       const similarity = match ? parseInt(match[0]) : 0;
 
       sendLog(socket, `AI Similarity: ${similarity}%`);
 
+      /* ===================================================== */
+      /* RETURN RESULT + ETSY LINK */
+/* ===================================================== */
+
       results.push({
         image: file.originalname,
+        listing: listingLink, // 🔥 ON GARDE LE LIEN ETSY
         matches: [
           {
-            url: "AI_ANALYSIS",
             similarity
           }
         ]
