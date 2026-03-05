@@ -17,15 +17,20 @@
 
 <h1>🖼 AliExpress Image Finder</h1>
 
-<!-- ================= UPLOAD FORM ================= -->
+<!-- ========================================= -->
+<!-- UPLOAD FORM -->
+<!-- ========================================= -->
 
 <div class="card">
 
-<h2>Upload Image(s)</h2>
+<h2>📤 Upload Image(s)</h2>
 
 <form id="uploadForm">
 
-<input type="file" name="images" multiple accept="image/*" />
+<input type="file"
+       name="images"
+       multiple
+       accept="image/*" />
 
 <button type="submit">
 🚀 Analyze
@@ -35,19 +40,23 @@
 
 </div>
 
-<!-- ================= LIVE PROGRESS ================= -->
+<!-- ========================================= -->
+<!-- LIVE LOGS -->
+<!-- ========================================= -->
 
 <div class="card">
 
-<h2>📊 Live Process</h2>
+<h2>📊 Live Logs</h2>
 
-<div id="progress" class="progress-box">
+<div id="logs" class="log-box">
 <p>Waiting for analysis...</p>
 </div>
 
 </div>
 
-<!-- ================= RESULTS ================= -->
+<!-- ========================================= -->
+<!-- RESULTS -->
+<!-- ========================================= -->
 
 <div class="card">
 
@@ -59,7 +68,9 @@
 
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ========================================= -->
+<!-- SCRIPT -->
+<!-- ========================================= -->
 
 <script>
 
@@ -67,37 +78,44 @@ const socket = io();
 let socketId = null;
 
 /*
-=========================================
+====================================================
 SOCKET CONNECTION
-=========================================
+====================================================
 */
 
 socket.on("connected", (data) => {
   socketId = data.socketId;
+  console.log("Socket connected:", socketId);
 });
 
 /*
-=========================================
-LIVE PROGRESS
-=========================================
+====================================================
+LIVE LOGS
+====================================================
 */
 
-socket.on("progress", (data) => {
+socket.on("log", (data) => {
 
-  const progressDiv = document.getElementById("progress");
+  const logsDiv = document.getElementById("logs");
 
-  const message = document.createElement("p");
-  message.textContent = data.message;
+  const line = document.createElement("p");
 
-  progressDiv.appendChild(message);
-  progressDiv.scrollTop = progressDiv.scrollHeight;
+  line.innerHTML = `
+    <span style="color:#888">
+      [${new Date(data.time).toLocaleTimeString()}]
+    </span>
+    ${data.message}
+  `;
+
+  logsDiv.appendChild(line);
+  logsDiv.scrollTop = logsDiv.scrollHeight;
 
 });
 
 /*
-=========================================
+====================================================
 FORM SUBMIT
-=========================================
+====================================================
 */
 
 const form = document.getElementById("uploadForm");
@@ -108,27 +126,35 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   resultsDiv.innerHTML = "";
-  document.getElementById("progress").innerHTML =
+  document.getElementById("logs").innerHTML =
     "<p>🚀 Starting analysis...</p>";
 
   const formData = new FormData(form);
   formData.append("socketId", socketId);
 
-  const response = await fetch("/analyze", {
-    method: "POST",
-    body: formData
-  });
+  try {
 
-  const data = await response.json();
+    const response = await fetch("/analyze", {
+      method: "POST",
+      body: formData
+    });
 
-  displayResults(data.results);
+    const data = await response.json();
+
+    displayResults(data.results);
+
+  } catch (err) {
+
+    console.error("Request failed", err);
+
+  }
 
 });
 
 /*
-=========================================
+====================================================
 DISPLAY RESULTS
-=========================================
+====================================================
 */
 
 function displayResults(results) {
@@ -140,15 +166,19 @@ function displayResults(results) {
     const card = document.createElement("div");
     card.className = "result-card";
 
-    let html = `<h3>📷 ${result.image}</h3>`;
+    let html = `
+      <h3>📷 ${result.image}</h3>
+    `;
 
-    if (!result.products || result.products.length === 0) {
+    if (!result.matches || result.matches.length === 0) {
 
-      html += `<p class="no-match">❌ No product matched (≥60%)</p>`;
+      html += `<p class="no-match">
+        ❌ No matches found (≥60%)
+      </p>`;
 
     } else {
 
-      result.products.forEach(product => {
+      result.matches.forEach(product => {
 
         html += `
           <div class="product">
