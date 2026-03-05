@@ -81,38 +81,23 @@ input, select{
   transform:scale(1.1);
 }
 
-/* ================= LOADING BAR ================= */
+/* ================= LOADER ROTATING LOGO ================= */
 
-.loading-container{
-  width:60%;
-  height:25px;
-  background:#111;
-  border-radius:20px;
-  margin-top:20px;
-  overflow:hidden;
-  position:relative;
+.loader-container{
+  margin-top:25px;
+  display:none;
+  justify-content:center;
+  align-items:center;
 }
 
-.flame-bar{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg, red, orange, yellow);
-  transition:width 0.4s ease;
-  position:relative;
+.loader{
+  font-size:40px;
+  animation:spin 1s linear infinite;
 }
 
-.flame-bar::after{
-  content:"🔥";
-  position:absolute;
-  right:-8px;
-  top:-8px;
-  font-size:20px;
-  animation:flameAnim 0.5s infinite alternate;
-}
-
-@keyframes flameAnim{
-  from{ transform:scale(1);}
-  to{ transform:scale(1.4);}
+@keyframes spin{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
 }
 
 /* ================= RESULTS ================= */
@@ -164,8 +149,9 @@ input, select{
 
 </div>
 
-<div class="loading-container">
-<div class="flame-bar" id="progressBar"></div>
+<!-- ✅ LOADER ROTATIF -->
+<div class="loader-container" id="loader">
+<div class="loader">🔥</div>
 </div>
 
 <div id="results"></div>
@@ -175,8 +161,7 @@ input, select{
 <script>
 
 const socket = io();
-let progress = 0;
-const progressBar = document.getElementById("progressBar");
+const loader = document.getElementById("loader");
 
 /* ============================================= */
 /* SEARCH */
@@ -184,11 +169,7 @@ const progressBar = document.getElementById("progressBar");
 
 async function searchEtsy(){
 
-  // 🔥 ACCELERATE MATRIX
-  setMatrixSpeed(10);
-
-  progress = 10;
-  updateProgress();
+  showLoader(); // 🔥 affiche loader
 
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
@@ -201,21 +182,21 @@ async function searchEtsy(){
 
   const data = await response.json();
 
-  // ✅ FIN SCRAPING → RALENTIT MATRIX
-  setMatrixSpeed(50);
-
-  progress = 100;
-  updateProgress();
+  hideLoader(); // ✅ cache loader quand terminé
 
   displayResults(data.results);
 }
 
 /* ============================================= */
-/* PROGRESS BAR */
+/* LOADER CONTROL */
 /* ============================================= */
 
-function updateProgress(){
-  progressBar.style.width = progress + "%";
+function showLoader(){
+  loader.style.display = "flex";
+}
+
+function hideLoader(){
+  loader.style.display = "none";
 }
 
 /* ============================================= */
@@ -238,6 +219,7 @@ function displayResults(results){
     card.className = "result-card";
 
     card.innerHTML = `
+      <img src="${item.image}" width="150"><br>
       🔗 <a href="${item.link}" target="_blank">
         Open Listing
       </a>
@@ -249,20 +231,7 @@ function displayResults(results){
 }
 
 /* ============================================= */
-/* LIVE PROGRESS FROM SERVER */
-/* ============================================= */
-
-socket.on("log", () => {
-
-  progress += 10;
-  if(progress > 90) progress = 90;
-
-  updateProgress();
-
-});
-
-/* ============================================= */
-/* MATRIX BACKGROUND WITH SPEED CONTROL */
+/* MATRIX BACKGROUND */
 /* ============================================= */
 
 const canvas = document.getElementById("matrix");
@@ -276,22 +245,10 @@ const fontSize = 16;
 
 let columns = canvas.width / fontSize;
 let drops = [];
+
 for(let i = 0; i < columns; i++){
   drops[i] = 1;
 }
-
-let matrixSpeed = 50;
-let matrixInterval = setInterval(drawMatrix, matrixSpeed);
-
-/* 🔥 CHANGE SPEED */
-
-function setMatrixSpeed(speed){
-  matrixSpeed = speed;
-  clearInterval(matrixInterval);
-  matrixInterval = setInterval(drawMatrix, matrixSpeed);
-}
-
-/* 🎬 DRAW MATRIX */
 
 function drawMatrix(){
 
@@ -304,7 +261,6 @@ function drawMatrix(){
   for(let i = 0; i < drops.length; i++){
 
     const text = letters[Math.floor(Math.random()*letters.length)];
-
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
     if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
@@ -314,6 +270,8 @@ function drawMatrix(){
     drops[i]++;
   }
 }
+
+setInterval(drawMatrix, 50);
 
 /* RESIZE FIX */
 
