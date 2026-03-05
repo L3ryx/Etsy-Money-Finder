@@ -4,23 +4,35 @@ let socketId = null;
 const progressBar = document.getElementById("progressBar");
 let progress = 0;
 
+/* =============================== */
+/* SOCKET CONNECT */
+/* =============================== */
+
 socket.on("connected", (data) => {
   socketId = data.socketId;
+  console.log("Connected:", socketId);
 });
 
+/* =============================== */
+/* LOG -> PROGRESS BAR */
+/* =============================== */
+
 socket.on("log", (data) => {
+
+  console.log(data.message);
 
   progress += 20;
   if (progress > 100) progress = 100;
 
-  progressBar.style.width = progress + "%";
+  if (progressBar) {
+    progressBar.style.width = progress + "%";
+  }
 
-  console.log(data.message);
 });
 
-/* ======================================== */
-/* SEARCH ETSY */
-/* ======================================== */
+/* ===================================================== */
+/* 🔎 SEARCH ETSY */
+/* ===================================================== */
 
 async function searchEtsy() {
 
@@ -48,20 +60,21 @@ async function searchEtsy() {
 
   const data = await response.json();
 
-  console.log("Scraped:", data.results);
+  console.log("Scraped results:", data.results);
 
-  // 🔥 Pour chaque image → lancer analyse
+  const resultsContainer = document.getElementById("results");
+  resultsContainer.innerHTML = "";
 
   for (const item of data.results) {
 
-    const imgRes = await fetch(item.image);
-    const blob = await imgRes.blob();
+    const imgResponse = await fetch(item.image);
+    const blob = await imgResponse.blob();
 
     const formData = new FormData();
     formData.append("images", blob);
     formData.append("socketId", socketId);
 
-    await fetch("/analyze", {
+    await fetch("/analyze-images", {
       method: "POST",
       body: formData
     });
