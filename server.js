@@ -10,9 +10,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-/* ========================= */
+/* ===================================================== */
 /* MIDDLEWARE */
-/* ========================= */
+/* ===================================================== */
 
 const upload = multer({
   storage: multer.memoryStorage()
@@ -22,9 +22,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-/* ========================= */
-/* SOCKET LOG */
-/* ========================= */
+/* ===================================================== */
+/* SOCKET LOG SYSTEM */
+/* ===================================================== */
 
 function sendLog(socket, message) {
 
@@ -38,9 +38,9 @@ function sendLog(socket, message) {
   }
 }
 
-/* ========================= */
-/* ETSY SEARCH */
-/* ========================= */
+/* ===================================================== */
+/* 🔎 ETSY SEARCH VIA SCRAPERAPI */
+/* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
 
@@ -49,49 +49,49 @@ app.post("/search-etsy", async (req, res) => {
   const { keyword, limit } = req.body;
 
   if (!keyword) {
-    return res.json({ results: [] });
+    return res.status(400).json({ error: "Keyword required" });
   }
 
-  const maxItems = Math.min(parseInt(limit) || 10, 100);
+  const maxItems = Math.min(parseInt(limit) || 10, 300);
 
   try {
 
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    const response = await axios.get("https://api.scraperapi.com/", {
-      params: {
-        api_key: process.env.SCRAPAPI_KEY,
-        url: etsyUrl
-      },
-      timeout: 30000
-    });
+    const scraperResponse = await axios.get(
+      "https://api.scraperapi.com/",
+      {
+        params: {
+          api_key: process.env.SCRAPAPI_KEY,
+          url: etsyUrl,
+          render: true
+        }
+      }
+    );
 
-    const html = response.data;
+    const html = scraperResponse.data;
 
-    if (!html) {
-      console.log("No HTML returned");
-      return res.json({ results: [] });
-    }
+    /* ================================================= */
+    /* EXTRACTION IMAGE + LIEN */
+    /* ================================================= */
 
-    /* EXTRACTION */
+    const imageRegex = /https:\/\/i\.etsystatic\.com\/[^"]+/g;
+    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+[^"]*/g;
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com\/[^\s"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-    const images = html.match(imageRegex) || [];
-    const links = html.match(linkRegex) || [];
-
-    console.log("Images:", images.length);
-    console.log("Links:", links.length);
+    const images = [...new Set(html.match(imageRegex) || [])];
+    const links = [...new Set(html.match(linkRegex) || [])];
 
     const results = [];
 
     for (let i = 0; i < Math.min(maxItems, images.length); i++) {
 
+      const image = images[i];
+      const link = links[i] ? links[i] : "https://www.etsy.com";
+
       results.push({
-        image: images[i],
-        link: links[i] || null
+        image,
+        link
       });
 
     }
@@ -100,22 +100,22 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error("Scraper error:", err.message);
+    console.error("ScraperAPI Error:", err.response?.data || err.message);
 
-    res.json({ results: [] });
+    res.status(500).json({
+      error: "Scraping failed"
+    });
   }
 
 });
 
-/* ========================= */
-/* IMAGE ANALYSIS */
-/* ========================= */
+/* ===================================================== */
+/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   const socketId = req.body.socketId;
-  const listingLink = req.body.listingLink;
-
   const socket = io.sockets.sockets.get(socketId);
 
   const results = [];
@@ -125,6 +125,10 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
+
+    /* ================================================= */
+    /* UPLOAD IMAGE TO IMGBB */
+/* ================================================= */
 
     let imageUrl;
 
@@ -140,13 +144,17 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       imageUrl = uploadRes.data.data.url;
 
-      sendLog(socket, "Image uploaded to IMGBB");
+      sendLog(socket, "Uploaded to IMGBB");
 
     } catch (err) {
 
       sendLog(socket, "IMGBB upload failed");
       continue;
     }
+
+    /* ================================================= */
+    /* OPENAI VISION ANALYSIS */
+/* ================================================= */
 
     try {
 
@@ -158,8 +166,16 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
             {
               role: "user",
               content: [
-                { type: "text", text: "Return similarity score between 0 and 100." },
-                { type: "image_url", image_url: { url: imageUrl } }
+                {
+                  type: "text",
+                  text: "Return similarity score between 0 and 100."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl
+                  }
+                }
               ]
             }
           ]
@@ -178,12 +194,16 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       const similarity = match ? parseInt(match[0]) : 0;
 
-      sendLog(socket, `Similarity: ${similarity}%`);
+      sendLog(socket, `AI Similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
-        listing: listingLink,
-        similarity
+        matches: [
+          {
+            url: imageUrl,
+            similarity
+          }
+        ]
       });
 
     } catch (err) {
@@ -197,9 +217,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
 });
 
-/* ========================= */
-/* SOCKET */
-/* ========================= */
+/* ===================================================== */
+/* SOCKET CONNECTION */
+/* ===================================================== */
 
 io.on("connection", (socket) => {
 
@@ -211,14 +231,12 @@ io.on("connection", (socket) => {
 
 });
 
-/* ========================= */
-/* START SERVER */
-/* ========================= */
+/* ===================================================== */
+/* SERVER START */
+/* ===================================================== */
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-
   console.log("🚀 Server running on port", PORT);
-
 });
