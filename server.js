@@ -39,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI */
+/* 🔎 ETSY SEARCH (JSON API STABLE VERSION) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -56,41 +56,39 @@ app.post("/search-etsy", async (req, res) => {
 
   try {
 
-    const etsyUrl =
-      `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+    /* ✅ ON UTILISE L’API JSON INTERNE ETSY */
+    const apiUrl =
+      `https://www.etsy.com/api/v3/ajax/search?q=${encodeURIComponent(keyword)}`;
 
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
         params: {
           api_key: process.env.SCRAPAPI_KEY,
-          url: etsyUrl,
-          render: true
+          url: apiUrl,
+          render: false
         }
       }
     );
 
-    const html = scraperResponse.data || "";
+    const data = scraperResponse.data;
 
     const results = [];
 
-    /* ===================================================== */
-    /* EXTRACTION LIEN + IMAGE EXACT */
-/* ===================================================== */
+    if (data && data.results) {
 
-    const regex =
-      /href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)".*?(https:\/\/i\.etsystatic\.com[^"]+)/g;
+      for (let i = 0; i < Math.min(maxItems, data.results.length); i++) {
 
-    let match;
+        const item = data.results[i];
 
-    while ((match = regex.exec(html)) !== null) {
+        results.push({
+          link: `https://www.etsy.com/listing/${item.listing_id}`,
+          image:
+            item.images?.[0]?.url_170x135 ||
+            item.images?.[0]?.url_fullxfull
+        });
 
-      if (results.length >= maxItems) break;
-
-      results.push({
-        link: match[1],
-        image: match[2]
-      });
+      }
 
     }
 
@@ -98,7 +96,7 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.message);
+    console.error("Scraper Error:", err.message);
 
     res.json({ results: [] });
   }
@@ -112,7 +110,7 @@ app.post("/search-etsy", async (req, res) => {
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
   const socketId = req.body.socketId;
-  const listingLink = req.body.listingLink; // 🔥 LIEN ETSY REÇU
+  const listingLink = req.body.listingLink; // 🔥 Lien Etsy reçu
   const socket = io.sockets.sockets.get(socketId);
 
   const results = [];
@@ -197,7 +195,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       results.push({
         image: file.originalname,
-        listing: listingLink, // 🔥 ON GARDE LE LIEN ETSY
+        listing: listingLink,
         matches: [
           {
             similarity
