@@ -1,53 +1,34 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Etsy Finder</title>
-
-<link rel="stylesheet" href="style.css">
-<script src="/socket.io/socket.io.js"></script>
-
+  <meta charset="UTF-8">
+  <title>Etsy Money Finder</title>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-<canvas id="matrix"></canvas>
+<h1>Etsy Search</h1>
 
-<h1 class="title">Etsy Money Finder</h1>
+<!-- SEARCH FORM -->
+<form id="searchForm">
+  <input type="text" id="keyword" placeholder="Keyword" required />
+  <input type="number" id="limit" value="10" />
+  <button type="submit">Search</button>
+</form>
 
-<div class="main-center">
-
-<!-- SEARCH MODULE -->
-
-<div class="search-box">
-
-<input type="text" id="keyword" placeholder="Keyword">
-
-<select id="limit">
-<option value="1">1</option>
-<option value="10">10</option>
-<option value="50">50</option>
-<option value="100">100</option>
-<option value="300">300</option>
-</select>
-
-<button onclick="searchEtsy()" class="big-start-btn">
-🔎 Search
-</button>
-
-</div>
-
-<!-- LOADING BAR -->
-
-<div class="loading-container">
-<div class="flame-bar" id="progressBar"></div>
-</div>
+<hr>
 
 <div id="results"></div>
 
-</div>
+<hr>
+
+<!-- IMAGE ANALYSIS -->
+<form id="analyzeForm">
+  <input type="file" id="imageInput" multiple />
+  <button type="submit">Analyze Image</button>
+</form>
+
+<div id="logs"></div>
 
 <script src="script.js"></script>
 
