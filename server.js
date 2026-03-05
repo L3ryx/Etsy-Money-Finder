@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* LOG SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket, message) {
@@ -39,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI */
+/* ETSY SEARCH VIA SCRAPERAPI */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -48,11 +48,7 @@ app.post("/search-etsy", async (req, res) => {
 
   const { keyword, limit } = req.body;
 
-  if (!keyword) {
-    return res.status(400).json({ error: "Keyword required" });
-  }
-
-  const maxItems = Math.min(parseInt(limit) || 10, 300);
+  const maxItems = Math.min(parseInt(limit) || 10, 50);
 
   try {
 
@@ -73,28 +69,27 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ================================================= */
-    /* EXTRACTION IMAGE + LIEN */
-    /* ================================================= */
+    /* EXTRACTION IMAGE + LIEN CORRECTE */
+/* ================================================= */
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com\/[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+[^"]*/g;
+const productRegex = /<a[^>]*href="(\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="(https:\/\/i\.etsystatic\.com[^"]+)"/g;
 
-    const images = [...new Set(html.match(imageRegex) || [])];
-    const links = [...new Set(html.match(linkRegex) || [])];
+const results = [];
+let match;
 
-    const results = [];
+while ((match = productRegex.exec(html)) !== null && results.length < maxItems) {
 
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+  const link = "https://www.etsy.com" + match[1];
+  const image = match[2];
 
-      const image = images[i];
-      const link = links[i] ? links[i] : "https://www.etsy.com";
+  results.push({
+    image,
+    link
+  });
 
-      results.push({
-        image,
-        link
-      });
+}
 
-    }
+    console.log("Images trouvées :", results.length);
 
     res.json({ results });
 
@@ -110,7 +105,7 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ===================================================== */
-/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* IMAGE ANALYSIS */
 /* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
@@ -125,10 +120,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
-
-    /* ================================================= */
-    /* UPLOAD IMAGE TO IMGBB */
-/* ================================================= */
 
     let imageUrl;
 
@@ -151,10 +142,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       sendLog(socket, "IMGBB upload failed");
       continue;
     }
-
-    /* ================================================= */
-    /* OPENAI VISION ANALYSIS */
-/* ================================================= */
 
     try {
 
@@ -182,19 +169,14 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json"
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
           }
         }
       );
 
       const text = vision.data.choices[0].message.content;
-
       const match = text.match(/\d+/);
-
       const similarity = match ? parseInt(match[0]) : 0;
-
-      sendLog(socket, `AI Similarity: ${similarity}%`);
 
       results.push({
         image: file.originalname,
@@ -210,7 +192,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       sendLog(socket, "OpenAI Vision failed");
     }
-
   }
 
   res.json({ results });
@@ -218,7 +199,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 });
 
 /* ===================================================== */
-/* SOCKET CONNECTION */
+/* SOCKET */
 /* ===================================================== */
 
 io.on("connection", (socket) => {
@@ -232,11 +213,13 @@ io.on("connection", (socket) => {
 });
 
 /* ===================================================== */
-/* SERVER START */
+/* SERVER */
 /* ===================================================== */
 
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
+
   console.log("🚀 Server running on port", PORT);
+
 });
