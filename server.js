@@ -1,77 +1,250 @@
+require("dotenv").config();
+
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
-const cheerio = require("cheerio");
-const FormData = require("form-data");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
+const server = http.createServer(app);
+const io = new Server(server);
 
+/* ===================================================== */
+/* MIDDLEWARE */
+/* ===================================================== */
+
+const upload = multer({
+  storage: multer.memoryStorage()
+});
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-const SCRAPER_API = "TA_CLE_SCRAPERAPI";
-const IMGBB_API = "TA_CLE_IMGBB";
+/* ===================================================== */
+/* SOCKET LOG SYSTEM */
+/* ===================================================== */
 
-app.post("/search", upload.single("image"), async (req, res) => {
+function sendLog(socket, message) {
 
-    try {
+  console.log(message);
 
-        // upload image vers imgbb
-        const form = new FormData();
-        form.append("image", req.file.buffer.toString("base64"));
+  if (socket) {
+    socket.emit("log", {
+      message,
+      time: new Date().toISOString()
+    });
+  }
+}
 
-        const upload = await axios.post(
-            `https://api.imgbb.com/1/upload?key=${IMGBB_API}`,
-            form
-        );
+/* ===================================================== */
+/* 🔎 ETSY SEARCH */
+/* ===================================================== */
 
-        const imageUrl = upload.data.data.url;
+app.post("/search-etsy", async (req, res) => {
 
-        // recherche Etsy
-        const searchUrl = `https://www.etsy.com/search?q=${encodeURIComponent(imageUrl)}`;
+  console.log("🔥 Search route called");
 
-        const response = await axios.get("https://api.scraperapi.com/", {
-            params: {
-                api_key: SCRAPER_API,
-                url: searchUrl,
-                render: true
-            }
+  const { keyword, limit } = req.body;
+
+  if (!keyword) {
+    return res.status(400).json({ error: "Keyword required" });
+  }
+
+  const maxItems = Math.min(parseInt(limit) || 10, 50);
+
+  try {
+
+    const etsyUrl =
+      `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+    const scraperResponse = await axios.get(
+      "https://api.scraperapi.com/",
+      {
+        params: {
+          api_key: process.env.SCRAPAPI_KEY,
+          url: etsyUrl,
+          render: true
+        }
+      }
+    );
+
+    const html = scraperResponse.data;
+
+    /* ================================================= */
+    /* ✅ EXTRACTION PROPRE IMAGE + LIEN */
+/* ================================================= */
+
+    const results = [];
+
+    const $ = require("cheerio").load(html);
+
+    $("a").each((i, el) => {
+
+      const linkRaw = $(el).attr("href");
+      const img =
+        $(el).find("img").attr("src") ||
+        $(el).find("img").attr("data-src");
+
+      if (!linkRaw || !img) return;
+
+      if (linkRaw.includes("/listing/")) {
+
+        const fullLink = linkRaw.startsWith("http")
+          ? linkRaw
+          : "https://www.etsy.com" + linkRaw;
+
+        results.push({
+          image: img,
+          link: fullLink
         });
 
-        const $ = cheerio.load(response.data);
+      }
 
-        const results = [];
+    });
 
-        $("li.wt-list-unstyled").each((i, el) => {
+    /* Limite propre */
 
-            const img =
-                $(el).find("img").attr("src") ||
-                $(el).find("img").attr("data-src");
+    const limited = results.slice(0, maxItems);
 
-            const link = $(el).find("a").attr("href");
+    res.json({ results: limited });
 
-            if (img && link && link.includes("/listing/")) {
+  } catch (err) {
 
-                results.push({
-                    image: img,
-                    link: link.startsWith("http") ? link : "https://www.etsy.com" + link
-                });
+    console.error("ScraperAPI Error:", err.message);
 
-            }
-
-        });
-
-        res.json(results);
-
-    } catch (err) {
-
-        console.log(err);
-        res.status(500).send("Search failed");
-
-    }
+    res.status(500).json({
+      error: "Scraping failed"
+    });
+  }
 
 });
 
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
+/* ===================================================== */
+/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* ===================================================== */
+
+app.post("/analyze-images", upload.array("images"), async (req, res) => {
+
+  const socketId = req.body.socketId;
+  const socket = io.sockets.sockets.get(socketId);
+
+  const results = [];
+
+  for (const file of req.files) {
+
+    sendLog(socket, `Processing ${file.originalname}`);
+
+    const base64 = file.buffer.toString("base64");
+
+    /* ================================================= */
+    /* UPLOAD TO IMGBB */
+/* ================================================= */
+
+    let imageUrl;
+
+    try {
+
+      const uploadRes = await axios.post(
+        "https://api.imgbb.com/1/upload",
+        new URLSearchParams({
+          key: process.env.IMGBB_KEY,
+          image: base64
+        })
+      );
+
+      imageUrl = uploadRes.data.data.url;
+
+      sendLog(socket, "Uploaded to IMGBB");
+
+    } catch (err) {
+
+      sendLog(socket, "IMGBB upload failed");
+      continue;
+    }
+
+    /* ================================================= */
+    /* OPENAI VISION */
+/* ================================================= */
+
+    try {
+
+      const vision = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Return similarity score between 0 and 100."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      const text = vision.data.choices[0].message.content;
+      const match = text.match(/\d+/);
+      const similarity = match ? parseInt(match[0]) : 0;
+
+      sendLog(socket, `AI Similarity: ${similarity}%`);
+
+      results.push({
+        image: file.originalname,
+        matches: [
+          {
+            url: imageUrl,
+            similarity
+          }
+        ]
+      });
+
+    } catch (err) {
+
+      sendLog(socket, "OpenAI Vision failed");
+    }
+  }
+
+  res.json({ results });
+
+});
+
+/* ===================================================== */
+/* SOCKET */
+/* ===================================================== */
+
+io.on("connection", (socket) => {
+
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+
+  console.log("🟢 Client connected");
+});
+
+/* ===================================================== */
+/* SERVER START */
+/* ===================================================== */
+
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
 });
