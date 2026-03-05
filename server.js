@@ -233,23 +233,4 @@ const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT);
-});  } catch (err) {
-
-    console.error("Scraping error:", err.message);
-
-    if (socket) {
-      socket.emit("progress", { percent: 0 });
-    }
-
-    res.status(500).json({ error: "Scraping failed" });
-  }
-
-});
-
-/* ================= SERVER START ================= */
-
-const PORT = process.env.PORT || 10000;
-
-server.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
 });
