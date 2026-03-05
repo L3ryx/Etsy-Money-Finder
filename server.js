@@ -4,6 +4,7 @@ const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
+const FormData = require("form-data");
 
 const app = express();
 const server = http.createServer(app);
@@ -22,31 +23,19 @@ LOG SYSTEM
 */
 
 function sendLog(socket, message) {
-  const logMessage = {
-    message,
-    time: new Date().toISOString()
-  };
-
   console.log("LOG:", message);
 
   if (socket) {
-    socket.emit("log", logMessage);
+    socket.emit("log", {
+      message,
+      time: new Date().toISOString()
+    });
   }
 }
 
 /*
 ====================================================
-UTILS
-====================================================
-*/
-
-function toBase64(buffer) {
-  return buffer.toString("base64");
-}
-
-/*
-====================================================
-REAL IMAGE SIMILARITY (OPENAI)
+IMAGE SIMILARITY (OPENAI)
 ====================================================
 */
 
@@ -82,8 +71,7 @@ async function calculateSimilarity(base64A, base64B) {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
         }
       }
     );
@@ -101,7 +89,7 @@ async function calculateSimilarity(base64A, base64B) {
 
 /*
 ====================================================
-ANALYSIS ROUTE
+ANALYZE ROUTE
 ====================================================
 */
 
@@ -120,54 +108,62 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
   for (const file of req.files) {
 
-    sendLog(socket, `🖼 Processing image: ${file.originalname}`);
+    sendLog(socket, `🖼 Processing image ${file.originalname}`);
 
-    const base64Input = toBase64(file.buffer);
+    const base64Input = file.buffer.toString("base64");
 
     /*
     ====================================================
-    ALIEXPRESS IMAGE SEARCH
+    1️⃣ CALL OFFICIAL ALIEXPRESS IMAGE SEARCH API
     ====================================================
     */
 
-    sendLog(socket, "🔎 Searching AliExpress image search");
+    sendLog(socket, "🔎 Calling AliExpress image search API");
 
-    const searchResponse = await axios.get(
-      "http://api.scraperapi.com",
-      {
-        params: {
-          api_key: process.env.SCRAPERAPI_KEY,
-          url: "https://www.aliexpress.com/p/uploadImage/search",
-          render: true
+    let productsData = [];
+
+    try {
+
+      const form = new FormData();
+      form.append("image", file.buffer, {
+        filename: "image.jpg"
+      });
+
+      const searchResponse = await axios.post(
+        "https://www.aliexpress.com/aer-api/search/image",
+        form,
+        {
+          headers: {
+            ...form.getHeaders()
+          }
         }
-      }
-    );
+      );
 
-    const html = searchResponse.data;
+      productsData = searchResponse.data?.data?.products || [];
 
-    /*
-    ====================================================
-    EXTRACT PRODUCTS (TOP 10)
-    ====================================================
-    */
+      sendLog(socket, `📦 ${productsData.length} products returned`);
 
-    const matches = [...html.matchAll(/"productId":"(.*?)"/g)]
-      .slice(0, 10);
+    } catch (err) {
 
-    sendLog(socket, `📦 ${matches.length} products extracted`);
+      sendLog(socket, "❌ Image search API failed");
+      productsData = [];
 
-    const products = [];
+    }
+
+    const matchedProducts = [];
 
     /*
     ====================================================
-    PROCESS PRODUCTS PARALLEL
+    2️⃣ PROCESS TOP 10 PRODUCTS
     ====================================================
     */
+
+    const topProducts = productsData.slice(0, 10);
 
     await Promise.all(
-      matches.map(async (match) => {
+      topProducts.map(async (product) => {
 
-        const productId = match[1];
+        const productId = product.productId;
 
         const productUrl =
           "https://www.aliexpress.com/item/" +
@@ -176,29 +172,11 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
         try {
 
-          sendLog(socket, `🔍 Loading product ${productId}`);
+          sendLog(socket, `🔍 Checking product ${productId}`);
 
-          const productPage = await axios.get(
-            "http://api.scraperapi.com",
-            {
-              params: {
-                api_key: process.env.SCRAPERAPI_KEY,
-                url: productUrl,
-                render: true
-              }
-            }
-          );
+          const productImageUrl = product.imageUrl;
 
-          const productHtml = productPage.data;
-
-          const imageMatch = productHtml.match(/"imageUrl":"(.*?)"/);
-
-          if (!imageMatch) return;
-
-          const productImageUrl =
-            imageMatch[1].replace(/\\\//g, "/");
-
-          sendLog(socket, "🖼 Downloading product image");
+          if (!productImageUrl) return;
 
           const imgResponse = await axios.get(productImageUrl, {
             responseType: "arraybuffer"
@@ -207,7 +185,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           const base64Product =
             Buffer.from(imgResponse.data).toString("base64");
 
-          sendLog(socket, "🤖 AI Comparing images");
+          sendLog(socket, "🤖 AI comparing images");
 
           const similarityRaw = await calculateSimilarity(
             base64Input,
@@ -218,27 +196,25 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
           if (similarity >= 60) {
 
-            sendLog(socket, `✅ Match found (${similarity}%)`);
+            sendLog(socket, `✅ Match found ${similarity}%`);
 
-            products.push({
+            matchedProducts.push({
               url: productUrl,
               similarity
             });
-
           } else {
 
-            sendLog(socket, `❌ Product rejected (${similarity}%)`);
-
+            sendLog(socket, `❌ Rejected ${similarity}%`);
           }
 
-        } catch (err) {
+        } catch {
           sendLog(socket, "⚠ Product processing failed");
         }
 
       })
     );
 
-    const sorted = products.sort(
+    const sorted = matchedProducts.sort(
       (a, b) => b.similarity - a.similarity
     );
 
@@ -248,11 +224,9 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
       image: file.originalname,
       matches: sorted
     });
-
   }
 
   res.json({ results });
-
 });
 
 /*
