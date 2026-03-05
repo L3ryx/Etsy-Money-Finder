@@ -2,115 +2,199 @@ require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /*
 ====================================================
-IMAGE ANALYSIS PIPELINE
+UTILS
 ====================================================
 */
+
+function toBase64(buffer) {
+  return buffer.toString("base64");
+}
+
+function emitProgress(socket, message) {
+  if (socket) {
+    socket.emit("progress", {
+      message,
+      time: new Date().toISOString()
+    });
+  }
+}
+
+/*
+====================================================
+ANALYSIS ROUTE
+====================================================
+*/
+
 app.post("/analyze", upload.array("images"), async (req, res) => {
+
+  console.log("🟢 /analyze request received");
+
+  const socketId = req.body.socketId;
+  const socket = io.sockets.sockets.get(socketId);
+
+  console.log("🔎 Socket ID:", socketId);
+
+  const results = [];
+
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "No images uploaded" });
   }
 
-  const results = [];
-
   for (const file of req.files) {
-    try {
-      console.log("Analyzing:", file.originalname);
 
-      const base64Image = file.buffer.toString("base64");
+    emitProgress(socket, "📥 Image received");
 
-      /*
-      ====================================================
-      1️⃣ ZENSERP REVERSE IMAGE SEARCH
-      ====================================================
-      */
+    const base64Input = toBase64(file.buffer);
 
-      const zenserpResponse = await axios.get(
-        "https://app.zenserp.com/api/v2/search",
-        {
-          params: {
-            apikey: process.env.ZENSERP_API_KEY,
-            tbm: "isch",
-            image_url: `data:image/jpeg;base64,${base64Image}`
-          }
+    /*
+    ====================================================
+    1️⃣ SEARCH ALIEXPRESS IMAGE SEARCH
+    ====================================================
+    */
+
+    emitProgress(socket, "🔎 Searching on AliExpress image search");
+
+    const searchResponse = await axios.get(
+      "http://api.scraperapi.com",
+      {
+        params: {
+          api_key: process.env.SCRAPERAPI_KEY,
+          url: "https://www.aliexpress.com/p/uploadImage/search",
+          render: true
         }
-      );
+      }
+    );
 
-      const organic = zenserpResponse.data.organic || [];
+    const html = searchResponse.data;
 
-      const aliexpressLinks = organic
-        .map(item => item.link)
-        .filter(link => link && link.includes("aliexpress.com"));
+    emitProgress(socket, "📦 Extracting products from page");
 
-      console.log("AliExpress Links:", aliexpressLinks);
+    /*
+    ====================================================
+    2️⃣ EXTRACT PRODUCTS (TOP 10)
+    ====================================================
+    */
 
-      /*
-      ====================================================
-      2️⃣ SCRAPERAPI SCRAPE PRODUITS
-      ====================================================
-      */
+    const matches = [...html.matchAll(/"productId":"(.*?)"/g)]
+      .slice(0, 10);
 
-      const products = [];
+    const products = [];
 
-      for (const link of aliexpressLinks) {
+    emitProgress(socket, "🖼 Comparing product images");
+
+    /*
+    ====================================================
+    3️⃣ PROCESS PRODUCTS IN PARALLEL
+    ====================================================
+    */
+
+    await Promise.all(
+      matches.map(async (match) => {
+
+        const productId = match[1];
+
+        const productUrl =
+          "https://www.aliexpress.com/item/" +
+          productId +
+          ".html";
+
         try {
-          const scrapeResponse = await axios.get(
+
+          const productPage = await axios.get(
             "http://api.scraperapi.com",
             {
               params: {
                 api_key: process.env.SCRAPERAPI_KEY,
-                url: link,
+                url: productUrl,
                 render: true
               }
             }
           );
 
-          const html = scrapeResponse.data;
+          const productHtml = productPage.data;
 
-          const titleMatch = html.match(/<title>(.*?)<\/title>/);
-          const priceMatch = html.match(/"price":"(.*?)"/);
+          const imageMatch = productHtml.match(/"imageUrl":"(.*?)"/);
 
-          products.push({
-            url: link,
-            title: titleMatch ? titleMatch[1] : "Unknown",
-            price: priceMatch ? priceMatch[1] : "Unknown"
+          if (!imageMatch) return;
+
+          const productImageUrl =
+            imageMatch[1].replace(/\\\//g, "/");
+
+          // Download product image
+          const imgResponse = await axios.get(productImageUrl, {
+            responseType: "arraybuffer"
           });
 
+          const base64Product =
+            Buffer.from(imgResponse.data).toString("base64");
+
+          /*
+          ====================================================
+          4️⃣ FAKE SIMULATION (REPLACE WITH REAL AI LATER)
+          ====================================================
+          */
+
+          // ⚡ Temporary similarity (Replace with real OpenAI compare later)
+          const similarity = Math.floor(Math.random() * 40) + 60;
+
+          if (similarity >= 60) {
+
+            products.push({
+              url: productUrl,
+              similarity
+            });
+
+          }
+
         } catch (err) {
-          console.log("Scraper failed for:", link);
+          console.log("Product check failed");
         }
-      }
 
-      /*
-      ====================================================
-      3️⃣ RESULT FINAL
-      ====================================================
-      */
+      })
+    );
 
-      results.push({
-        image: file.originalname,
-        products
-      });
+    emitProgress(socket, "✅ Product analysis finished");
 
-    } catch (err) {
-      console.log("Pipeline error:", err.message);
+    results.push({
+      image: file.originalname,
+      products
+    });
 
-      results.push({
-        image: file.originalname,
-        products: []
-      });
-    }
   }
 
   res.json({ results });
+
+});
+
+/*
+====================================================
+SOCKET.IO CONNECTION
+====================================================
+*/
+
+io.on("connection", (socket) => {
+
+  console.log("🟢 Client connected:", socket.id);
+
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+
 });
 
 /*
@@ -118,8 +202,9 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 START SERVER
 ====================================================
 */
+
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+server.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
 });
