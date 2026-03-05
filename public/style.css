@@ -1,17 +1,105 @@
+/* ============================= */
+/* GLOBAL */
+/* ============================= */
+
 body {
-  font-family: Arial;
-  padding: 40px;
-  background: #f4f4f4;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: black;
+  color: white;
+  overflow-x: hidden;
 }
 
-button {
-  padding: 10px 15px;
+/* ============================= */
+/* MATRIX CANVAS */
+/* ============================= */
+
+#matrix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+/* ============================= */
+/* TITLE (TOP CENTER) */
+/* ============================= */
+
+.title {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 50px;
+  font-weight: bold;
+  text-shadow:
+    0 0 10px #00ff88,
+    0 0 20px #00ff88;
+}
+
+/* ============================= */
+/* CENTER CONTAINER */
+/* ============================= */
+
+.main-center {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ============================= */
+/* BIG START BUTTON */
+/* ============================= */
+
+.big-start-btn {
+  background: #00ff00;
+  border: none;
+  padding: 25px 120px;
+  font-size: 35px;
+  font-weight: bold;
+  border-radius: 20px;
   cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 0 40px #00ff00;
 }
 
-.card {
-  background: white;
-  padding: 20px;
-  margin-top: 15px;
-  border-radius: 10px;
+.big-start-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 80px #00ff00;
+}
+
+/* ============================= */
+/* LOADING BAR (FIRE STYLE) */
+/* ============================= */
+
+.loading-container {
+  width: 70%;
+  height: 40px;
+  background: #111;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 50px;
+  box-shadow: 0 0 20px red;
+}
+
+.flame-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(
+    90deg,
+    red,
+    orange,
+    yellow
+  );
+  transition: width 0.8s ease;
+}
+
+/* ============================= */
+/* HIDE LOGS VISUALLY */
+/* ============================= */
+
+#logs {
+  display: none;
 }
