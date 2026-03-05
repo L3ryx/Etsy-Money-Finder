@@ -36,18 +36,71 @@ function emitProgress(socket, message) {
 
 /*
 ====================================================
+REAL IMAGE SIMILARITY (OPENAI)
+====================================================
+*/
+
+async function calculateSimilarity(base64A, base64B) {
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Compare these two product images and return ONLY a similarity score between 0 and 1."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64A}`
+                }
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64B}`
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const text = response.data.choices[0].message.content;
+    const match = text.match(/0\.\d+|1(\.0+)?/);
+
+    return match ? parseFloat(match[0]) : 0;
+
+  } catch (err) {
+    console.log("Similarity error:", err.message);
+    return 0;
+  }
+}
+
+/*
+====================================================
 ANALYSIS ROUTE
 ====================================================
 */
 
 app.post("/analyze", upload.array("images"), async (req, res) => {
 
-  console.log("🟢 /analyze request received");
+  console.log("🟢 Analysis request received");
 
   const socketId = req.body.socketId;
   const socket = io.sockets.sockets.get(socketId);
-
-  console.log("🔎 Socket ID:", socketId);
 
   const results = [];
 
@@ -63,11 +116,11 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     /*
     ====================================================
-    1️⃣ SEARCH ALIEXPRESS IMAGE SEARCH
+    SEARCH IMAGE ON ALIEXPRESS
     ====================================================
     */
 
-    emitProgress(socket, "🔎 Searching on AliExpress image search");
+    emitProgress(socket, "🔎 Searching AliExpress image search");
 
     const searchResponse = await axios.get(
       "http://api.scraperapi.com",
@@ -82,24 +135,22 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     const html = searchResponse.data;
 
-    emitProgress(socket, "📦 Extracting products from page");
-
     /*
     ====================================================
-    2️⃣ EXTRACT PRODUCTS (TOP 10)
+    EXTRACT TOP 10 PRODUCTS
     ====================================================
     */
 
     const matches = [...html.matchAll(/"productId":"(.*?)"/g)]
       .slice(0, 10);
 
-    const products = [];
+    emitProgress(socket, `📦 ${matches.length} products found`);
 
-    emitProgress(socket, "🖼 Comparing product images");
+    const products = [];
 
     /*
     ====================================================
-    3️⃣ PROCESS PRODUCTS IN PARALLEL
+    PROCESS PRODUCTS IN PARALLEL
     ====================================================
     */
 
@@ -114,6 +165,8 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           ".html";
 
         try {
+
+          emitProgress(socket, "🔍 Loading product page");
 
           const productPage = await axios.get(
             "http://api.scraperapi.com",
@@ -135,7 +188,8 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           const productImageUrl =
             imageMatch[1].replace(/\\\//g, "/");
 
-          // Download product image
+          emitProgress(socket, "🖼 Downloading product image");
+
           const imgResponse = await axios.get(productImageUrl, {
             responseType: "arraybuffer"
           });
@@ -143,14 +197,14 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           const base64Product =
             Buffer.from(imgResponse.data).toString("base64");
 
-          /*
-          ====================================================
-          4️⃣ FAKE SIMULATION (REPLACE WITH REAL AI LATER)
-          ====================================================
-          */
+          emitProgress(socket, "🤖 AI Comparing images");
 
-          // ⚡ Temporary similarity (Replace with real OpenAI compare later)
-          const similarity = Math.floor(Math.random() * 40) + 60;
+          const similarityRaw = await calculateSimilarity(
+            base64Input,
+            base64Product
+          );
+
+          const similarity = Math.round(similarityRaw * 100);
 
           if (similarity >= 60) {
 
@@ -162,17 +216,27 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
           }
 
         } catch (err) {
-          console.log("Product check failed");
+          console.log("Product processing failed");
         }
 
       })
     );
 
-    emitProgress(socket, "✅ Product analysis finished");
+    /*
+    ====================================================
+    SORT BY BEST MATCH
+    ====================================================
+    */
+
+    const sorted = products.sort(
+      (a, b) => b.similarity - a.similarity
+    );
+
+    emitProgress(socket, "✅ Analysis finished");
 
     results.push({
       image: file.originalname,
-      products
+      matches: sorted
     });
 
   }
