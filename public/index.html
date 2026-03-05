@@ -11,17 +11,15 @@
 
 <style>
 
-/* ================= GLOBAL ================= */
-
 body{
   margin:0;
   background:black;
-  font-family:Arial;
   color:white;
+  font-family:Arial;
   overflow:hidden;
 }
 
-/* ================= MATRIX ================= */
+/* MATRIX */
 
 #matrix{
   position:fixed;
@@ -32,16 +30,15 @@ body{
   z-index:-1;
 }
 
-/* ================= TITLE ================= */
+/* TITLE */
 
 .title{
   text-align:center;
-  font-size:32px;
   margin-top:30px;
-  font-weight:bold;
+  font-size:32px;
 }
 
-/* ================= CENTER ================= */
+/* CENTER */
 
 .main-center{
   display:flex;
@@ -50,13 +47,7 @@ body{
   margin-top:40px;
 }
 
-/* ================= SEARCH ================= */
-
-.search-box{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
+/* INPUT */
 
 input, select{
   padding:8px;
@@ -64,24 +55,18 @@ input, select{
   border:none;
 }
 
-/* ================= START BUTTON ================= */
+/* START BUTTON */
 
 .start-btn{
   background:#00ff66;
   border:none;
-  padding:6px 18px;
+  padding:6px 16px;
   border-radius:20px;
-  font-size:13px;
   font-weight:bold;
   cursor:pointer;
-  transition:0.2s;
 }
 
-.start-btn:hover{
-  transform:scale(1.1);
-}
-
-/* ================= LOADING BAR ================= */
+/* PROGRESS */
 
 .loading-container{
   width:60%;
@@ -90,14 +75,13 @@ input, select{
   border-radius:20px;
   margin-top:20px;
   overflow:hidden;
-  position:relative;
 }
 
 .flame-bar{
   height:100%;
   width:0%;
   background:linear-gradient(90deg, red, orange, yellow);
-  transition:width 0.4s ease;
+  transition:width 0.3s ease;
   position:relative;
 }
 
@@ -106,28 +90,26 @@ input, select{
   position:absolute;
   right:-8px;
   top:-8px;
-  font-size:20px;
-  animation:flameAnim 0.5s infinite alternate;
+  animation:flame 0.5s infinite alternate;
 }
 
-@keyframes flameAnim{
+@keyframes flame{
   from{ transform:scale(1);}
   to{ transform:scale(1.4);}
 }
 
-/* ================= RESULTS ================= */
+/* RESULTS */
 
 #results{
   margin-top:20px;
-  width:80%;
   text-align:center;
 }
 
 .result-card{
   background:#111;
   padding:15px;
+  margin:10px;
   border-radius:10px;
-  margin:10px 0;
 }
 
 .result-card a{
@@ -146,19 +128,17 @@ input, select{
 
 <div class="main-center">
 
-<div class="search-box">
+<div>
 
 <input type="text" id="keyword" placeholder="Keyword">
 
 <select id="limit">
-<option value="1">1</option>
 <option value="10">10</option>
 <option value="50">50</option>
 <option value="100">100</option>
-<option value="300">300</option>
 </select>
 
-<button onclick="searchEtsy()" class="start-btn">
+<button class="start-btn" onclick="searchEtsy()">
 🚀 START
 </button>
 
@@ -177,18 +157,30 @@ input, select{
 const socket = io();
 let progress = 0;
 const progressBar = document.getElementById("progressBar");
+let socketId = null;
 
-/* ============================================= */
+/* SOCKET CONNECTION */
+
+socket.on("connected", data => {
+  socketId = data.socketId;
+});
+
+/* 🔥 REAL PROGRESS FROM SERVER */
+
+socket.on("progress", data => {
+
+  progress = data.percent;
+
+  if(progress > 100) progress = 100;
+
+  progressBar.style.width = progress + "%";
+});
+
 /* SEARCH */
-/* ============================================= */
 
 async function searchEtsy(){
 
-  // 🔥 ACCELERATE MATRIX
-  setMatrixSpeed(10);
-
-  progress = 10;
-  updateProgress();
+  progressBar.style.width = "10%";
 
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
@@ -196,31 +188,19 @@ async function searchEtsy(){
   const response = await fetch("/search-etsy", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ keyword, limit })
+    body: JSON.stringify({
+      keyword,
+      limit,
+      socketId
+    })
   });
 
   const data = await response.json();
 
-  // ✅ FIN SCRAPING → RALENTIT MATRIX
-  setMatrixSpeed(50);
-
-  progress = 100;
-  updateProgress();
-
   displayResults(data.results);
 }
 
-/* ============================================= */
-/* PROGRESS BAR */
-/* ============================================= */
-
-function updateProgress(){
-  progressBar.style.width = progress + "%";
-}
-
-/* ============================================= */
 /* RESULTS */
-/* ============================================= */
 
 function displayResults(results){
 
@@ -248,22 +228,7 @@ function displayResults(results){
   });
 }
 
-/* ============================================= */
-/* LIVE PROGRESS FROM SERVER */
-/* ============================================= */
-
-socket.on("log", () => {
-
-  progress += 10;
-  if(progress > 90) progress = 90;
-
-  updateProgress();
-
-});
-
-/* ============================================= */
-/* MATRIX BACKGROUND WITH SPEED CONTROL */
-/* ============================================= */
+/* MATRIX */
 
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
@@ -276,24 +241,21 @@ const fontSize = 16;
 
 let columns = canvas.width / fontSize;
 let drops = [];
+
 for(let i = 0; i < columns; i++){
   drops[i] = 1;
 }
 
-let matrixSpeed = 50;
-let matrixInterval = setInterval(drawMatrix, matrixSpeed);
+let speed = 50;
+let interval = setInterval(draw, speed);
 
-/* 🔥 CHANGE SPEED */
-
-function setMatrixSpeed(speed){
-  matrixSpeed = speed;
-  clearInterval(matrixInterval);
-  matrixInterval = setInterval(drawMatrix, matrixSpeed);
+function setSpeed(newSpeed){
+  speed = newSpeed;
+  clearInterval(interval);
+  interval = setInterval(draw, speed);
 }
 
-/* 🎬 DRAW MATRIX */
-
-function drawMatrix(){
+function draw(){
 
   ctx.fillStyle = "rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -301,10 +263,9 @@ function drawMatrix(){
   ctx.fillStyle = "#00ff00";
   ctx.font = fontSize + "px monospace";
 
-  for(let i = 0; i < drops.length; i++){
+  for(let i=0;i<drops.length;i++){
 
     const text = letters[Math.floor(Math.random()*letters.length)];
-
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
     if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
@@ -315,20 +276,21 @@ function drawMatrix(){
   }
 }
 
-/* RESIZE FIX */
+/* ACCELERATE MATRIX DURING SCRAP */
 
-window.addEventListener("resize", () => {
+socket.on("progress", data => {
 
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  columns = canvas.width / fontSize;
-  drops = [];
-
-  for(let i = 0; i < columns; i++){
-    drops[i] = 1;
+  if(data.percent < 50){
+    setSpeed(20);  // 🔥 rapide
+  } else {
+    setSpeed(50);  // normal
   }
 
+});
+
+window.addEventListener("resize", ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 });
 
 </script>
