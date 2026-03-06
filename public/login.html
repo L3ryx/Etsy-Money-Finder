@@ -3,45 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Connexion</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 
 <style>
 
-/* ================= GLOBAL ================= */
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Croissant One', cursive;
+}
 
 body{
-margin:0;
-font-family:Arial, Helvetica, sans-serif;
-background:#0f0f0f;
-color:white;
+background:black;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+color:white;
 }
 
 /* ================= BOX ================= */
 
-.container{
-background:#1a1a1a;
+.box{
+background:#111;
 padding:40px;
-border-radius:20px;
+border-radius:25px;
 width:350px;
 text-align:center;
-box-shadow:0 0 40px rgba(255,255,255,0.05);
+box-shadow:0 0 40px rgba(0,255,102,0.3);
 }
 
 /* ================= INPUT ================= */
 
 input{
 width:100%;
-padding:14px;
+padding:12px;
 margin:10px 0;
-border-radius:12px;
 border:none;
+border-radius:15px;
 outline:none;
-background:#2a2a2a;
-color:white;
 font-size:14px;
 }
 
@@ -49,10 +53,12 @@ font-size:14px;
 
 button{
 width:100%;
-padding:14px;
+padding:12px;
+margin-top:15px;
 border:none;
-border-radius:12px;
-background:gold;
+border-radius:20px;
+background:#00ff66;
+color:black;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
@@ -60,62 +66,40 @@ transition:0.3s;
 
 button:hover{
 transform:scale(1.05);
-opacity:0.8;
+box-shadow:0 0 20px #00ff66;
 }
 
-/* ================= LINKS ================= */
+/* ================= LINK ================= */
 
-.switch{
-margin-top:15px;
-font-size:14px;
-}
-
-.switch a{
-color:gold;
+a{
+color:#00ff66;
 text-decoration:none;
-}
-
-.error{
-color:red;
-margin-top:10px;
 font-size:14px;
-display:none;
 }
 
-.loader{
-display:none;
-margin:15px auto;
-width:30px;
-height:30px;
-border:4px solid gold;
-border-top:4px solid transparent;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-to{transform:rotate(360deg);}
+a:hover{
+text-decoration:underline;
 }
 
 </style>
+
 </head>
 <body>
 
-<div class="container">
+<div class="box">
 
-<h2>Connexion</h2>
+<h2>Connexion 🔐</h2>
 
 <input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Mot de passe">
 
 <button onclick="login()">Se connecter</button>
 
-<div class="loader" id="loader"></div>
+<br><br>
 
-<div class="error" id="error"></div>
-
-<div class="switch">
-Pas encore inscrit ? <br>
+<div>
+Pas encore inscrit ?
+<br>
 <a href="/register.html">Créer un compte</a>
 </div>
 
@@ -123,22 +107,19 @@ Pas encore inscrit ? <br>
 
 <script>
 
+/* ===================================================== */
+/* LOGIN FUNCTION */
+/* ===================================================== */
+
 async function login(){
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
-const errorDiv = document.getElementById("error");
-const loader = document.getElementById("loader");
-
-errorDiv.style.display = "none";
 
 if(!email || !password){
-errorDiv.innerText = "Remplis tous les champs";
-errorDiv.style.display = "block";
+alert("Remplis tous les champs !");
 return;
 }
-
-loader.style.display = "block";
 
 try{
 
@@ -152,32 +133,40 @@ body:JSON.stringify({email,password})
 
 const data = await res.json();
 
-loader.style.display = "none";
-
 if(res.ok){
 
-/* ✅ Stocker token */
-localStorage.setItem("token",data.token);
+/* 🔥 STOCK TOKEN */
+localStorage.setItem("token", data.token);
 
-/* 🔥 Redirection */
-window.location.href = "/outil.html";
+alert("Connexion réussie ✅");
+
+/* 🚀 REDIRECTION */
+window.location.href="/index.html";
 
 }else{
-
-errorDiv.innerText = data.message || "Erreur connexion";
-errorDiv.style.display = "block";
-
+alert(data.message || "Erreur connexion");
 }
 
 }catch(err){
-
-loader.style.display = "none";
-errorDiv.innerText = "Erreur serveur";
-errorDiv.style.display = "block";
-
+console.error(err);
+alert("Erreur serveur");
 }
 
 }
+
+/* ===================================================== */
+/* AUTO REDIRECT SI DEJA CONNECTÉ */
+/* ===================================================== */
+
+window.onload = function(){
+
+const token = localStorage.getItem("token");
+
+if(token){
+window.location.href="/index.html";
+}
+
+};
 
 </script>
 
