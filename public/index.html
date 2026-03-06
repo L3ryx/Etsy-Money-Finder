@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Niche Finder</title>
 
 <link rel="stylesheet" href="style.css">
+
 </head>
 <body>
 
-<!-- ================= BACKGROUND ANIMATION ================= -->
+<!-- ===================================================== -->
+<!-- ANIMATED WORLD -->
+<!-- ===================================================== -->
 
 <div class="world">
 
@@ -26,7 +30,9 @@
 
 </div>
 
-<!-- ================= UI ================= -->
+<!-- ===================================================== -->
+<!-- UI -->
+<!-- ===================================================== -->
 
 <h1 class="title">Niche Finder</h1>
 
@@ -53,6 +59,56 @@
 
 </div>
 
+<!-- ===================================================== -->
+<!-- ANIMATION SCRIPT -->
+<!-- ===================================================== -->
+
+<script>
+
+/* ================= DOG SPAWNER ================= */
+
+const world = document.querySelector(".world");
+
+function spawnDog(){
+
+  const dog = document.createElement("div");
+  dog.className = "dogs";
+  dog.innerHTML = "🐕";
+
+  dog.style.top = (60 + Math.random()*15) + "%";
+
+  world.appendChild(dog);
+
+  setTimeout(()=>dog.remove(),6000);
+}
+
+setInterval(spawnDog,2000);
+
+/* ================= MONEY SPAWNER ================= */
+
+function spawnMoney(){
+
+  const money = document.createElement("div");
+  money.className = "money";
+  money.innerHTML = "$";
+
+  money.style.left = (45 + Math.random()*10) + "%";
+  money.style.bottom = "40%";
+
+  world.appendChild(money);
+
+  setTimeout(()=>money.remove(),4000);
+}
+
+setInterval(spawnMoney,800);
+
+</script>
+
+<!-- ===================================================== -->
+<!-- SEARCH SCRIPT -->
+<!-- ===================================================== -->
+
+<script src="/socket.io/socket.io.js"></script>
 <script src="script.js"></script>
 
 </body>
