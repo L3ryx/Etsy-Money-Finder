@@ -1,146 +1,168 @@
-/* ===================================================== */
-/* SOCKET CONNECTION */
-/* ===================================================== */
-
 const socket = io();
-let socketId = null;
+const loader = document.getElementById("loader");
 
-const progressBar = document.getElementById("progressBar");
-let progress = 0;
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
 
-socket.on("connected", (data) => {
-  socketId = data.socketId;
-  console.log("🟢 Connected to server:", socketId);
-});
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-/* ===================================================== */
-/* LOGS -> PROGRESS BAR */
-/* ===================================================== */
+let fontSize = 16;
+let letters = "010101ETSYMONEYFINDER";
 
-socket.on("log", (data) => {
+let columns = canvas.width / fontSize;
+let drops = [];
 
-  console.log("LOG:", data.message);
+for(let i=0;i<columns;i++){
+  drops[i] = 1;
+}
 
-  progress += 20;
-
-  if (progress > 100) progress = 100;
-
-  if (progressBar) {
-    progressBar.style.width = progress + "%";
-  }
-
-});
+let speed = 50;
+let matrixInterval = setInterval(drawMatrix, speed);
 
 /* ===================================================== */
-/* 🔎 SEARCH ETSY */
+/* MATRIX SPEED CONTROL */
 /* ===================================================== */
 
-async function searchEtsy() {
+function setMatrixSpeed(newSpeed){
+  clearInterval(matrixInterval);
+  speed = newSpeed;
+  matrixInterval = setInterval(drawMatrix, speed);
+}
 
-  const keywordInput = document.getElementById("keyword");
-  const limitSelect = document.getElementById("limit");
-  const resultsContainer = document.getElementById("results");
+/* ===================================================== */
+/* DRAW MATRIX */
+/* ===================================================== */
 
-  if (!keywordInput) {
-    console.error("Keyword input not found");
-    return;
-  }
+function drawMatrix(){
 
-  const keyword = keywordInput.value;
-  const limit = limitSelect ? limitSelect.value : 10;
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  if (!keyword) {
-    alert("Please enter a keyword");
-    return;
-  }
+  ctx.fillStyle = "#00ff66";
+  ctx.font = fontSize+"px monospace";
 
-  /* Reset progress */
-  progress = 0;
+  for(let i=0;i<drops.length;i++){
 
-  if (progressBar) {
-    progressBar.style.width = "0%";
-  }
+    let text = letters[Math.floor(Math.random()*letters.length)];
+    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-  resultsContainer.innerHTML = "<p>🔎 Searching Etsy...</p>";
-
-  try {
-
-    /* ===================================== */
-    /* CALL BACKEND SEARCH ROUTE */
-    /* ===================================== */
-
-    const response = await fetch("/search-etsy", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        keyword,
-        limit
-      })
-    });
-
-    const data = await response.json();
-
-    if (!data.results || data.results.length === 0) {
-
-      resultsContainer.innerHTML =
-        "<p style='color:red'>❌ No results found</p>";
-
-      return;
+    if(drops[i]*fontSize > canvas.height && Math.random()>0.98){
+      drops[i] = 0;
     }
 
-    resultsContainer.innerHTML = "";
+    drops[i]++;
+  }
+}
 
-    /* ===================================== */
-    /* LOOP THROUGH SCRAPED IMAGES */
-    /* ===================================== */
+/* ===================================================== */
+/* RESIZE */
+/* ===================================================== */
 
-    for (const item of data.results) {
+window.addEventListener("resize", () => {
 
-      const card = document.createElement("div");
-      card.style.background = "#111";
-      card.style.padding = "10px";
-      card.style.margin = "10px";
-      card.style.borderRadius = "10px";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
-      card.innerHTML = `
-        <p>🔗 <a href="${item.link}" target="_blank" style="color:#00ff88">
+  columns = canvas.width / fontSize;
+  drops = [];
+
+  for(let i=0;i<columns;i++){
+    drops[i] = 1;
+  }
+
+});
+
+/* ===================================================== */
+/* SEARCH */
+/* ===================================================== */
+
+async function searchEtsy(){
+
+  const keyword = document.getElementById("keyword").value;
+  const limit = document.getElementById("limit").value;
+
+  loader.style.display = "block";
+
+  /* 🔥 Matrix accélère */
+  setMatrixSpeed(5);
+
+  const res = await fetch("/search-etsy",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ keyword, limit })
+  });
+
+  const data = await res.json();
+
+  loader.style.display = "none";
+
+  /* 🔥 Matrix ralentit */
+  setMatrixSpeed(60);
+
+  displayResults(data.results);
+
+  explosion();
+}
+
+/* ===================================================== */
+/* RESULTS */
+/* ===================================================== */
+
+function displayResults(results){
+
+  const container = document.getElementById("results");
+  container.innerHTML = "";
+
+  if(!results || results.length === 0){
+    container.innerHTML = "<h2>No results found</h2>";
+    return;
+  }
+
+  results.forEach(item => {
+
+    const card = document.createElement("div");
+    card.className = "result-card";
+
+    card.innerHTML = `
+      <img src="${item.image}">
+      <br>
+      🔗 <a href="${item.link}" target="_blank">
         Open Listing
-        </a></p>
-        <img src="${item.image}" width="200" style="border-radius:10px"/>
-      `;
+      </a>
+    `;
 
-      resultsContainer.appendChild(card);
+    container.appendChild(card);
 
-      /* ===================================== */
-      /* SEND IMAGE TO ANALYSIS PIPELINE */
-      /* ===================================== */
+  });
 
-      try {
+}
 
-        const imgResponse = await fetch(item.image);
-        const blob = await imgResponse.blob();
+/* ===================================================== */
+/* EXPLOSION EFFECT */
+/* ===================================================== */
 
-        const formData = new FormData();
-        formData.append("images", blob);
-        formData.append("socketId", socketId);
+function explosion(){
 
-        await fetch("/analyze-images", {
-          method: "POST",
-          body: formData
-        });
+  const boom = document.createElement("div");
+  boom.innerHTML = "💥";
+  boom.style.position = "fixed";
+  boom.style.top = "50%";
+  boom.style.left = "50%";
+  boom.style.fontSize = "150px";
+  boom.style.transform = "translate(-50%,-50%)";
+  boom.style.transition = "1s";
+  boom.style.opacity = "1";
 
-      } catch (err) {
-        console.error("Image analysis failed", err);
-      }
+  document.body.appendChild(boom);
 
-    }
+  setTimeout(()=>{
+    boom.style.transform = "translate(-50%,-50%) scale(3)";
+    boom.style.opacity = "0";
+  },100);
 
-  } catch (err) {
+  setTimeout(()=>{
+    boom.remove();
+  },1200);
 
-    console.error("Search failed:", err);
-    resultsContainer.innerHTML =
-      "<p style='color:red'>❌ Search failed</p>";
-  }
 }
