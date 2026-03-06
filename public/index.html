@@ -8,44 +8,66 @@
 </head>
 <body>
 
-<!-- ================= OUTIL ================= -->
+<!-- ================= BACKGROUND TOOL ================= -->
 
 <div class="container">
 
-<h1>Niche Finder</h1>
-<p>Les niches n'ont plus de secrets !</p>
+<h1 class="title">Niche Finder</h1>
+<p class="subtitle">Les niches n'ont plus de secrets !</p>
 
 </div>
 
-<!-- ================= AUTH BOX ================= -->
+<!-- ================= AUTH BOX PREMIUM ================= -->
 
 <div id="authBox">
 
-<h2 id="formTitle">Créer un compte</h2>
+<div class="form-container" id="formContainer">
 
-<!-- 🔐 CHAMPS -->
+<!-- 🔵 INSCRIPTION FORM -->
+
+<div class="form active" id="registerForm">
+
+<h2>Créer un compte</h2>
+
 <input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Mot de passe">
 
-<!-- 🔵 BOUTON PRINCIPAL (INSCRIPTION) -->
-<button id="primaryBtn" onclick="register()">
+<button onclick="register()">
 Créer un compte
 </button>
 
-<!-- 🔵 TEXTE SWITCH -->
-<p style="margin-top:15px;font-size:14px;">
+<p class="switch-text">
 Déjà inscrit ?
-<span onclick="switchToLogin()"
-style="color:blue;cursor:pointer;font-weight:bold;">
+<span onclick="switchForm()" class="switch-link">
 Sign in
 </span>
 </p>
 
-<!-- 🔴 BOUTON LOGIN (CACHE PAR DEFAUT) -->
-<button id="loginBtn" onclick="login()" style="display:none;">
+</div>
+
+<!-- 🔴 LOGIN FORM -->
+
+<div class="form" id="loginForm">
+
+<h2>Connexion</h2>
+
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPassword" placeholder="Mot de passe">
+
+<button onclick="login()">
 Login
 </button>
 
+<p class="switch-text">
+Pas encore de compte ?
+<span onclick="switchForm()" class="switch-link">
+Créer un compte
+</span>
+</p>
+
+</div>
+
+</div>
 </div>
 
 <!-- ================= SCRIPT ================= -->
@@ -84,8 +106,8 @@ alert("Erreur inscription");
 
 async function login(){
 
-const email = document.getElementById("email").value;
-const password = document.getElementById("password").value;
+const email = document.getElementById("loginEmail").value;
+const password = document.getElementById("loginPassword").value;
 
 const res = await fetch("/login",{
 method:"POST",
@@ -112,16 +134,16 @@ alert("Login échoué");
 }
 
 /* ================================================= */
-/* ================= SWITCH ======================== */
+/* ========== SWITCH AVEC ANIMATION ================= */
 /* ================================================= */
 
-function switchToLogin(){
+function switchForm(){
 
-document.getElementById("formTitle").innerText = "Connexion";
+const registerForm = document.getElementById("registerForm");
+const loginForm = document.getElementById("loginForm");
 
-document.getElementById("primaryBtn").style.display = "none";
-
-document.getElementById("loginBtn").style.display = "block";
+registerForm.classList.toggle("active");
+loginForm.classList.toggle("active");
 
 }
 
