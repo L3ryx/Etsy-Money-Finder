@@ -10,6 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="style.css">
+
+<script src="/socket.io/socket.io.js"></script>
+
 </head>
 <body>
 
@@ -26,7 +29,9 @@
 <!-- ================= MAIN FORM ================= -->
 <div class="container">
 
-<h1 class="title">Niche Finder</h1>
+<h1 class="title">Niche Finder 🚀</h1>
+
+<div id="credits">Credits: -</div>
 
 <div class="form-container">
 
@@ -42,9 +47,13 @@
 <button class="start-btn">START</button>
 
 </div>
+
+<!-- ================= LOGS ================= -->
+<div class="logs" id="logs"></div>
+
 </div>
 
-<!-- ================= RESULTS (IMPORTANT : HORS CONTAINER) ================= -->
+<!-- ================= RESULTS ================= -->
 <div id="results"></div>
 
 <!-- ================= LOADER ================= -->
@@ -53,8 +62,65 @@
 <p>Recherche en cours...</p>
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ===================================================== -->
+<!-- ================= SCRIPT ============================ -->
+<!-- ===================================================== -->
+
 <script>
+
+/* ===================================================== */
+/* TOKEN CHECK */
+/* ===================================================== */
+
+const token = localStorage.getItem("token");
+
+if(!token){
+alert("Tu dois te connecter !");
+window.location.href="/login.html";
+}
+
+/* ===================================================== */
+/* SOCKET CONNECTION */
+/* ===================================================== */
+
+const socket = io();
+let socketId = null;
+
+socket.on("connected",(data)=>{
+socketId = data.socketId;
+});
+
+socket.on("log",(data)=>{
+const logs = document.getElementById("logs");
+logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
+logs.scrollTop = logs.scrollHeight;
+});
+
+/* ===================================================== */
+/* LOAD USER INFO (CREDITS) */
+/* ===================================================== */
+
+async function loadUser(){
+
+const res = await fetch("/me",{
+headers:{
+Authorization:"Bearer " + token
+}
+});
+
+if(res.ok){
+const data = await res.json();
+document.getElementById("credits").innerText =
+"Credits: " + data.credits;
+}
+
+}
+
+loadUser();
+
+/* ===================================================== */
+/* SEARCH FUNCTION */
+/* ===================================================== */
 
 const startBtn = document.querySelector(".start-btn");
 const resultsContainer = document.getElementById("results");
@@ -74,12 +140,15 @@ loader.classList.remove("hidden");
 startBtn.disabled = true;
 startBtn.innerText = "Loading...";
 
+resultsContainer.innerHTML = "";
+
 try {
 
 const response = await fetch("/search-etsy", {
 method:"POST",
 headers:{
-"Content-Type":"application/json"
+"Content-Type":"application/json",
+Authorization:"Bearer " + token
 },
 body:JSON.stringify({
 keyword,
@@ -88,8 +157,6 @@ limit
 });
 
 const data = await response.json();
-
-resultsContainer.innerHTML = "";
 
 if(data.results && data.results.length > 0){
 
@@ -109,7 +176,9 @@ resultsContainer.appendChild(card);
 });
 
 } else {
+
 resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+
 }
 
 } catch(error){
