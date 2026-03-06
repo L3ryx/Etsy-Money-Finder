@@ -77,7 +77,6 @@ app.post("/register", async(req,res)=>{
 const {email,password} = req.body;
 
 const exists = await User.findOne({email});
-
 if(exists){
 return res.status(400).json({message:"User exists"});
 }
@@ -112,13 +111,11 @@ app.post("/login", async(req,res)=>{
 const {email,password} = req.body;
 
 const user = await User.findOne({email});
-
 if(!user){
 return res.status(400).json({message:"Invalid"});
 }
 
 const match = await bcrypt.compare(password,user.password);
-
 if(!match){
 return res.status(400).json({message:"Invalid"});
 }
@@ -134,7 +131,64 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ========== AUTO CHARGE 0.50€ ======================== */
+/* ============= CREATE SETUP INTENT =================== */
+/* ===================================================== */
+
+app.post("/create-setup-intent", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(!user.stripeCustomerId){
+return res.status(400).json({message:"No customer"});
+}
+
+const setupIntent = await stripe.setupIntents.create({
+customer:user.stripeCustomerId,
+payment_method_types:["card"]
+});
+
+res.json({
+clientSecret:setupIntent.client_secret
+});
+
+});
+
+/* ===================================================== */
+/* ============= ATTACH CARD =========================== */
+/* ===================================================== */
+
+app.post("/attach-card", auth, async(req,res)=>{
+
+const {paymentMethodId} = req.body;
+
+const user = await User.findById(req.user.userId);
+
+try{
+
+await stripe.paymentMethods.attach(paymentMethodId,{
+customer:user.stripeCustomerId
+});
+
+await stripe.customers.update(user.stripeCustomerId,{
+invoice_settings:{
+default_payment_method:paymentMethodId
+}
+});
+
+user.defaultPaymentMethod = paymentMethodId;
+await user.save();
+
+res.json({success:true});
+
+}catch(err){
+console.log("❌ Attach error");
+res.status(400).json({message:"Attach failed"});
+}
+
+});
+
+/* ===================================================== */
+/* ========== AUTO CHARGE 0.50€ ======================= */
 /* ===================================================== */
 
 async function chargeUser(user){
@@ -144,7 +198,7 @@ throw new Error("No card");
 }
 
 await stripe.paymentIntents.create({
-amount:50, // 0.50€
+amount:50,
 currency:"eur",
 customer:user.stripeCustomerId,
 payment_method:user.defaultPaymentMethod,
@@ -155,7 +209,7 @@ confirm:true
 }
 
 /* ===================================================== */
-/* ============== SEARCH + PRELEVEMENT ================== */
+/* ========== SEARCH + AUTO PAYMENT ==================== */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -166,7 +220,7 @@ try{
 
 const user = await User.findById(req.user.userId);
 
-/* 🔥 PRELEVEMENT AVANT RECHERCHE */
+/* 🔥 PRELEVEMENT */
 
 await chargeUser(user);
 
@@ -214,9 +268,9 @@ res.json({results});
 
 }catch(err){
 
-console.log("❌ Payment failed or card issue");
+console.log("❌ Payment failed");
 
-return res.status(400).json({
+res.status(400).json({
 message:"Paiement échoué ou carte invalide"
 });
 
@@ -259,16 +313,10 @@ process.env.STRIPE_WEBHOOK_SECRET
 );
 
 }catch(err){
-
-return res.status(400).send("Webhook Error");
-
+return res.status(400).send("Webhook error");
 }
 
-/* 🔥 Paiement validé */
-
 if(event.type === "payment_intent.succeeded"){
-
-const payment = event.data.object;
 
 console.log("✅ Payment succeeded");
 
