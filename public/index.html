@@ -12,10 +12,16 @@
 </head>
 <body>
 
-<!-- 🐕 LOADER -->
-<div class="loader-dog">🐕</div>
-
 <div class="sky">
+
+<!-- ⭐ STARS -->
+<div class="star" style="width:4px;height:4px;top:60px;left:100px;"></div>
+<div class="star" style="width:3px;height:3px;top:200px;left:300px;"></div>
+<div class="star" style="width:5px;height:5px;top:350px;left:600px;"></div>
+<div class="star" style="width:3px;height:3px;top:150px;left:800px;"></div>
+
+<!-- 🌠 SHOOTING STAR -->
+<div class="shooting-star"></div>
 
 <!-- 🔥 TITLE -->
 <h1 class="title">Niche Finder</h1>
@@ -23,94 +29,39 @@
 <!-- 🎯 FORM -->
 <div class="form-container">
 
-<input type="text" id="keyword" class="input-field" placeholder="Keyword">
+<input type="text" class="input-field" placeholder="Keyword">
 
-<select id="limit" class="dropdown">
+<select class="dropdown">
 <option value="5">Analyse 5 annonces</option>
 <option value="10">Analyse 10 annonces</option>
 <option value="20">Analyse 20 annonces</option>
 <option value="50">Analyse 50 annonces</option>
 </select>
 
-<button class="start-btn" onclick="startSearch()">
+<button class="start-btn">
 START
 </button>
 
 </div>
 
-<!-- 📦 RESULTS -->
-<div id="results"></div>
-
-<!-- 🌿 GRASS -->
-<div class="grass"></div>
-
+<!-- 🏠 DOGHOUSE -->
+<div class="doghouse">
+<div class="roof"></div>
+<div class="door"></div>
 </div>
 
-<script>
+<!-- 🐕 DOG -->
+<div class="dog"></div>
 
-/* ================= SEARCH ================= */
+<!-- 🌿 GROUND -->
+<div class="ground"></div>
 
-async function startSearch(){
+<!-- 💵 MONEY RAIN -->
+<div class="money" style="left:40%">💵</div>
+<div class="money" style="left:50%">💵</div>
+<div class="money" style="left:60%">💵</div>
 
-const keyword = document.getElementById("keyword").value;
-const limit = document.getElementById("limit").value;
-
-if(!keyword){
-alert("Enter keyword");
-return;
-}
-
-const res = await fetch("/search-etsy",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({keyword,limit})
-});
-
-const data = await res.json();
-
-displayResults(data.results);
-
-}
-
-/* ================= DISPLAY RESULTS ================= */
-
-function displayResults(results){
-
-const container = document.getElementById("results");
-container.innerHTML = "";
-
-if(!results) return;
-
-results.forEach(item => {
-
-const card = document.createElement("div");
-card.className = "result-card";
-
-card.innerHTML = `
-<img src="${item.image}" />
-<br>
-<a href="${item.link}" target="_blank">
-Open Listing
-</a>
-`;
-
-container.appendChild(card);
-
-});
-
-}
-
-/* ================= REMOVE LOADER ================= */
-
-window.addEventListener("load",()=>{
-
-document.querySelector(".loader-dog").style.display="none";
-
-});
-
-</script>
+</div>
 
 </body>
 </html>
