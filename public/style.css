@@ -2,263 +2,172 @@
 /* GLOBAL */
 /* ===================================================== */
 
-html, body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow-x:hidden;
-  background:black;
-  font-family:"Courier New", monospace;
-  color:white;
-  position:relative;
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  font-family: "Arial Black", Arial, sans-serif;
 }
 
 /* ===================================================== */
-/* ANIMATED WORLD */
+/* THREE.JS CANVAS */
 /* ===================================================== */
 
-.world{
-  position:fixed;
-  width:100%;
-  height:100%;
-  z-index:-1;
-  overflow:hidden;
-}
-
-/* SKY */
-
-.sky{
-  position:absolute;
-  width:100%;
-  height:65%;
-  background:linear-gradient(to bottom,#4da6ff,#87ceeb);
-}
-
-/* SUN */
-
-.sun{
-  position:absolute;
-  top:40px;
-  right:80px;
-  width:120px;
-  height:120px;
-  background:yellow;
-  border-radius:50%;
-  box-shadow:0 0 120px yellow;
-  animation:sunPulse 3s infinite alternate;
-}
-
-@keyframes sunPulse{
-  from{transform:scale(1);}
-  to{transform:scale(1.2);}
-}
-
-/* GRASS */
-
-.grass{
-  position:absolute;
-  bottom:0;
-  width:100%;
-  height:35%;
-  background:#2ecc71;
-}
-
-/* DOGHOUSE */
-
-.doghouse{
-  position:absolute;
-  bottom:30%;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:120px;
-}
-
-/* DOGS */
-
-.dogs{
-  position:absolute;
-  bottom:15%;
-  font-size:60px;
-  animation:dogRun 6s linear infinite;
-}
-
-@keyframes dogRun{
-
-  0%{
-    left:-20%;
-    opacity:1;
-  }
-
-  40%{
-    left:45%;
-  }
-
-  60%{
-    opacity:0;
-    left:50%;
-  }
-
-  100%{
-    left:120%;
-    opacity:0;
-  }
-}
-
-/* MONEY DOLLARS */
-
-.money{
-  position:absolute;
-  font-size:30px;
-  color:gold;
-  animation:moneyFly 4s linear infinite;
-  text-shadow:0 0 10px gold;
-}
-
-@keyframes moneyFly{
-
-  0%{
-    transform:translateY(0) scale(1);
-    opacity:1;
-  }
-
-  100%{
-    transform:translateY(-400px) scale(0);
-    opacity:0;
-  }
+canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* ===================================================== */
 /* TITLE */
 /* ===================================================== */
 
-.title{
-  text-align:center;
-  font-size:60px;
-  margin-top:40px;
-  text-shadow:0 0 20px red;
+.ui {
+  position: fixed;
+  top: 25px;
+  width: 100%;
+  text-align: center;
+  font-size: 60px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 4px;
+  text-shadow:
+    0 0 10px red,
+    0 0 30px orange,
+    0 0 60px yellow;
+  animation: glitch 3s infinite;
+  pointer-events: none;
+}
+
+/* 🔥 GLITCH EFFECT */
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px,2px); }
+  40% { transform: translate(2px,-2px); }
+  60% { transform: translate(-1px,1px); }
+  80% { transform: translate(1px,-1px); }
+  100% { transform: translate(0); }
 }
 
 /* ===================================================== */
-/* SEARCH BOX */
+/* UI CONTROLS */
 /* ===================================================== */
 
-.main-center{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:40px;
-  padding-bottom:120px;
+.controls {
+  position: fixed;
+  bottom: 40px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.search-box{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:25px;
-
-  backdrop-filter:blur(25px);
-  background:rgba(255,0,0,0.1);
-  padding:50px;
-  border-radius:40px;
-  border:2px solid red;
-  box-shadow:0 0 60px red;
+input, select {
+  padding: 15px;
+  border-radius: 15px;
+  border: 2px solid #ff0000;
+  background: black;
+  color: white;
+  font-size: 18px;
+  text-align: center;
+  min-width: 200px;
 }
 
-input, select{
-  width:300px;
-  padding:15px;
-  border-radius:20px;
-  border:2px solid red;
-  background:black;
-  color:white;
-  text-align:center;
-  font-size:16px;
+input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 20px red;
 }
 
 /* ===================================================== */
-/* START BUTTON (RED) */
+/* START BUTTON */
 /* ===================================================== */
 
-.start-btn{
-  background:red;
-  color:white;
-  border:none;
-  padding:20px 80px;
-  border-radius:50px;
-  font-size:22px;
-  font-weight:bold;
-  cursor:pointer;
-  transition:0.3s;
-  box-shadow:0 0 40px red;
+.start-btn {
+  background: red;
+  color: white;
+  border: none;
+  padding: 18px 50px;
+  border-radius: 40px;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 0 40px red;
 }
 
-.start-btn:hover{
-  transform:scale(1.1);
-  box-shadow:0 0 80px red;
+.start-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 80px orange;
 }
 
 /* ===================================================== */
-/* RESULTS */
+/* RESULTS GRID */
 /* ===================================================== */
 
-#results{
-  width:95%;
-  max-width:1400px;
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:30px;
-  justify-items:center;
+#results {
+  position: fixed;
+  top: 150px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  padding: 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  max-height: 60vh;
 }
 
-.result-card{
-  background:rgba(255,0,0,0.1);
-  border:2px solid red;
-  border-radius:30px;
-  padding:30px;
-  width:100%;
-  max-width:350px;
-  text-align:center;
-  transition:0.3s;
+.result-card {
+  background: rgba(255,0,0,0.1);
+  border: 2px solid red;
+  border-radius: 25px;
+  padding: 20px;
+  text-align: center;
+  transition: 0.3s;
+  backdrop-filter: blur(10px);
 }
 
-.result-card:hover{
-  transform:scale(1.08);
-  box-shadow:0 0 60px red;
+.result-card:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 60px red;
 }
 
-.result-card img{
-  width:100%;
-  border-radius:20px;
+.result-card img {
+  width: 100%;
+  border-radius: 20px;
+  border: 2px solid red;
 }
 
-.result-card a{
-  color:red;
-  text-decoration:none;
-  font-weight:bold;
+.result-card a {
+  display: block;
+  margin-top: 10px;
+  color: gold;
+  text-decoration: none;
+  font-weight: bold;
 }
 
 /* ===================================================== */
 /* RESPONSIVE */
 /* ===================================================== */
 
-@media(max-width:600px){
+@media (max-width: 768px) {
 
-  .title{
-    font-size:30px;
+  .ui {
+    font-size: 35px;
   }
 
-  input, select{
-    width:220px;
+  #results {
+    grid-template-columns: 1fr;
   }
 
-  .start-btn{
-    width:220px;
-    padding:15px;
-    font-size:16px;
-  }
-
-  #results{
-    grid-template-columns:1fr;
+  .start-btn {
+    width: 200px;
   }
 }
