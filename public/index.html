@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Niche 3D Ultra Real</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+
+body{
+  margin:0;
+  overflow:hidden;
+  background:black;
+}
+
+.ui{
+  position:fixed;
+  top:20px;
+  width:100%;
+  text-align:center;
+  font-size:40px;
+  color:white;
+  text-shadow:0 0 20px gold;
+  font-family:Arial;
+}
+
+</style>
+</head>
+<body>
+
+<div class="ui">🐕 Niche finder 💰</div>
+
+<script>
+
+/* ================= SCENE ================= */
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth/window.innerHeight,
+  0.1,
+  1000
+);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+/* ================= LIGHT ================= */
+
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(10,20,10);
+light.castShadow = true;
+scene.add(light);
+
+const ambient = new THREE.AmbientLight(0xffffff,0.5);
+scene.add(ambient);
+
+/* ================= GROUND (HERBE) ================= */
+
+const groundGeo = new THREE.PlaneGeometry(200,200);
+const groundMat = new THREE.MeshStandardMaterial({
+  color:0x2ecc71
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* ================= SUN ================= */
+
+const sunGeo = new THREE.SphereGeometry(5,32,32);
+const sunMat = new THREE.MeshStandardMaterial({
+  color:0xffff00,
+  emissive:0xffff00
+});
+const sun = new THREE.Mesh(sunGeo,sunMat);
+sun.position.set(0,50,-50);
+scene.add(sun);
+
+/* ================= NICHE ================= */
+
+const nicheGeo = new THREE.BoxGeometry(10,8,8);
+const nicheMat = new THREE.MeshStandardMaterial({color:0x8b4513});
+const niche = new THREE.Mesh(nicheGeo,nicheMat);
+
+niche.position.set(0,4,20);
+niche.castShadow = true;
+
+scene.add(niche);
+
+/* ================= DOGS ================= */
+
+const dogs = [];
+
+function spawnDog(){
+
+  const dogGeo = new THREE.SphereGeometry(2,16,16);
+  const dogMat = new THREE.MeshStandardMaterial({
+    color:0x8b5a2b
+  });
+
+  const dog = new THREE.Mesh(dogGeo,dogMat);
+  dog.position.set(-100,2,0);
+  dog.castShadow = true;
+
+  dog.velocity = 0.5;
+
+  scene.add(dog);
+  dogs.push(dog);
+}
+
+setInterval(spawnDog,2000);
+
+/* ================= MONEY PARTICLES ================= */
+
+const moneyParticles = [];
+
+function spawnMoney(x,y,z){
+
+  const geo = new THREE.TextGeometry("$$$",{
+    size:2,
+    height:0.5
+  });
+
+  const mat = new THREE.MeshStandardMaterial({
+    color:0xffd700
+  });
+
+  const money = new THREE.Mesh(
+    new THREE.SphereGeometry(1,8,8),
+    mat
+  );
+
+  money.position.set(x,y,z);
+  money.velocityY = Math.random()*1 + 0.5;
+
+  scene.add(money);
+  moneyParticles.push(money);
+}
+
+/* ================= CAMERA ================= */
+
+camera.position.set(0,30,60);
+camera.lookAt(0,0,0);
+
+/* ================= ANIMATION ================= */
+
+function animate(){
+
+  requestAnimationFrame(animate);
+
+  dogs.forEach((dog,index)=>{
+
+    dog.position.x += dog.velocity;
+
+    // Jump near niche
+    if(dog.position.x > 15 && dog.position.x < 25){
+      dog.position.y = 10;
+    }
+
+    // Collision with niche
+    if(dog.position.x > 20){
+
+      spawnMoney(dog.position.x,10,20);
+
+      scene.remove(dog);
+      dogs.splice(index,1);
+    }
+
+  });
+
+  moneyParticles.forEach((money,index)=>{
+
+    money.position.y += money.velocityY;
+    money.velocityY -= 0.02;
+
+    if(money.position.y < 0){
+      scene.remove(money);
+      moneyParticles.splice(index,1);
+    }
+
+  });
+
+  renderer.render(scene,camera);
+}
+
+animate();
+
+/* ================= RESIZE ================= */
+
+window.addEventListener("resize",()=>{
+
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+
+});
+
+</script>
+
+</body>
+</html>
