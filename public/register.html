@@ -18,28 +18,7 @@ height:100vh;
 color:white;
 }
 
-/* 🔥 CONTAINER PRINCIPAL */
-
-.wrapper{
-display:flex;
-align-items:center;
-gap:60px;
-}
-
-/* 🔥 IMAGE A GAUCHE */
-
-.image-container img{
-width:350px;
-border-radius:30px;
-box-shadow:0 0 60px rgba(255,255,255,0.2);
-transition:0.3s;
-}
-
-.image-container img:hover{
-transform:scale(1.05);
-}
-
-/* 🔥 BOX INSCRIPTION */
+/* 🔥 BOX */
 
 .box{
 background:#111;
@@ -50,10 +29,30 @@ text-align:center;
 box-shadow:0 0 80px rgba(255,255,255,0.1);
 }
 
+/* 🔥 IMAGE AJOUTÉE */
+
+.box img{
+width:100%;
+max-height:200px;
+object-fit:cover;
+border-radius:20px;
+margin-bottom:20px;
+box-shadow:0 0 40px rgba(255,255,255,0.2);
+transition:0.3s;
+}
+
+.box img:hover{
+transform:scale(1.05);
+}
+
+/* 🔥 TITRE */
+
 .box h2{
 color:yellow;
 margin-bottom:25px;
 }
+
+/* 🔥 INPUT */
 
 .box input{
 width:100%;
@@ -66,6 +65,8 @@ background:#222;
 color:white;
 font-size:14px;
 }
+
+/* 🔥 BOUTON JAUNE */
 
 .box button{
 width:100%;
@@ -82,6 +83,8 @@ transition:0.3s;
 transform:scale(1.05);
 }
 
+/* 🔥 SWITCH */
+
 .switch{
 margin-top:15px;
 font-size:14px;
@@ -97,15 +100,10 @@ cursor:pointer;
 </head>
 <body>
 
-<div class="wrapper">
-
-<!-- 🔥 IMAGE -->
-<div class="image-container">
-<img src="/image-register.png">
-</div>
-
-<!-- 🔥 FORM -->
 <div class="box">
+
+<!-- ✅ IMAGE AJOUTÉE -->
+<img src="/image-register.png" alt="Image inscription">
 
 <h2>Créer un compte</h2>
 
@@ -116,8 +114,6 @@ cursor:pointer;
 
 <div class="switch">
 Déjà inscrit ? <a href="/login.html">Se connecter</a>
-</div>
-
 </div>
 
 </div>
