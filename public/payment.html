@@ -23,26 +23,27 @@ height:100vh;
 .container{
 width:500px;
 background:#111;
-padding:50px;
+padding:40px;
 border-radius:30px;
 box-shadow:0 0 80px rgba(255,255,255,0.1);
 text-align:center;
 }
 
-/* ================= IMAGE ================= */
+/* ================= IMAGE BOX BLEU ================= */
+
+.image-box{
+background:#0044ff;
+padding:15px;
+border-radius:20px;
+margin-bottom:25px;
+box-shadow:0 0 30px rgba(0,68,255,0.4);
+}
 
 .payment-image{
 width:100%;
-max-height:220px;
+max-height:200px;
 object-fit:cover;
-border-radius:20px;
-margin-bottom:25px;
-box-shadow:0 0 40px rgba(255,255,255,0.15);
-transition:0.3s;
-}
-
-.payment-image:hover{
-transform:scale(1.03);
+border-radius:15px;
 }
 
 /* ================= PRICE ================= */
@@ -85,10 +86,12 @@ transform:scale(1.05);
 
 <div class="container">
 
-<!-- 🔥 IMAGE -->
+<!-- 🔵 IMAGE DANS CADRE BLEU -->
+<div class="image-box">
 <img src="/image-payment.png" class="payment-image">
+</div>
 
-<!-- 🔥 PRICE -->
+<!-- 💰 PRICE -->
 <div class="highlight">
 0,50€ par recherche
 </div>
@@ -106,7 +109,7 @@ Activer le système de paiement
 
 <script>
 
-/* ================= REDIRECTION STRIPE ================= */
+/* ================= STRIPE REDIRECT ================= */
 
 async function goCheckout(){
 
