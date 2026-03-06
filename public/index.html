@@ -13,35 +13,48 @@
 <div class="container">
 
 <h1>Niche Finder</h1>
-
 <p>Les niches n'ont plus de secrets !</p>
 
 </div>
 
-<!-- ================= BOX INSCRIPTION CENTRE ================= -->
+<!-- ================= AUTH BOX ================= -->
 
 <div id="authBox">
 
-<h2>Inscription</h2>
+<h2 id="formTitle">Créer un compte</h2>
 
+<!-- 🔐 CHAMPS -->
 <input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Mot de passe">
 
-<button onclick="register()">Créer un compte</button>
+<!-- 🔵 BOUTON PRINCIPAL (INSCRIPTION) -->
+<button id="primaryBtn" onclick="register()">
+Créer un compte
+</button>
 
-<p style="margin-top:15px;color:#aaa;">
+<!-- 🔵 TEXTE SWITCH -->
+<p style="margin-top:15px;font-size:14px;">
 Déjà inscrit ?
+<span onclick="switchToLogin()"
+style="color:blue;cursor:pointer;font-weight:bold;">
+Sign in
+</span>
 </p>
 
-<button class="login-btn" onclick="loginPage()">
+<!-- 🔴 BOUTON LOGIN (CACHE PAR DEFAUT) -->
+<button id="loginBtn" onclick="login()" style="display:none;">
 Login
 </button>
 
 </div>
 
+<!-- ================= SCRIPT ================= -->
+
 <script>
 
-/* 🔥 INSCRIPTION */
+/* ================================================= */
+/* ================= REGISTER ====================== */
+/* ================================================= */
 
 async function register(){
 
@@ -65,10 +78,51 @@ alert("Erreur inscription");
 
 }
 
-/* 🔥 LOGIN */
+/* ================================================= */
+/* ================= LOGIN ========================= */
+/* ================================================= */
 
-function loginPage(){
-window.location="/login";
+async function login(){
+
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+
+const res = await fetch("/login",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({email,password})
+});
+
+const data = await res.json();
+
+if(res.ok){
+
+localStorage.setItem("token",data.token);
+
+alert("Connexion réussie 🔓");
+
+document.getElementById("authBox").style.display="none";
+
+}else{
+alert("Login échoué");
+}
+
+}
+
+/* ================================================= */
+/* ================= SWITCH ======================== */
+/* ================================================= */
+
+function switchToLogin(){
+
+document.getElementById("formTitle").innerText = "Connexion";
+
+document.getElementById("primaryBtn").style.display = "none";
+
+document.getElementById("loginBtn").style.display = "block";
+
 }
 
 </script>
