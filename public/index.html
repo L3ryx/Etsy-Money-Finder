@@ -7,7 +7,7 @@
 <title>Niche Finder</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/style.css">
 
 </head>
 <body>
@@ -27,7 +27,7 @@
   <div class="smoke"></div>
 </div>
 
-<!-- ================= MAIN CONTAINER ================= -->
+<!-- ================= MAIN CONTENT ================= -->
 <div class="container">
 
 <h1 class="title">Niche Finder</h1>
@@ -63,11 +63,11 @@
 
 <script>
 
+const token = localStorage.getItem("token");
+
 const startBtn = document.querySelector(".start-btn");
 const resultsContainer = document.getElementById("results");
 const loader = document.getElementById("loader");
-
-const token = localStorage.getItem("token");
 
 /* ===================================================== */
 /* ========== BLOQUER START SI PAS LOGIN =============== */
@@ -93,7 +93,7 @@ const keyword = document.querySelector(".input-field").value;
 const limit = document.querySelector(".dropdown").value;
 
 if(!keyword){
-alert("⚠️ Entre un keyword !");
+alert("Entre un keyword");
 return;
 }
 
@@ -104,7 +104,7 @@ startBtn.innerText = "Chargement...";
 try {
 
 /* ===================================================== */
-/* 🔥 PRELEVEMENT AUTOMATIQUE 0.50€ AVANT RECHERCHE */
+/* 🔥 PRELEVEMENT AUTOMATIQUE AVANT RECHERCHE */
 /* ===================================================== */
 
 const charge = await fetch("/charge-search",{
@@ -115,7 +115,7 @@ Authorization:"Bearer "+token
 });
 
 if(!charge.ok){
-alert("❌ Paiement refusé");
+alert("Paiement refusé ❌");
 loader.classList.add("hidden");
 startBtn.disabled = false;
 startBtn.innerText = "START";
@@ -123,7 +123,7 @@ return;
 }
 
 /* ===================================================== */
-/* 🔎 SI PAIEMENT OK → RECHERCHE */
+/* 🔎 RECHERCHE ETSY */
 /* ===================================================== */
 
 const response = await fetch("/search-etsy",{
@@ -160,7 +160,9 @@ resultsContainer.appendChild(card);
 });
 
 }else{
-resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+
+resultsContainer.innerHTML = "<p>Aucun résultat trouvé</p>";
+
 }
 
 } catch(error){
