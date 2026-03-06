@@ -32,6 +32,13 @@ async function login(){
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
 
+if(!email || !password){
+alert("Remplis tous les champs");
+return;
+}
+
+try {
+
 const res = await fetch("/login",{
 method:"POST",
 headers:{
@@ -44,16 +51,27 @@ const data = await res.json();
 
 if(res.ok){
 
+// 🔐 On stocke le token
+localStorage.setItem("token", data.token);
+
 alert("Connexion réussie ✅");
 
-/* redirection */
+// 🚀 Redirection (modifie si tu veux une autre page)
 window.location.href="/payment.html";
 
 }else{
-alert(data.message || "Erreur");
 
+alert(data.message || "Erreur de connexion");
+
+}
+
+} catch(err){
+alert("Erreur serveur");
 }
 
 }
 
 </script>
+
+</body>
+</html>
