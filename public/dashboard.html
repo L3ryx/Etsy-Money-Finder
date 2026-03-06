@@ -3,22 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Outil Verrouillé</title>
+<title>Dashboard</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-<!-- ================= TOOL CONTENT ================= -->
+<!-- ================= TON OUTIL NORMAL ================= -->
 
 <div class="tool-container">
 
 <h1>Niche Finder</h1>
 
+<!-- 🔥 TON OUTIL RESTE ICI -->
+<div id="results">
+<!-- Tes résultats apparaissent ici -->
 </div>
 
-<!-- ================= LOCK OVERLAY ================= -->
+</div>
 
-<div id="lockOverlay">
+<!-- ================= LOCK OVERLAY PAR DESSUS ================= -->
+
+<div id="premiumOverlay">
 
 <div class="lock">🔒</div>
 
@@ -34,12 +39,12 @@ Accéder
 
 <script>
 
-/* 🔐 Vérifie connexion */
+/* Vérification connexion */
 if(!localStorage.getItem("token")){
 window.location="/";
 }
 
-/* 🔥 Redirection paiement */
+/* Redirection paiement */
 function goPayment(){
 window.location="/payment.html";
 }
