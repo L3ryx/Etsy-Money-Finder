@@ -7,51 +7,74 @@
 
 <style>
 
-body{
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
 background:black;
 font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
-height:100vh;
+min-height:100vh;
 color:white;
 }
 
-/* 🔥 ANCIEN DESIGN BOX */
+/* 🔥 CONTAINER GLOBAL */
+
+.container{
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+/* 🔥 IMAGE */
+
+.container img{
+width:300px;
+max-width:90%;
+border-radius:25px;
+margin-bottom:25px;
+box-shadow:0 0 50px rgba(255,255,255,0.2);
+object-fit:cover;
+}
+
+/* 🔥 BOX INSCRIPTION */
 
 .box{
 background:#111;
-padding:50px;
+padding:40px;
 border-radius:30px;
-width:400px;
+width:350px;
 text-align:center;
 box-shadow:0 0 80px rgba(255,255,255,0.1);
 }
 
 .box h2{
 color:yellow;
-margin-bottom:25px;
+margin-bottom:20px;
 }
 
 .box input{
 width:100%;
-padding:15px;
+padding:12px;
 margin:10px 0;
-border-radius:15px;
+border-radius:12px;
 border:none;
 outline:none;
 background:#222;
 color:white;
-font-size:14px;
 }
 
 .box button{
 width:100%;
-padding:15px;
+padding:12px;
 border:none;
-border-radius:15px;
-background:yellow; /* 🔥 BOUTON JAUNE */
+border-radius:12px;
+background:yellow;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
@@ -61,8 +84,6 @@ transition:0.3s;
 transform:scale(1.05);
 }
 
-/* 🔥 SWITCH LOGIN */
-
 .switch{
 margin-top:15px;
 font-size:14px;
@@ -71,12 +92,16 @@ font-size:14px;
 .switch a{
 color:#00aaff;
 text-decoration:none;
-cursor:pointer;
 }
 
 </style>
 </head>
 <body>
+
+<div class="container">
+
+<!-- ✅ IMAGE (CHANGE LE NOM SI BESOIN) -->
+<img src="/image-register.png" alt="Image">
 
 <div class="box">
 
@@ -89,6 +114,8 @@ cursor:pointer;
 
 <div class="switch">
 Déjà inscrit ? <a href="/login.html">Se connecter</a>
+</div>
+
 </div>
 
 </div>
