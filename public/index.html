@@ -4,44 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Tool</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
 <script src="/socket.io/socket.io.js"></script>
-
-<style>
-
-/* ================= FOND IMAGE ================= */
-
-body{
-background:url("/background.png") no-repeat center center fixed;
-background-size:cover;
-}
-
-/* Option si tu veux un overlay sombre */
-body::before{
-content:"";
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.6);
-z-index:-1;
-}
-
-</style>
 
 </head>
 <body>
 
-<!-- ================= SMOKE (tu peux garder si tu veux) ================= -->
-<div class="smoke-container">
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-  <div class="smoke"></div>
+<!-- ================= USER BUTTON ================= -->
+<div class="user-btn" id="userButton" onclick="goDashboard()">
+👤 Connexion
 </div>
 
+<!-- ================= BACKGROUND ================= -->
+<img src="/background.png" class="gif-background">
+
+<!-- ================= SMOKE ================= -->
+<div class="smoke-container">
+<div class="smoke"></div>
+<div class="smoke"></div>
+<div class="smoke"></div>
+</div>
+
+<!-- ================= MAIN ================= -->
 <div class="container">
 
 <div id="credits">Credits: -</div>
@@ -50,8 +38,7 @@ z-index:-1;
 
 <input type="text" class="input-field" placeholder="Keyword">
 
-<select class="dropdown" id="limitDropdown">
-</select>
+<select class="dropdown" id="limitDropdown"></select>
 
 <button class="start-btn">START</button>
 
@@ -61,7 +48,18 @@ z-index:-1;
 
 </div>
 
+<!-- ================= RESULTS ================= -->
 <div id="results"></div>
+
+<!-- ================= LOADER ================= -->
+<div id="loader" class="loader hidden">
+<div class="spinner"></div>
+<p>Recherche en cours...</p>
+</div>
+
+<!-- ===================================================== -->
+<!-- ================= SCRIPT ============================ -->
+<!-- ===================================================== -->
 
 <script>
 
@@ -72,7 +70,44 @@ z-index:-1;
 const token = localStorage.getItem("token");
 
 if(!token){
+document.getElementById("credits").innerText = "Non connecté";
+}
+
+/* ===================================================== */
+/* USER BUTTON */
+/* ===================================================== */
+
+const userBtn = document.getElementById("userButton");
+
+if(token){
+
+fetch("/me",{
+headers:{
+Authorization:"Bearer " + token
+}
+})
+.then(res => res.json())
+.then(data => {
+
+if(data.email){
+userBtn.innerText = "👤 " + data.email;
+document.getElementById("credits").innerText =
+"Credits: " + data.credits;
+}
+
+})
+.catch(()=>{});
+
+}
+
+function goDashboard(){
+
+if(token){
+window.location.href="/dashboard.html";
+}else{
 window.location.href="/login.html";
+}
+
 }
 
 /* ===================================================== */
@@ -81,15 +116,17 @@ window.location.href="/login.html";
 
 const dropdown = document.getElementById("limitDropdown");
 
-for(let i = 1; i <= 100; i++){
+for(let i=1;i<=100;i++){
+
 const option = document.createElement("option");
 option.value = i;
 option.textContent = `Analyse ${i} annonces`;
 dropdown.appendChild(option);
+
 }
 
 /* ===================================================== */
-/* SOCKET */
+/* SOCKET LOGS */
 /* ===================================================== */
 
 const socket = io();
@@ -100,38 +137,26 @@ socketId = data.socketId;
 });
 
 socket.on("log",(data)=>{
+
 const logs = document.getElementById("logs");
 logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
 logs.scrollTop = logs.scrollHeight;
+
 });
-
-/* ===================================================== */
-/* LOAD USER INFO */
-/* ===================================================== */
-
-async function loadUser(){
-
-const res = await fetch("/me",{
-headers:{
-Authorization:"Bearer " + token
-}
-});
-
-if(res.ok){
-const data = await res.json();
-document.getElementById("credits").innerText =
-"Credits: " + data.credits;
-}
-
-}
-
-loadUser();
 
 /* ===================================================== */
 /* SEARCH */
 /* ===================================================== */
 
 document.querySelector(".start-btn").addEventListener("click", async()=>{
+
+const token = localStorage.getItem("token");
+
+if(!token){
+alert("🔒 Tu dois être connecté !");
+window.location.href="/login.html";
+return;
+}
 
 const keyword = document.querySelector(".input-field").value;
 const limit = dropdown.value;
@@ -161,7 +186,7 @@ const data = await res.json();
 const resultsContainer = document.getElementById("results");
 resultsContainer.innerHTML = "";
 
-if(data.results){
+if(data.results && data.results.length > 0){
 
 data.results.forEach(item=>{
 
@@ -178,6 +203,8 @@ resultsContainer.appendChild(card);
 
 });
 
+}else{
+resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
 document.getElementById("loader").classList.add("hidden");
