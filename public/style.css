@@ -1,44 +1,80 @@
+/* ================= PREMIUM AUTH STYLE ================= */
+
 body{
-margin:0;
-font-family:Arial;
 background:black;
 color:white;
+font-family:Arial, Helvetica, sans-serif;
 overflow:hidden;
 }
 
-/* ================= POPUP ================= */
+/* ================= TOOL TEXT ================= */
 
-.popup{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.6);
-backdrop-filter:blur(20px);
-display:flex;
-justify-content:center;
-align-items:center;
-z-index:9999;
-}
-
-.popup-box{
-background:#111;
-padding:50px;
-border-radius:30px;
-width:350px;
+.container{
 text-align:center;
+margin-top:100px;
 }
 
-.popup-box input{
+.title{
+font-size:60px;
+background:linear-gradient(90deg,#00e676,#ffffff);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+}
+
+.subtitle{
+opacity:0.6;
+}
+
+/* ================= AUTH BOX ================= */
+
+#authBox{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#111;
+padding:60px;
+border-radius:30px;
+width:400px;
+box-shadow:0 0 80px rgba(255,255,255,0.1);
+overflow:hidden;
+}
+
+/* ================= FORMS ================= */
+
+.form-container{
+position:relative;
+width:100%;
+}
+
+.form{
+position:absolute;
+width:100%;
+opacity:0;
+transform:translateX(100%);
+transition:0.5s ease;
+}
+
+.form.active{
+opacity:1;
+transform:translateX(0);
+position:relative;
+}
+
+/* ================= INPUT ================= */
+
+.form input{
 width:100%;
 padding:12px;
 margin:10px 0;
-border-radius:10px;
+border-radius:12px;
 border:none;
+outline:none;
 }
 
-.popup-box button{
+/* ================= BUTTON ================= */
+
+.form button{
 width:100%;
 padding:12px;
 background:yellow;
@@ -46,50 +82,22 @@ border:none;
 border-radius:12px;
 font-weight:bold;
 cursor:pointer;
+transition:0.3s;
 }
 
-/* ================= TOOL ================= */
-
-.container{
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-flex-direction:column;
-text-align:center;
+.form button:hover{
+transform:scale(1.05);
 }
 
-/* ================= LOCK SECTION ================= */
+/* ================= SWITCH TEXT ================= */
 
-.arrow{
-font-size:60px;
-color:red;
-animation:bounce 1s infinite;
+.switch-text{
+margin-top:15px;
+font-size:14px;
 }
 
-.flames{
-font-size:40px;
-}
-
-.lock{
-font-size:90px;
-margin:20px 0;
-}
-
-.unlock-btn{
-background:yellow;
-padding:15px 40px;
-border:none;
-border-radius:15px;
-font-size:18px;
-font-weight:bold;
+.switch-link{
+color:#00e676;
 cursor:pointer;
-}
-
-/* 🔥 ANIMATION */
-
-@keyframes bounce{
-0%{transform:translateY(0);}
-50%{transform:translateY(20px);}
-100%{transform:translateY(0);}
+font-weight:bold;
 }
