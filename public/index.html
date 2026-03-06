@@ -7,30 +7,21 @@
 
 <title>Etsy Money Finder</title>
 
+<!-- 🔥 POLICE HACKER -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 
-/* ================= RESET ================= */
+/* ================= GLOBAL ================= */
 
-*{
-  box-sizing:border-box;
-}
-
-html, body{
+body{
   margin:0;
-  padding:0;
-  width:100%;
-  min-height:100%;
-
   background:black;
-  font-family:Arial, sans-serif;
+  font-family:Arial;
   color:white;
-
-  overflow-x:hidden;
-  overflow-y:auto;
-
-  -webkit-overflow-scrolling:touch;
+  overflow:auto; /* ✅ permet le scroll */
 }
 
 /* ================= MATRIX ================= */
@@ -42,16 +33,50 @@ html, body{
   width:100%;
   height:100%;
   z-index:-1;
-  pointer-events:none;
 }
 
-/* ================= TITLE ================= */
+/* ================= TITLE HACKER ================= */
 
 .title{
   text-align:center;
-  font-size:32px;
+  font-size:42px;
   margin-top:30px;
-  font-weight:bold;
+  font-family:'Orbitron', sans-serif;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color:#00ff66;
+  text-shadow:
+    0 0 5px #00ff66,
+    0 0 10px #00ff66,
+    0 0 20px #00ff66;
+  animation:glow 2s infinite alternate, glitch 3s infinite;
+}
+
+/* Glow animation */
+
+@keyframes glow{
+  from{
+    text-shadow:
+      0 0 5px #00ff66,
+      0 0 10px #00ff66;
+  }
+  to{
+    text-shadow:
+      0 0 10px #00ff66,
+      0 0 20px #00ff66,
+      0 0 40px #00ff66;
+  }
+}
+
+/* Glitch effect */
+
+@keyframes glitch{
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px,2px); }
+  40% { transform: translate(2px,-2px); }
+  60% { transform: translate(-2px); }
+  80% { transform: translate(2px); }
+  100% { transform: translate(0); }
 }
 
 /* ================= CENTER ================= */
@@ -61,7 +86,6 @@ html, body{
   flex-direction:column;
   align-items:center;
   margin-top:40px;
-  padding-bottom:150px;
 }
 
 /* ================= SEARCH ================= */
@@ -69,16 +93,13 @@ html, body{
 .search-box{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
-  justify-content:center;
   align-items:center;
 }
 
 input, select{
-  padding:8px 12px;
+  padding:8px;
   border-radius:8px;
   border:none;
-  outline:none;
 }
 
 /* ================= START BUTTON ================= */
@@ -98,23 +119,23 @@ input, select{
   transform:scale(1.1);
 }
 
-/* ================= LOADER ================= */
+/* ================= LOADER ROTATING ================= */
 
 .loader-container{
-  display:none;
   margin-top:25px;
+  display:none;
   justify-content:center;
   align-items:center;
 }
 
 .loader{
-  font-size:40px;
+  font-size:50px;
   animation:spin 1s linear infinite;
 }
 
 @keyframes spin{
-  from{ transform:rotate(0deg); }
-  to{ transform:rotate(360deg); }
+  from{ transform:rotate(0deg);}
+  to{ transform:rotate(360deg);}
 }
 
 /* ================= RESULTS ================= */
@@ -128,19 +149,17 @@ input, select{
 .result-card{
   background:#111;
   padding:15px;
-  border-radius:12px;
+  border-radius:10px;
   margin:10px 0;
 }
 
 .result-card img{
-  max-width:100%;
   border-radius:8px;
 }
 
 .result-card a{
   color:#00ffcc;
   text-decoration:none;
-  font-weight:bold;
 }
 
 </style>
@@ -148,14 +167,12 @@ input, select{
 </head>
 <body>
 
-<!-- MATRIX BACKGROUND -->
 <canvas id="matrix"></canvas>
 
 <h1 class="title">Etsy Money Finder</h1>
 
 <div class="main-center">
 
-<!-- SEARCH AREA -->
 <div class="search-box">
 
 <input type="text" id="keyword" placeholder="Keyword">
@@ -174,24 +191,20 @@ input, select{
 
 </div>
 
-<!-- LOADER -->
+<!-- 🔥 LOADER -->
 <div class="loader-container" id="loader">
 <div class="loader">🔥</div>
 </div>
 
-<!-- RESULTS -->
 <div id="results"></div>
 
 </div>
 
 <script>
 
-const socket = io();
 const loader = document.getElementById("loader");
 
-/* ============================================= */
-/* SEARCH FUNCTION */
-/* ============================================= */
+/* ================= SEARCH ================= */
 
 async function searchEtsy(){
 
@@ -200,21 +213,20 @@ async function searchEtsy(){
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
 
-  const response = await fetch("/search-etsy",{
+  const response = await fetch("/search-etsy", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ keyword, limit })
+    body: JSON.stringify({ keyword, limit })
   });
 
   const data = await response.json();
 
   hideLoader();
+
   displayResults(data.results);
 }
 
-/* ============================================= */
-/* LOADER */
-/* ============================================= */
+/* ================= LOADER ================= */
 
 function showLoader(){
   loader.style.display = "flex";
@@ -224,9 +236,7 @@ function hideLoader(){
   loader.style.display = "none";
 }
 
-/* ============================================= */
-/* RESULTS */
-/* ============================================= */
+/* ================= RESULTS ================= */
 
 function displayResults(results){
 
@@ -244,8 +254,7 @@ function displayResults(results){
     card.className = "result-card";
 
     card.innerHTML = `
-      <img src="${item.image}">
-      <br><br>
+      <img src="${item.image}" width="200"><br><br>
       🔗 <a href="${item.link}" target="_blank">
         Open Listing
       </a>
@@ -256,60 +265,59 @@ function displayResults(results){
   });
 }
 
-/* ============================================= */
-/* MATRIX FIX PRO */
-/* ============================================= */
+/* ================= MATRIX BACKGROUND ================= */
 
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 const letters = "010101ETSYMONEYFINDER";
 const fontSize = 16;
 
-let columns = Math.floor(canvas.width / fontSize);
-let drops = new Array(columns).fill(1);
+let columns = canvas.width / fontSize;
+let drops = [];
 
-function resetColumns(){
-  columns = Math.floor(canvas.width / fontSize);
-  drops = new Array(columns).fill(1);
+for(let i=0;i<columns;i++){
+  drops[i]=1;
 }
-
-window.addEventListener("resize", resetColumns);
 
 function drawMatrix(){
 
-  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillStyle="rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle = "#00ff00";
-  ctx.font = fontSize + "px monospace";
+  ctx.fillStyle="#00ff00";
+  ctx.font = fontSize+"px monospace";
 
-  for(let i=0;i<columns;i++){
+  for(let i=0;i<drops.length;i++){
 
-    const text = letters.charAt(
-      Math.floor(Math.random()*letters.length)
-    );
-
+    const text = letters[Math.floor(Math.random()*letters.length)];
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-    if(drops[i]*fontSize > canvas.height && Math.random() > 0.95){
-      drops[i] = 0;
+    if(drops[i]*fontSize > canvas.height && Math.random()>0.975){
+      drops[i]=0;
     }
 
     drops[i]++;
   }
 }
 
-/* Animation */
 setInterval(drawMatrix,50);
+
+/* ================= RESIZE FIX ================= */
+
+window.addEventListener("resize",()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  columns = canvas.width/fontSize;
+  drops=[];
+  for(let i=0;i<columns;i++){
+    drops[i]=1;
+  }
+});
 
 </script>
 
