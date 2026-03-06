@@ -1,21 +1,28 @@
 *{
-box-sizing:border-box;
-}
-
-html,body{
 margin:0;
 padding:0;
-height:100%;
+box-sizing:border-box;
 font-family:Arial;
-background:black;
-color:white;
-overflow:hidden;
 }
 
-/* ================= STARS ================= */
+body{
+background:black;
+overflow:hidden;
+color:white;
+}
+
+/* SKY */
+
+.sky{
+position:relative;
+height:100vh;
+background:linear-gradient(#000010,#000);
+}
+
+/* STARS */
 
 .stars{
-position:fixed;
+position:absolute;
 width:100%;
 height:100%;
 background-image:
@@ -23,55 +30,44 @@ radial-gradient(white 1px, transparent 1px),
 radial-gradient(white 1px, transparent 1px);
 background-size:60px 60px;
 animation:moveStars 60s linear infinite;
-z-index:-3;
+opacity:0.5;
 }
 
 @keyframes moveStars{
 from{transform:translateY(0)}
-to{transform:translateY(-1000px)}
+to{transform:translateY(-2000px)}
 }
 
-/* ================= TITLE ================= */
+/* TITLE */
 
 .title{
-position:absolute;
-top:30px;
-width:100%;
 text-align:center;
-font-size:38px;
-font-weight:bold;
-color:white;
+padding-top:30px;
+font-size:40px;
 }
 
-/* ================= CENTER ================= */
+/* FORM SECTION */
 
-.main-center{
-position:absolute;
-top:110px;
-width:100%;
+.form-container{
 display:flex;
-justify-content:center;
+flex-direction:column;
+align-items:center;
+gap:15px;
+margin-top:40px;
 }
 
-/* ================= SEARCH ================= */
-
-.search-box{
-display:flex;
-gap:10px;
-}
-
-input,select{
-padding:8px;
+.input-field,
+.dropdown{
+padding:10px;
+width:250px;
 border-radius:8px;
 border:none;
 }
 
-/* ================= START BUTTON ================= */
-
 .start-btn{
 background:#00ff66;
 border:none;
-padding:8px 20px;
+padding:10px 30px;
 border-radius:20px;
 font-weight:bold;
 cursor:pointer;
@@ -82,85 +78,66 @@ transition:0.2s;
 transform:scale(1.1);
 }
 
-/* ================= SCENE ================= */
+/* SCENE */
 
 .scene{
 position:absolute;
-bottom:140px;
+bottom:120px;
 width:100%;
 display:flex;
 justify-content:center;
-align-items:center;
+align-items:flex-end;
+gap:20px;
 }
 
-/* ================= DOG HOUSE ================= */
-
-.dog-house{
-font-size:120px;
-position:absolute;
+.doghouse{
+font-size:90px;
 }
-
-/* ================= DOG ================= */
 
 .dog{
 font-size:60px;
-position:absolute;
-bottom:-10px;
-animation:dogWalk 6s infinite alternate linear;
+animation:dogMove 3s infinite alternate;
 }
 
-@keyframes dogWalk{
-
-0%{
-transform:translateX(-120px);
+@keyframes dogMove{
+from{transform:translateX(-10px)}
+to{transform:translateX(10px)}
 }
 
-100%{
-transform:translateX(120px);
-}
-
-}
-
-/* ================= MONEY ================= */
+/* MONEY */
 
 .money{
 position:absolute;
-font-size:40px;
-color:#00ff00;
-animation:flyMoney 5s linear infinite;
+font-size:30px;
+bottom:150px;
+animation:moneyFly 6s infinite;
+opacity:0;
 }
 
-.m1{left:-40px; animation-delay:0s;}
-.m2{left:0px; animation-delay:1s;}
-.m3{left:40px; animation-delay:2s;}
-.m4{left:80px; animation-delay:3s;}
-.m5{left:-80px; animation-delay:4s;}
+.m1{left:48%;animation-delay:0s;}
+.m2{left:50%;animation-delay:1s;}
+.m3{left:52%;animation-delay:2s;}
+.m4{left:47%;animation-delay:3s;}
+.m5{left:53%;animation-delay:4s;}
 
-@keyframes flyMoney{
-
+@keyframes moneyFly{
 0%{
 transform:translateY(0) rotate(0deg);
-opacity:1;
+opacity:0;
 }
-
+20%{opacity:1;}
 100%{
 transform:translateY(-600px) rotate(360deg);
 opacity:0;
 }
-
 }
 
-/* ================= GRASS ================= */
+/* GRASS */
 
 .grass{
-position:fixed;
+position:absolute;
 bottom:0;
 width:100%;
-height:140px;
-background:linear-gradient(
-to top,
-#0a7d00,
-#18b300
-);
-z-index:-1;
+height:120px;
+background:linear-gradient(#0a5f00,#0f8f00);
 }
