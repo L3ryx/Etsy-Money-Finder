@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Niche Finder</title>
+
+<!-- 🔥 POLICE -->
+<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ================= BACKGROUND ================= -->
+<img src="/background.gif" class="gif-background">
+
+<!-- ================= SMOKE ================= -->
+<div class="smoke-container">
+  <div class="smoke"></div>
+  <div class="smoke"></div>
+  <div class="smoke"></div>
+</div>
+
+<!-- ================= MAIN FORM ================= -->
+<div class="container">
+
+<h1 class="title">Niche Finder</h1>
+
+<div class="form-container">
+
+<input type="text" class="input-field" placeholder="Keyword">
+
+<select class="dropdown">
+<option value="5">Analyse 5 annonces</option>
+<option value="10">Analyse 10 annonces</option>
+<option value="20">Analyse 20 annonces</option>
+<option value="50">Analyse 50 annonces</option>
+</select>
+
+<button class="start-btn">START</button>
+
+</div>
+</div>
+
+<!-- ================= RESULTS (IMPORTANT : HORS CONTAINER) ================= -->
+<div id="results"></div>
+
+<!-- ================= LOADER ================= -->
+<div id="loader" class="loader hidden">
+<div class="spinner"></div>
+<p>Recherche en cours...</p>
+</div>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+
+const startBtn = document.querySelector(".start-btn");
+const resultsContainer = document.getElementById("results");
+const loader = document.getElementById("loader");
+
+startBtn.addEventListener("click", async () => {
+
+const keyword = document.querySelector(".input-field").value;
+const limit = document.querySelector(".dropdown").value;
+
+if(!keyword){
+alert("⚠️ Entre un keyword !");
+return;
+}
+
+loader.classList.remove("hidden");
+startBtn.disabled = true;
+startBtn.innerText = "Loading...";
+
+try {
+
+const response = await fetch("/search-etsy", {
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+keyword,
+limit
+})
+});
+
+const data = await response.json();
+
+resultsContainer.innerHTML = "";
+
+if(data.results && data.results.length > 0){
+
+data.results.forEach(item => {
+
+const card = document.createElement("div");
+card.className = "result-card";
+
+card.innerHTML = `
+<img src="${item.image}">
+<br>
+<a href="${item.link}" target="_blank">Voir annonce</a>
+`;
+
+resultsContainer.appendChild(card);
+
+});
+
+} else {
+resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+}
+
+} catch(error){
+console.error(error);
+alert("Erreur serveur ❌");
+}
+
+loader.classList.add("hidden");
+startBtn.disabled = false;
+startBtn.innerText = "START";
+
+});
+
+</script>
+
+</body>
+</html>
