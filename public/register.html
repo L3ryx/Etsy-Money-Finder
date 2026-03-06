@@ -7,23 +7,20 @@
 
 <style>
 
-*{
+html, body {
 margin:0;
 padding:0;
-box-sizing:border-box;
-}
-
-body{
-background:black;
+width:100%;
+height:100%;
+background:black !important; /* 🔥 FORCE LE FOND NOIR */
 font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
-min-height:100vh;
 color:white;
 }
 
-/* 🔥 BOX CENTRÉE */
+/* BOX */
 
 .box{
 background:#111;
@@ -31,13 +28,17 @@ padding:40px;
 border-radius:30px;
 width:350px;
 text-align:center;
-box-shadow:0 0 80px rgba(255,255,255,0.1);
+box-shadow:0 0 80px rgba(255,255,255,0.15);
 }
+
+/* TITRE */
 
 .box h2{
 color:yellow;
 margin-bottom:20px;
 }
+
+/* INPUT */
 
 .box input{
 width:100%;
@@ -49,6 +50,8 @@ outline:none;
 background:#222;
 color:white;
 }
+
+/* BOUTON JAUNE */
 
 .box button{
 width:100%;
@@ -64,6 +67,8 @@ transition:0.3s;
 .box button:hover{
 transform:scale(1.05);
 }
+
+/* SWITCH */
 
 .switch{
 margin-top:15px;
