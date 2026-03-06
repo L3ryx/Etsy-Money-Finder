@@ -80,7 +80,7 @@ justify-content:center;
 align-items:center;
 gap:35px;
 text-align:center;
-padding:40px 0;
+padding:60px 20px;
 }
 
 /* ===================================================== */
@@ -118,7 +118,7 @@ transition:0.3s ease;
 
 .input-field:focus,
 .dropdown:focus{
-box-shadow:0 0 0 4px rgba(0,113,227,0.3);
+box-shadow:0 0 0 4px rgba(0,255,102,0.3);
 }
 
 /* ===================================================== */
@@ -143,15 +143,45 @@ box-shadow:0 0 20px #00ff66;
 }
 
 .start-btn:disabled{
-opacity:0.6;
+opacity:0.5;
 cursor:not-allowed;
+}
+
+/* ===================================================== */
+/* ======================= CREDITS ===================== */
+/* ===================================================== */
+
+#credits{
+background:#00ff66;
+color:black;
+padding:8px 16px;
+border-radius:20px;
+font-weight:bold;
+}
+
+/* ===================================================== */
+/* ======================= LOGS ======================== */
+/* ===================================================== */
+
+.logs{
+width:100%;
+max-width:800px;
+background:#111;
+padding:20px;
+border-radius:20px;
+max-height:200px;
+overflow-y:auto;
+font-size:13px;
+}
+
+.logs .log{
+color:#00ff66;
+margin-bottom:6px;
 }
 
 /* ===================================================== */
 /* ================= RESPONSIVE GRID =================== */
 /* ===================================================== */
-
-/* 🔥 GRID AUTO ADAPTATIF */
 
 #results{
 width:100%;
@@ -164,9 +194,9 @@ padding:0 40px;
 justify-items:center;
 }
 
-/* 🔥 RESULT CARD */
+/* Result Card */
 
-#results .result-card{
+.result-card{
 width:100%;
 max-width:400px;
 background:white;
@@ -178,13 +208,13 @@ box-shadow:0 5px 20px rgba(0,0,0,0.2);
 transition:0.3s ease;
 }
 
-#results .result-card:hover{
+.result-card:hover{
 transform:translateY(-5px);
 }
 
 /* Images */
 
-#results .result-card img{
+.result-card img{
 width:100%;
 height:220px;
 object-fit:cover;
@@ -193,7 +223,7 @@ border-radius:14px;
 
 /* Links */
 
-#results .result-card a{
+.result-card a{
 display:inline-block;
 margin-top:10px;
 text-decoration:none;
@@ -202,33 +232,37 @@ font-weight:600;
 }
 
 /* ===================================================== */
-/* ================= MOBILE = 2 PAR LIGNE ============== */
+/* ================= MOBILE ============================ */
 /* ===================================================== */
 
 @media(max-width:768px){
 
 #results{
-grid-template-columns:repeat(2, 1fr) !important; /* 🔥 2 cartes mobile */
+grid-template-columns:repeat(2, 1fr);
 gap:15px;
 padding:0 10px;
 }
 
-#results .result-card{
+.result-card{
 max-width:none;
 }
 
-#results .result-card img{
+.result-card img{
 height:150px;
 }
 
+.title{
+font-size:32px;
 }
 
-/* Petit écran très petit */
+}
+
+/* Petit écran */
 
 @media(max-width:480px){
 
 #results{
-grid-template-columns:repeat(2, 1fr) !important;
+grid-template-columns:repeat(2, 1fr);
 gap:10px;
 }
 
@@ -244,13 +278,13 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.7);
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
 z-index:9999;
-backdrop-filter:blur(6px);
+backdrop-filter:blur(8px);
 }
 
 .loader.hidden{
@@ -271,4 +305,3 @@ margin-bottom:15px;
 from{transform:rotate(0deg);}
 to{transform:rotate(360deg);}
 }
-
