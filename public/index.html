@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,138 +10,187 @@
 <link rel="stylesheet" href="style.css">
 
 </head>
-
 <body>
 
-<!-- BACKGROUND IMAGE -->
+<!-- BACKGROUND -->
 <img src="/background.png" class="background-image">
-
 
 <!-- USER BUTTON -->
 <div class="top-bar">
+<button id="userBtn" class="user-btn">Espace utilisateur</button>
+</div>
 
-<button id="userBtn" class="user-btn">
-Espace utilisateur
+<!-- DASHBOARD MODAL -->
+<div id="dashboard" class="dashboard hidden">
+
+<div class="dashboard-box">
+
+<h2>Dashboard</h2>
+
+<p>Email : <span id="dashEmail"></span></p>
+<p>Role : <span id="dashRole"></span></p>
+<p>Credits : <span id="dashCredits"></span></p>
+
+<h3>Historique recherches</h3>
+<div id="history"></div>
+
+<button onclick="logout()" class="logout-btn">
+Se déconnecter
+</button>
+
+<button onclick="closeDashboard()" class="close-btn">
+Fermer
 </button>
 
 </div>
+</div>
 
-
-<!-- MAIN TOOL -->
+<!-- TOOL -->
 <div class="container">
 
 <div class="form-container">
 
-<input
-type="text"
-class="input-field"
-placeholder="Keyword Etsy"
->
+<input type="text" class="input-field" placeholder="Keyword Etsy">
 
 <select class="dropdown" id="limitSelect"></select>
 
-<button class="start-btn">
-START
-</button>
+<button class="start-btn">START</button>
 
 </div>
 
 </div>
-
 
 <!-- RESULTS -->
 <div id="results"></div>
 
-
 <!-- LOADER -->
 <div id="loader" class="loader hidden">
-
 <div class="spinner"></div>
 <p>Recherche en cours...</p>
-
 </div>
-
-
 
 <script>
 
-/* ================= LIMIT DROPDOWN ================= */
+/* ===================================================== */
+/* DROPDOWN 1 → 100 */
+/* ===================================================== */
 
 const select = document.getElementById("limitSelect");
 
 for(let i=1;i<=100;i++){
-
-const option = document.createElement("option");
-
-option.value = i;
-option.textContent = "Analyse " + i + " annonces";
-
+const option=document.createElement("option");
+option.value=i;
+option.textContent="Analyse "+i+" annonces";
 select.appendChild(option);
-
 }
 
+/* ===================================================== */
+/* LOGIN CHECK */
+/* ===================================================== */
 
-/* ================= LOGIN BUTTON ================= */
+function getToken(){
+return localStorage.getItem("token");
+}
 
-document.getElementById("userBtn").onclick = ()=>{
+/* ===================================================== */
+/* USER BUTTON */
+/* ===================================================== */
 
-const token = localStorage.getItem("token");
+document.getElementById("userBtn").onclick=async()=>{
 
-if(token){
-window.location.href="/dashboard.html";
-}else{
+const token=getToken();
+
+if(!token){
 window.location.href="/login.html";
+return;
 }
+
+const res=await fetch("/me",{
+headers:{
+Authorization:"Bearer "+token
+}
+});
+
+if(!res.ok){
+alert("Session expirée");
+localStorage.removeItem("token");
+window.location.href="/login.html";
+return;
+}
+
+const data=await res.json();
+
+document.getElementById("dashEmail").innerText=data.email;
+document.getElementById("dashRole").innerText=data.role;
+document.getElementById("dashCredits").innerText=data.credits;
+
+const history=document.getElementById("history");
+history.innerHTML="";
+
+data.searchHistory.forEach(h=>{
+const div=document.createElement("div");
+div.innerText=h.query+" - "+new Date(h.date).toLocaleString();
+history.appendChild(div);
+});
+
+document.getElementById("dashboard").classList.remove("hidden");
 
 };
 
+/* ===================================================== */
+/* CLOSE DASHBOARD */
+/* ===================================================== */
 
-/* ================= SEARCH ================= */
+function closeDashboard(){
+document.getElementById("dashboard").classList.add("hidden");
+}
 
-const startBtn = document.querySelector(".start-btn");
-const results = document.getElementById("results");
-const loader = document.getElementById("loader");
+/* ===================================================== */
+/* LOGOUT */
+/* ===================================================== */
 
-startBtn.addEventListener("click", async ()=>{
+function logout(){
+localStorage.removeItem("token");
+window.location.href="/login.html";
+}
 
-const keyword = document.querySelector(".input-field").value;
-const limit = document.querySelector(".dropdown").value;
+/* ===================================================== */
+/* SEARCH */
+/* ===================================================== */
 
-const token = localStorage.getItem("token");
+const startBtn=document.querySelector(".start-btn");
+const loader=document.getElementById("loader");
+const results=document.getElementById("results");
+
+startBtn.onclick=async()=>{
+
+const token=getToken();
 
 if(!token){
-
-alert("🔒 Connecte-toi pour lancer une recherche");
-
+alert("Connecte toi !");
 window.location.href="/login.html";
-
 return;
-
 }
+
+const keyword=document.querySelector(".input-field").value;
+const limit=document.getElementById("limitSelect").value;
 
 if(!keyword){
-
-alert("Entre un keyword");
-
+alert("Keyword obligatoire");
 return;
-
 }
 
-
 loader.classList.remove("hidden");
-startBtn.disabled = true;
+startBtn.disabled=true;
 
-results.innerHTML = "";
+results.innerHTML="";
 
-try{
-
-const res = await fetch("/search-etsy",{
+const res=await fetch("/search-etsy",{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json",
-"Authorization":"Bearer "+token
+Authorization:"Bearer "+token
 },
 
 body:JSON.stringify({
@@ -152,22 +200,20 @@ limit
 
 });
 
-
-const data = await res.json();
-
+const data=await res.json();
 
 if(data.results){
 
 data.results.forEach(item=>{
 
-const card = document.createElement("div");
-
+const card=document.createElement("div");
 card.className="result-card";
 
-card.innerHTML = `
+card.innerHTML=`
 
 <img src="${item.image}">
-
+<h3>${item.title}</h3>
+<p>${item.price}</p>
 <a href="${item.link}" target="_blank">
 Voir annonce
 </a>
@@ -184,17 +230,10 @@ results.innerHTML="<p>Aucun résultat</p>";
 
 }
 
-}catch(err){
-
-alert("Erreur serveur");
-
-}
-
-
 loader.classList.add("hidden");
 startBtn.disabled=false;
 
-});
+};
 
 </script>
 
