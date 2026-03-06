@@ -1,127 +1,264 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etsy Finder</title>
 
-<title>Niche Finder</title>
+<style>
 
-<!-- 🔥 POLICE -->
-<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
+body{
+font-family:Arial;
+background:#f5f5f5;
+padding:40px;
+text-align:center;
+}
 
-<link rel="stylesheet" href="style.css">
+.container{
+background:white;
+padding:30px;
+border-radius:10px;
+max-width:900px;
+margin:auto;
+}
+
+input{
+padding:10px;
+margin:5px;
+width:200px;
+}
+
+button{
+padding:10px 20px;
+margin:5px;
+cursor:pointer;
+}
+
+#results{
+display:grid;
+grid-template-columns:repeat(auto-fill,200px);
+gap:20px;
+margin-top:30px;
+justify-content:center;
+}
+
+.product{
+background:white;
+padding:10px;
+border-radius:10px;
+box-shadow:0 0 5px rgba(0,0,0,0.1);
+}
+
+.product img{
+width:100%;
+border-radius:8px;
+}
+
+</style>
+
 </head>
+
 <body>
 
-<!-- ================= BACKGROUND ================= -->
-<img src="/background.gif" class="gif-background">
-
-<!-- ================= SMOKE ================= -->
-<div class="smoke-container">
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-</div>
-
-<!-- ================= MAIN FORM ================= -->
 <div class="container">
 
-<h1 class="title">Niche Finder</h1>
+<h1>Etsy Product Finder</h1>
 
-<div class="form-container">
+<h3>Tokens disponibles : <span id="tokens">0</span></h3>
 
-<input type="text" class="input-field" placeholder="Keyword">
+<hr>
 
-<select class="dropdown">
-<option value="5">Analyse 5 annonces</option>
-<option value="10">Analyse 10 annonces</option>
-<option value="20">Analyse 20 annonces</option>
-<option value="50">Analyse 50 annonces</option>
-</select>
+<h2>Créer un compte</h2>
 
-<button class="start-btn">START</button>
+<input id="registerEmail" placeholder="Email">
+<input id="registerPassword" type="password" placeholder="Password">
 
-</div>
-</div>
+<br>
 
-<!-- ================= RESULTS (IMPORTANT : HORS CONTAINER) ================= -->
+<button onclick="register()">Register</button>
+
+<hr>
+
+<h2>Connexion</h2>
+
+<input id="loginEmail" placeholder="Email">
+<input id="loginPassword" type="password" placeholder="Password">
+
+<br>
+
+<button onclick="login()">Login</button>
+
+<hr>
+
+<h2>Acheter une recherche</h2>
+
+<button onclick="buySearch()">Acheter 1 recherche (0,50€)</button>
+
+<hr>
+
+<h2>Recherche Etsy</h2>
+
+<input id="keyword" placeholder="Mot clé">
+<input id="limit" placeholder="Nombre" value="10">
+
+<br>
+
+<button onclick="search()">Rechercher</button>
+
 <div id="results"></div>
 
-<!-- ================= LOADER ================= -->
-<div id="loader" class="loader hidden">
-<div class="spinner"></div>
-<p>Recherche en cours...</p>
 </div>
 
-<!-- ================= SCRIPT ================= -->
 <script>
 
-const startBtn = document.querySelector(".start-btn");
-const resultsContainer = document.getElementById("results");
-const loader = document.getElementById("loader");
+let token = localStorage.getItem("token");
 
-startBtn.addEventListener("click", async () => {
+async function register(){
 
-const keyword = document.querySelector(".input-field").value;
-const limit = document.querySelector(".dropdown").value;
+const email = document.getElementById("registerEmail").value
+const password = document.getElementById("registerPassword").value
 
-if(!keyword){
-alert("⚠️ Entre un keyword !");
-return;
+const res = await fetch("/register",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({email,password})
+})
+
+const data = await res.json()
+
+alert(data.message)
+
 }
 
-loader.classList.remove("hidden");
-startBtn.disabled = true;
-startBtn.innerText = "Loading...";
+async function login(){
 
-try {
+const email = document.getElementById("loginEmail").value
+const password = document.getElementById("loginPassword").value
 
-const response = await fetch("/search-etsy", {
+const res = await fetch("/login",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({email,password})
+})
+
+const data = await res.json()
+
+token = data.token
+
+localStorage.setItem("token",token)
+
+loadDashboard()
+
+}
+
+async function loadDashboard(){
+
+if(!token) return
+
+const res = await fetch("/dashboard",{
+headers:{
+Authorization:"Bearer "+token
+}
+})
+
+const data = await res.json()
+
+document.getElementById("tokens").innerText = data.tokens
+
+}
+
+async function buySearch(){
+
+const res = await fetch("/create-payment",{
 method:"POST",
 headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-keyword,
-limit
+Authorization:"Bearer "+token
+}
 })
-});
 
-const data = await response.json();
+const data = await res.json()
 
-resultsContainer.innerHTML = "";
+window.location = data.url
 
-if(data.results && data.results.length > 0){
-
-data.results.forEach(item => {
-
-const card = document.createElement("div");
-card.className = "result-card";
-
-card.innerHTML = `
-<img src="${item.image}">
-<br>
-<a href="${item.link}" target="_blank">Voir annonce</a>
-`;
-
-resultsContainer.appendChild(card);
-
-});
-
-} else {
-resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
-} catch(error){
-console.error(error);
-alert("Erreur serveur ❌");
+async function search(){
+
+const keyword = document.getElementById("keyword").value
+const limit = document.getElementById("limit").value
+
+const res = await fetch("/search-etsy",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify({keyword,limit})
+})
+
+const data = await res.json()
+
+if(data.message){
+alert(data.message)
+return
 }
 
-loader.classList.add("hidden");
-startBtn.disabled = false;
-startBtn.innerText = "START";
+displayResults(data.results)
 
-});
+loadDashboard()
+
+}
+
+function displayResults(products){
+
+const container = document.getElementById("results")
+
+container.innerHTML=""
+
+products.forEach(p=>{
+
+const div=document.createElement("div")
+
+div.className="product"
+
+div.innerHTML=`
+
+<img src="${p.image}">
+
+<br><br>
+
+<a href="${p.link}" target="_blank">Voir produit</a>
+
+<br><br>
+
+<button onclick="saveProduct('${p.image}','${p.link}')">
+Sauvegarder
+</button>
+
+`
+
+container.appendChild(div)
+
+})
+
+}
+
+async function saveProduct(image,link){
+
+await fetch("/save-product",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify({image,link})
+})
+
+alert("Produit sauvegardé")
+
+}
+
+loadDashboard()
 
 </script>
 
