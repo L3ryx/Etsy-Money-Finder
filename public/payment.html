@@ -1,46 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ajouter Carte</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiement</title>
+
 <script src="https://js.stripe.com/v3/"></script>
 
 <style>
 
 body{
+margin:0;
 background:black;
 color:white;
-font-family:Arial;
+font-family:Arial, Helvetica, sans-serif;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
 }
 
-.box{
+/* ================= CONTAINER ================= */
+
+.container{
+width:500px;
 background:#111;
 padding:40px;
-border-radius:20px;
-width:400px;
+border-radius:25px;
+box-shadow:0 0 60px rgba(255,255,255,0.1);
 text-align:center;
-box-shadow:0 0 40px rgba(255,255,255,0.1);
 }
 
-button{
-width:100%;
-padding:12px;
-background:yellow;
-border:none;
-border-radius:10px;
+/* ================= TEXT ================= */
+
+.title{
+font-size:20px;
 font-weight:bold;
-cursor:pointer;
+line-height:1.6;
 }
+
+.price{
+margin-top:20px;
+font-size:18px;
+color:yellow;
+font-weight:bold;
+}
+
+/* ================= CARD BOX ================= */
+
+.card-box{
+margin-top:30px;
+display:flex;
+flex-direction:column;
+gap:15px;
+}
+
+/* Stripe Card */
 
 #card-element{
 background:white;
 padding:15px;
-border-radius:10px;
-margin:20px 0;
+border-radius:12px;
+}
+
+/* ================= BUTTON ================= */
+
+button{
+margin-top:20px;
+width:100%;
+padding:15px;
+border:none;
+border-radius:15px;
+background:yellow;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
 }
 
 </style>
@@ -48,27 +86,45 @@ margin:20px 0;
 </head>
 <body>
 
-<div class="box">
+<div class="container">
 
-<h2>Ajouter votre carte 💳</h2>
+<div class="title">
+Un moteur de recherche intelligent qui analyse les produits à partir d’un simple mot-clé et identifie automatiquement ceux disponibles sur AliExpress.<br><br>
+Les niches n'ont plus de secrets !
+</div>
+
+<div class="price">
+0,50€ par recherche
+</div>
+
+<!-- ================= PAYMENT FORM ================= -->
+
+<div class="card-box">
 
 <div id="card-element"></div>
 
-<button onclick="saveCard()">Enregistrer Carte</button>
+<button onclick="saveCard()">
+Enregistrer et Activer
+</button>
+
+</div>
 
 </div>
 
 <script>
 
+/* ================= STRIPE ================= */
+
 const stripe = Stripe("TON_PUBLIC_KEY_ICI");
 
 const elements = stripe.elements();
 const card = elements.create("card");
+
 card.mount("#card-element");
 
 let clientSecret;
 
-/* 🔥 GET SETUP INTENT */
+/* ================= GET SETUP INTENT ================= */
 
 async function getSetupIntent(){
 
@@ -87,7 +143,7 @@ clientSecret = data.clientSecret;
 
 getSetupIntent();
 
-/* 🔥 SAVE CARD */
+/* ================= SAVE CARD ================= */
 
 async function saveCard(){
 
@@ -115,7 +171,7 @@ paymentMethodId: result.setupIntent.payment_method
 })
 });
 
-alert("Carte enregistrée ✅");
+alert("Paiement activé ✅");
 
 window.location="/dashboard.html";
 
