@@ -6,7 +6,7 @@ html, body{
   margin:0;
   padding:0;
   width:100%;
-  min-height:100vh;
+  height:100%;
   overflow-x:hidden;
   overflow-y:auto;
   background:black;
@@ -15,7 +15,7 @@ html, body{
 }
 
 /* ===================================================== */
-/* MATRIX FIX 100% (PLUS DE CARRÉ NOIR) */
+/* MATRIX ULTRA FIX (ANTI CARRÉ NOIR) */
 /* ===================================================== */
 
 #matrix{
@@ -25,28 +25,18 @@ html, body{
   width:100vw;
   height:100vh;
   z-index:-1;
-  pointer-events:none;
   background:black;
+  pointer-events:none;
   display:block;
 }
 
 canvas{
   background:transparent;
-}
-
-/* Animation légère */
-@keyframes matrixGlow{
-  0%{ filter:brightness(1); }
-  50%{ filter:brightness(1.3); }
-  100%{ filter:brightness(1); }
-}
-
-#matrix{
-  animation:matrixGlow 5s infinite;
+  transform:translateZ(0);
 }
 
 /* ===================================================== */
-/* TITLE + GLITCH */
+/* TITLE GLITCH */
 /* ===================================================== */
 
 .title{
@@ -58,7 +48,6 @@ canvas{
   position:relative;
 }
 
-/* Glitch */
 .title::before,
 .title::after{
   content:"Etsy Money Finder";
@@ -95,7 +84,7 @@ canvas{
 }
 
 /* ===================================================== */
-/* CENTER */
+/* SEARCH BOX (GLASS) */
 /* ===================================================== */
 
 .main-center{
@@ -103,13 +92,8 @@ canvas{
   flex-direction:column;
   align-items:center;
   gap:40px;
-  margin-top:40px;
   padding-bottom:120px;
 }
-
-/* ===================================================== */
-/* SEARCH BOX (GLASS EFFECT) */
-/* ===================================================== */
 
 .search-box{
   display:flex;
@@ -135,16 +119,10 @@ canvas{
   text-align:center;
   font-size:16px;
   outline:none;
-  transition:0.3s;
-}
-
-#keyword:focus,
-#limit:focus{
-  box-shadow:0 0 25px #00ff66;
 }
 
 /* ===================================================== */
-/* START BUTTON (FIRE) */
+/* START BUTTON FIRE */
 /* ===================================================== */
 
 .start-btn{
@@ -157,11 +135,10 @@ canvas{
   font-size:24px;
   font-weight:bold;
   cursor:pointer;
-  transition:0.3s;
   box-shadow:0 0 50px #00ff66;
+  transition:0.3s;
 }
 
-/* Fire border */
 .start-btn::before{
   content:"";
   position:absolute;
@@ -174,13 +151,12 @@ canvas{
 }
 
 @keyframes fireRotate{
-  0%{ transform:rotate(0deg); }
-  100%{ transform:rotate(360deg); }
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
 }
 
 .start-btn:hover{
   transform:scale(1.15);
-  box-shadow:0 0 90px #00ff66;
 }
 
 /* ===================================================== */
@@ -196,7 +172,7 @@ canvas{
   justify-items:center;
 }
 
-/* 🔥 Mobile = 1 colonne */
+/* Mobile */
 @media(max-width:768px){
   #results{
     grid-template-columns:repeat(1,1fr);
@@ -215,8 +191,8 @@ canvas{
   padding:30px;
   width:100%;
   max-width:350px;
-  transition:0.3s;
   text-align:center;
+  transition:0.3s;
 }
 
 .result-card:hover{
@@ -234,11 +210,6 @@ canvas{
   color:#00ff66;
   text-decoration:none;
   font-weight:bold;
-  font-size:18px;
-}
-
-.result-card a:hover{
-  text-shadow:0 0 15px #00ff66;
 }
 
 /* ===================================================== */
