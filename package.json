@@ -1,7 +1,7 @@
 {
-  "name": "etsy-niche-finder",
-  "version": "1.0.0",
-  "description": "Etsy niche finder with authentication, credits, stripe payment and scraping",
+  "name": "niche-finder-pro",
+  "version": "2.0.0",
+  "description": "Etsy niche finder SaaS with auth, stripe, puppeteer scraping and image analysis",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,14 +12,14 @@
   "dependencies": {
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
-    "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.2.1",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.5",
-    "stripe": "^14.21.0"
+    "stripe": "^14.21.0",
+    "puppeteer": "^22.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
