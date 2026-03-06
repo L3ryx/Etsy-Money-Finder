@@ -1,7 +1,7 @@
 {
-  "name": "etsy-niche-finder",
-  "version": "2.0.0",
-  "description": "Etsy + AliExpress smart comparison engine",
+  "name": "etsy-aliexpress-ai-engine",
+  "version": "3.0.0",
+  "description": "Smart Etsy to AliExpress comparison engine with AI filtering",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,12 +13,13 @@
   "keywords": [
     "etsy",
     "aliexpress",
-    "scraper",
     "ai",
-    "serpapi"
+    "serpapi",
+    "scraping",
+    "mongodb"
   ],
   "author": "YourName",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
@@ -27,7 +28,6 @@
     "google-search-results-nodejs": "^2.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.0",
-    "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
