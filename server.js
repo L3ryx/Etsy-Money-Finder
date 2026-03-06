@@ -87,6 +87,8 @@ purchaseHistory:[],
 searchHistory:[]
 });
 
+/* Stripe customer */
+
 const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
 
@@ -166,8 +168,7 @@ plan,
 searches
 },
 
-line_items:[
-{
+line_items:[{
 price_data:{
 currency:"eur",
 product_data:{
@@ -176,8 +177,7 @@ name:`Plan ${plan}`
 unit_amount:amount
 },
 quantity:1
-}
-],
+}],
 
 success_url:"http://localhost:10000/success.html",
 cancel_url:"http://localhost:10000/payment.html"
@@ -243,7 +243,7 @@ res.json({received:true});
 });
 
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* SOCKET SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket,message){
@@ -258,22 +258,34 @@ socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* 🔥 ETSY SEARCH – IMAGE + LINK ASSOCIE */
+/* 🔥 SECURE ETSY SEARCH */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
 
+const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.status(401).json({message:"User not found"});
+}
+
+/* 🔥 Vérification crédits */
+if(user.role !== "unlimited" && user.credits <= 0){
+return res.status(403).json({message:"No credits"});
+}
+
 const {keyword,limit} = req.body;
 
 if(!keyword){
-return res.status(400).json({error:"Keyword required"});
+return res.status(400).json({message:"Keyword required"});
 }
 
 const maxItems = Math.min(parseInt(limit) || 10,100);
 
 try{
 
-const etsyUrl = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+const etsyUrl =
+`https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
 const scraperResponse = await axios.get(
 "https://api.scraperapi.com/",
@@ -288,9 +300,7 @@ render:true
 
 const html = scraperResponse.data;
 
-/* ===================================================== */
-/* 🔥 EXTRACTION PROPRE DES BLOCS */
-/* ===================================================== */
+/* 🔥 Extraction bloc propre */
 
 const productRegex =
 /<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+)[^>]*>([\s\S]*?)<\/a>/g;
@@ -304,7 +314,6 @@ for(let i=0;i<matches.length && results.length<maxItems;i++){
 const block = matches[i][0];
 const link = matches[i][1];
 
-/* Extraire image dans le bloc */
 const imageMatch = block.match(/https:\/\/i\.etsystatic\.com[^"]+/);
 
 if(imageMatch){
@@ -318,29 +327,38 @@ link:link
 
 }
 
-res.json({results});
+/* 🔥 Déduction crédit */
+
+if(user.role !== "unlimited"){
+user.credits -= 1;
+user.searchesUsed += 1;
+}
+
+user.searchHistory.push({
+query:keyword,
+date:new Date()
+});
+
+await user.save();
+
+res.json({results,creditsLeft:user.credits});
 
 }catch(err){
-console.log("Scraping error",err.message);
-res.status(500).json({error:"Scraping failed"});
+console.log(err);
+res.status(500).json({message:"Scraping failed"});
 }
 
 });
 
 /* ===================================================== */
-/* 🔥 IMAGE ANALYSIS (UNCHANGED) */
+/* IMAGE ANALYSIS */
 /* ===================================================== */
 
-app.post("/analyze-images", upload.array("images"), async(req,res)=>{
-
-const socketId = req.body.socketId;
-const socket = io.sockets.sockets.get(socketId);
+app.post("/analyze-images", auth, upload.array("images"), async(req,res)=>{
 
 const results = [];
 
 for(const file of req.files){
-
-sendLog(socket,`Processing ${file.originalname}`);
 
 const base64 = file.buffer.toString("base64");
 
@@ -355,8 +373,6 @@ image:base64
 );
 
 const imageUrl = uploadRes.data.data.url;
-
-sendLog(socket,"Image uploaded");
 
 const vision = await axios.post(
 "https://api.openai.com/v1/chat/completions",
@@ -389,7 +405,7 @@ matches:[{url:"AI_ANALYSIS",similarity}]
 });
 
 }catch(err){
-sendLog(socket,"Pipeline failed");
+console.log("Image pipeline error");
 }
 
 }
