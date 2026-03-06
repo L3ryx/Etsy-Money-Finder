@@ -12,7 +12,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cheerio = require("cheerio");
 const Stripe = require("stripe");
-const rateLimit = require("express-rate-limit");
 
 /* ===================================================== */
 /* ================= CONFIG ============================ */
@@ -37,8 +36,8 @@ mongoose
 .connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
 )
-.then(()=>console.log("✅ Mongo Connected"))
-.catch(err=>console.log(err));
+.then(()=>console.log("✅ MongoDB Connected"))
+.catch(err=>console.log("❌ Mongo Error",err));
 
 /* ===================================================== */
 /* ================= MIDDLEWARE ======================== */
@@ -47,24 +46,6 @@ mongoose
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
-
-/* ===================================================== */
-/* ================= ANTI FRAUDE ======================= */
-/* ===================================================== */
-
-/* 🔥 Limite globale */
-app.use(rateLimit({
-windowMs:60*1000,
-max:200,
-message:"Trop de requêtes"
-}));
-
-/* 🔥 Anti brute force login */
-const loginLimiter = rateLimit({
-windowMs:15*60*1000,
-max:5,
-message:"Trop de tentatives. Attends 15min."
-});
 
 /* ===================================================== */
 /* ================= AUTH ============================== */
@@ -88,6 +69,16 @@ return res.status(401).json({message:"Invalid token"});
 }
 
 /* ===================================================== */
+/* ================= HTML ROUTES ======================= */
+/* ===================================================== */
+
+app.get("/",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
+app.get("/register",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
+app.get("/login",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
+app.get("/dashboard",(req,res)=>res.sendFile(__dirname+"/public/dashboard.html"));
+app.get("/payment",(req,res)=>res.sendFile(__dirname+"/public/payment.html"));
+
+/* ===================================================== */
 /* ================= REGISTER ========================== */
 /* ===================================================== */
 
@@ -101,8 +92,6 @@ return res.status(400).json({message:"User exists"});
 }
 
 const hashed = await bcrypt.hash(password,10);
-
-/* 🔥 CREATE STRIPE CUSTOMER */
 
 const customer = await stripe.customers.create({
 email
@@ -123,7 +112,7 @@ res.json({message:"User created",userId:user._id});
 /* ================= LOGIN ============================= */
 /* ===================================================== */
 
-app.post("/login",loginLimiter,async(req,res)=>{
+app.post("/login",async(req,res)=>{
 
 const {email,password} = req.body;
 
@@ -175,7 +164,7 @@ res.json({success:true});
 });
 
 /* ===================================================== */
-/* ================= SEARCH (AUTO CHARGE) ============== */
+/* ================= SEARCH =========================== */
 /* ===================================================== */
 
 app.post("/search-etsy",auth,async(req,res)=>{
@@ -192,20 +181,20 @@ message:"Carte bancaire obligatoire"
 });
 }
 
-/* 🔥 ANTI FRAUDE — INTERVALLE RECHERCHE */
+/* 🔥 ANTI FRAUDE SIMPLE (ANTI SPAM) */
 
 const now = Date.now();
 
-if(user.lastSearch && now - user.lastSearch < 5000){
+if(user.lastSearch && now - user.lastSearch < 4000){
 return res.status(429).json({
-message:"Attends quelques secondes avant une nouvelle recherche"
+message:"Attends quelques secondes avant de relancer"
 });
 }
 
 user.lastSearch = now;
 await user.save();
 
-/* 🔥 PRELEVEMENT 0.50€ */
+/* 🔥 PRELEVEMENT AUTOMATIQUE 0.50€ */
 
 try{
 
@@ -224,7 +213,7 @@ message:"Paiement refusé"
 });
 }
 
-/* 🔥 SCRAP */
+/* 🔥 SCRAPING */
 
 const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
