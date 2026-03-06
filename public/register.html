@@ -1,31 +1,95 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscription</title>
 
-<title>Créer un compte</title>
+<style>
 
-<link rel="stylesheet" href="style.css">
+body{
+margin:0;
+background:black;
+font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+color:white;
+}
 
+/* 🔥 ANCIEN DESIGN BOX */
+
+.box{
+background:#111;
+padding:50px;
+border-radius:30px;
+width:400px;
+text-align:center;
+box-shadow:0 0 80px rgba(255,255,255,0.1);
+}
+
+.box h2{
+color:yellow;
+margin-bottom:25px;
+}
+
+.box input{
+width:100%;
+padding:15px;
+margin:10px 0;
+border-radius:15px;
+border:none;
+outline:none;
+background:#222;
+color:white;
+font-size:14px;
+}
+
+.box button{
+width:100%;
+padding:15px;
+border:none;
+border-radius:15px;
+background:yellow; /* 🔥 BOUTON JAUNE */
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+.box button:hover{
+transform:scale(1.05);
+}
+
+/* 🔥 SWITCH LOGIN */
+
+.switch{
+margin-top:15px;
+font-size:14px;
+}
+
+.switch a{
+color:#00aaff;
+text-decoration:none;
+cursor:pointer;
+}
+
+</style>
 </head>
-
 <body>
 
-<div class="auth-container">
+<div class="box">
 
 <h2>Créer un compte</h2>
 
 <input type="email" id="email" placeholder="Email">
-
 <input type="password" id="password" placeholder="Mot de passe">
 
-<button class="yellow-btn" onclick="register()">Créer un compte</button>
+<button onclick="register()">Créer un compte</button>
 
-<p class="switch">
+<div class="switch">
 Déjà inscrit ? <a href="/login.html">Se connecter</a>
-</p>
+</div>
 
 </div>
 
@@ -47,14 +111,10 @@ body:JSON.stringify({email,password})
 const data = await res.json();
 
 if(res.ok){
-
 alert("Compte créé ✅");
-
-/* redirection directe vers paiement */
 window.location.href="/payment.html";
-
 }else{
-alert(data.message || "Erreur");
+alert(data.message);
 }
 
 }
