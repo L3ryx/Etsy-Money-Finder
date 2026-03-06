@@ -13,17 +13,17 @@
 </head>
 <body>
 
-<!-- 🎬 BACKGROUND -->
+<!-- ================= BACKGROUND ================= -->
 <img src="/background.gif" class="gif-background">
 
-<!-- 🔥 FUMÉE -->
+<!-- ================= SMOKE ================= -->
 <div class="smoke-container">
   <div class="smoke"></div>
   <div class="smoke"></div>
   <div class="smoke"></div>
 </div>
 
-<!-- 🔥 CONTENU -->
+<!-- ================= MAIN FORM ================= -->
 <div class="container">
 
 <h1 class="title">Niche Finder</h1>
@@ -44,7 +44,7 @@
 </div>
 </div>
 
-<!-- ================= RESULTATS ================= -->
+<!-- ================= RESULTS (IMPORTANT : HORS CONTAINER) ================= -->
 <div id="results"></div>
 
 <!-- ================= LOADER ================= -->
@@ -53,7 +53,7 @@
 <p>Recherche en cours...</p>
 </div>
 
-<!-- 🚀 SCRIPT -->
+<!-- ================= SCRIPT ================= -->
 <script>
 
 const startBtn = document.querySelector(".start-btn");
@@ -88,6 +88,7 @@ limit
 });
 
 const data = await response.json();
+
 resultsContainer.innerHTML = "";
 
 if(data.results && data.results.length > 0){
@@ -112,8 +113,8 @@ resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
 } catch(error){
-alert("Erreur serveur ❌");
 console.error(error);
+alert("Erreur serveur ❌");
 }
 
 loader.classList.add("hidden");
