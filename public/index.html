@@ -1,27 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Niche Finder</title>
-
 <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
 
 <div class="sky">
 
-<!-- 🎮 CANVAS ANIMATION -->
+<!-- 🎨 CANVAS BACKGROUND -->
 <canvas id="gameCanvas"></canvas>
 <img id="sourceImage" src="/background.jpg" style="display:none;">
 
-<!-- 🔥 TITLE -->
+<!-- 🔥 INTERFACE -->
 <h1 class="title">Niche Finder</h1>
 
-<!-- 🎯 FORM -->
 <div class="form-container">
 
 <input type="text" class="input-field" placeholder="Keyword">
@@ -58,7 +53,7 @@ START
 
 </div>
 
-<!-- 🚀 SCRIPT CANVAS + PARTICULES -->
+<!-- 🚀 CANVAS SCRIPT -->
 <script>
 
 const canvas = document.getElementById("gameCanvas");
@@ -68,14 +63,11 @@ const img = document.getElementById("sourceImage");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* ================= PARTICLES ================= */
-
 let particles = [];
 
 function createParticles(x,y){
 
-for(let i=0;i<80;i++){
-
+for(let i=0;i<60;i++){
 particles.push({
 x:x,
 y:y,
@@ -84,17 +76,13 @@ vy:(Math.random()-0.5)*8,
 alpha:1,
 size:Math.random()*4+2
 });
-
 }
 
 }
 
-/* Explosion au clic */
 canvas.addEventListener("click",(e)=>{
 createParticles(e.clientX,e.clientY);
 });
-
-/* ================= ANIMATION LOOP ================= */
 
 let offset = 0;
 
@@ -102,8 +90,7 @@ img.onload = function(){
 loop();
 };
 
-function drawImage(){
-
+function drawBackground(){
 offset += 0.3;
 
 ctx.drawImage(
@@ -113,10 +100,9 @@ Math.cos(offset/40)*20,
 canvas.width,
 canvas.height
 );
-
 }
 
-function updateParticles(){
+function drawParticles(){
 
 particles.forEach((p,index)=>{
 
@@ -143,8 +129,8 @@ function loop(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-drawImage();
-updateParticles();
+drawBackground();
+drawParticles();
 
 requestAnimationFrame(loop);
 }
