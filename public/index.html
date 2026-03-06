@@ -7,9 +7,6 @@
 
 <title>Etsy Money Finder</title>
 
-<!-- 🔥 POLICE HACKER -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
@@ -19,9 +16,9 @@
 body{
   margin:0;
   background:black;
-  font-family:Arial;
-  color:white;
-  overflow:auto; /* ✅ permet le scroll */
+  font-family: "Courier New", monospace;
+  color:#00ff66;
+  overflow:auto; /* ✅ SCROLL ACTIVÉ */
 }
 
 /* ================= MATRIX ================= */
@@ -35,48 +32,14 @@ body{
   z-index:-1;
 }
 
-/* ================= TITLE HACKER ================= */
+/* ================= TITLE HACKER STYLE ================= */
 
 .title{
   text-align:center;
   font-size:42px;
-  margin-top:30px;
-  font-family:'Orbitron', sans-serif;
-  letter-spacing:4px;
-  text-transform:uppercase;
-  color:#00ff66;
-  text-shadow:
-    0 0 5px #00ff66,
-    0 0 10px #00ff66,
-    0 0 20px #00ff66;
-  animation:glow 2s infinite alternate, glitch 3s infinite;
-}
-
-/* Glow animation */
-
-@keyframes glow{
-  from{
-    text-shadow:
-      0 0 5px #00ff66,
-      0 0 10px #00ff66;
-  }
-  to{
-    text-shadow:
-      0 0 10px #00ff66,
-      0 0 20px #00ff66,
-      0 0 40px #00ff66;
-  }
-}
-
-/* Glitch effect */
-
-@keyframes glitch{
-  0% { transform: translate(0); }
-  20% { transform: translate(-2px,2px); }
-  40% { transform: translate(2px,-2px); }
-  60% { transform: translate(-2px); }
-  80% { transform: translate(2px); }
-  100% { transform: translate(0); }
+  margin-top:40px;
+  font-weight:bold;
+  text-shadow:0 0 10px #00ff66;
 }
 
 /* ================= CENTER ================= */
@@ -85,76 +48,83 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  margin-top:40px;
+  margin-top:50px;
 }
 
-/* ================= SEARCH ================= */
+/* ================= SEARCH VERTICAL ================= */
 
 .search-box{
   display:flex;
-  gap:10px;
+  flex-direction:column;
   align-items:center;
+  gap:18px;
+  margin-top:20px;
 }
 
-input, select{
-  padding:8px;
-  border-radius:8px;
+.input-field{
+  padding:12px;
+  width:260px;
+  border-radius:10px;
   border:none;
+  text-align:center;
+  font-size:16px;
 }
 
-/* ================= START BUTTON ================= */
+.select-field{
+  padding:12px;
+  width:260px;
+  border-radius:10px;
+  border:none;
+  text-align:center;
+  font-size:16px;
+}
+
+/* ================= START BUTTON BIG ================= */
 
 .start-btn{
   background:#00ff66;
   border:none;
-  padding:6px 18px;
-  border-radius:20px;
-  font-size:13px;
+  padding:15px 60px;
+  border-radius:40px;
+  font-size:22px;
   font-weight:bold;
   cursor:pointer;
-  transition:0.2s;
+  transition:0.3s;
+  box-shadow:0 0 20px #00ff66;
 }
 
 .start-btn:hover{
-  transform:scale(1.1);
+  transform:scale(1.2);
+  box-shadow:0 0 40px #00ff66;
 }
 
-/* ================= LOADER ROTATING ================= */
-
-.loader-container{
-  margin-top:25px;
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
+/* ================= LOADER ================= */
 
 .loader{
-  font-size:50px;
+  margin-top:20px;
+  font-size:40px;
   animation:spin 1s linear infinite;
+  display:none;
 }
 
 @keyframes spin{
-  from{ transform:rotate(0deg);}
-  to{ transform:rotate(360deg);}
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
 }
 
 /* ================= RESULTS ================= */
 
 #results{
-  margin-top:20px;
-  width:90%;
+  margin-top:30px;
+  width:80%;
   text-align:center;
 }
 
 .result-card{
   background:#111;
   padding:15px;
-  border-radius:10px;
-  margin:10px 0;
-}
-
-.result-card img{
-  border-radius:8px;
+  border-radius:15px;
+  margin:15px 0;
 }
 
 .result-card a{
@@ -175,9 +145,9 @@ input, select{
 
 <div class="search-box">
 
-<input type="text" id="keyword" placeholder="Keyword">
+<input type="text" id="keyword" placeholder="Keyword" class="input-field">
 
-<select id="limit">
+<select id="limit" class="select-field">
 <option value="1">1</option>
 <option value="10">10</option>
 <option value="50">50</option>
@@ -191,10 +161,7 @@ input, select{
 
 </div>
 
-<!-- 🔥 LOADER -->
-<div class="loader-container" id="loader">
-<div class="loader">🔥</div>
-</div>
+<div class="loader" id="loader">🔥</div>
 
 <div id="results"></div>
 
@@ -202,13 +169,14 @@ input, select{
 
 <script>
 
+const socket = io();
 const loader = document.getElementById("loader");
 
 /* ================= SEARCH ================= */
 
 async function searchEtsy(){
 
-  showLoader();
+  loader.style.display = "block";
 
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
@@ -221,19 +189,9 @@ async function searchEtsy(){
 
   const data = await response.json();
 
-  hideLoader();
+  loader.style.display = "none";
 
   displayResults(data.results);
-}
-
-/* ================= LOADER ================= */
-
-function showLoader(){
-  loader.style.display = "flex";
-}
-
-function hideLoader(){
-  loader.style.display = "none";
 }
 
 /* ================= RESULTS ================= */
@@ -254,9 +212,9 @@ function displayResults(results){
     card.className = "result-card";
 
     card.innerHTML = `
-      <img src="${item.image}" width="200"><br><br>
+      <img src="${item.image}" width="180"><br><br>
       🔗 <a href="${item.link}" target="_blank">
-        Open Listing
+      Open Listing
       </a>
     `;
 
@@ -265,7 +223,7 @@ function displayResults(results){
   });
 }
 
-/* ================= MATRIX BACKGROUND ================= */
+/* ================= MATRIX ================= */
 
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
@@ -273,53 +231,42 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const letters = "010101ETSYMONEYFINDER";
+const letters = "010101HACKERETSYFINDER";
 const fontSize = 16;
 
 let columns = canvas.width / fontSize;
 let drops = [];
 
-for(let i=0;i<columns;i++){
-  drops[i]=1;
+for(let i = 0; i < columns; i++){
+  drops[i] = 1;
 }
 
 function drawMatrix(){
 
-  ctx.fillStyle="rgba(0,0,0,0.05)";
+  ctx.fillStyle = "rgba(0,0,0,0.05)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle="#00ff00";
-  ctx.font = fontSize+"px monospace";
+  ctx.fillStyle = "#00ff00";
+  ctx.font = fontSize + "px monospace";
 
-  for(let i=0;i<drops.length;i++){
+  for(let i = 0; i < drops.length; i++){
 
     const text = letters[Math.floor(Math.random()*letters.length)];
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-    if(drops[i]*fontSize > canvas.height && Math.random()>0.975){
-      drops[i]=0;
+    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
+      drops[i] = 0;
     }
 
     drops[i]++;
   }
 }
 
-setInterval(drawMatrix,50);
+setInterval(drawMatrix, 50);
 
-/* ================= RESIZE FIX ================= */
+/* RESIZE */
 
-window.addEventListener("resize",()=>{
+window.addEventListener("resize", () => {
+
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-
-  columns = canvas.width/fontSize;
-  drops=[];
-  for(let i=0;i<columns;i++){
-    drops[i]=1;
-  }
-});
-
-</script>
-
-</body>
-</html>
