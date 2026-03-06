@@ -7,167 +7,33 @@
 <title>Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Croissant One', cursive;
-}
-
-body{
-background:#000;
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-min-height:100vh;
-}
-
-/* ================= CONTAINER ================= */
-
-.dashboard{
-width:90%;
-max-width:1100px;
-background:#111;
-border-radius:30px;
-padding:40px;
-box-shadow:0 0 60px rgba(0,255,102,0.2);
-}
-
-/* ================= HEADER ================= */
-
-.top{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:30px;
-}
-
-.logout{
-background:red;
-color:white;
-padding:8px 18px;
-border:none;
-border-radius:20px;
-cursor:pointer;
-transition:0.3s;
-}
-
-.logout:hover{
-transform:scale(1.1);
-}
-
-/* ================= CARDS ================= */
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-gap:20px;
-}
-
-.card{
-background:#1a1a1a;
-padding:20px;
-border-radius:20px;
-box-shadow:0 5px 20px rgba(0,0,0,0.4);
-}
-
-.card h3{
-color:#00ff66;
-margin-bottom:10px;
-}
-
-/* ================= TABLE ================= */
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}
-
-th,td{
-padding:10px;
-border-bottom:1px solid #222;
-text-align:left;
-font-size:13px;
-}
-
-th{
-color:#00ff66;
-}
-
-/* ================= HISTORY BOX ================= */
-
-.history{
-margin-top:30px;
-background:#0f0f0f;
-padding:20px;
-border-radius:20px;
-max-height:200px;
-overflow:auto;
-}
-
-</style>
+<link rel="stylesheet" href="style.css">
 
 </head>
 <body>
 
-<div class="dashboard">
+<div class="container">
 
-<div class="top">
-<h2>👤 Mon Dashboard</h2>
-<button class="logout" onclick="logout()">Déconnexion</button>
-</div>
+<h2>👤 Dashboard</h2>
 
-<div class="grid">
+<div id="userEmail"></div>
+<div id="userCredits"></div>
 
-<div class="card">
-<h3>Email</h3>
-<p id="email">-</p>
-</div>
+<!-- ===================================================== -->
+<!-- BUTTONS -->
+<!-- ===================================================== -->
 
-<div class="card">
-<h3>Rôle</h3>
-<p id="role">-</p>
-</div>
+<button class="recharge-btn" onclick="goPayment()">
+🔄 Recharger Crédits
+</button>
 
-<div class="card">
-<h3>Credits</h3>
-<p id="credits">-</p>
-</div>
+<button class="logout-btn" onclick="logout()">
+🚪 Déconnexion
+</button>
 
-<div class="card">
-<h3>Recherches utilisées</h3>
-<p id="searches">-</p>
-</div>
-
-</div>
-
-<div class="history">
-
-<h3>📦 Historique Achats</h3>
-<table>
-<thead>
-<tr>
-<th>Plan</th>
-<th>Recherches</th>
-<th>Date</th>
-</tr>
-</thead>
-<tbody id="purchaseHistory"></tbody>
-</table>
-
-</div>
-
-<div class="history">
-
-<h3>🔎 Historique Recherches</h3>
-<ul id="searchHistory"></ul>
-
-</div>
+<button class="close-btn" onclick="closeDashboard()">
+❌ Fermer
+</button>
 
 </div>
 
@@ -187,66 +53,38 @@ window.location.href="/login.html";
 /* LOAD USER DATA */
 /* ===================================================== */
 
-async function loadDashboard(){
-
-const res = await fetch("/me",{
+fetch("/me",{
 headers:{
-Authorization:"Bearer " + token
+Authorization:"Bearer "+token
 }
-});
+})
+.then(res=>res.json())
+.then(data=>{
 
-if(!res.ok){
-localStorage.removeItem("token");
-window.location.href="/login.html";
-return;
-}
+document.getElementById("userEmail").innerText =
+"Email: "+data.email;
 
-const data = await res.json();
-
-document.getElementById("email").innerText = data.email;
-document.getElementById("role").innerText = data.role;
-document.getElementById("credits").innerText = data.credits;
-document.getElementById("searches").innerText = data.searchesUsed;
-
-/* ================= PURCHASE HISTORY ================= */
-
-const purchaseTable = document.getElementById("purchaseHistory");
-
-data.purchaseHistory.forEach(p=>{
-
-purchaseTable.innerHTML += `
-<tr>
-<td>${p.plan}</td>
-<td>${p.searches}</td>
-<td>${new Date(p.date).toLocaleString()}</td>
-</tr>
-`;
+document.getElementById("userCredits").innerText =
+"Credits: "+data.credits;
 
 });
-
-/* ================= SEARCH HISTORY ================= */
-
-const searchList = document.getElementById("searchHistory");
-
-data.searchHistory.forEach(s=>{
-
-searchList.innerHTML += `
-<li>${s.query} - ${new Date(s.date).toLocaleString()}</li>
-`;
-
-});
-
-}
-
-loadDashboard();
 
 /* ===================================================== */
-/* LOGOUT */
+/* BUTTONS */
 /* ===================================================== */
+
+function goPayment(){
+window.location.href="/payment.html";
+}
 
 function logout(){
 localStorage.removeItem("token");
+alert("Déconnecté ✅");
 window.location.href="/login.html";
+}
+
+function closeDashboard(){
+window.location.href="/index.html";
 }
 
 </script>
