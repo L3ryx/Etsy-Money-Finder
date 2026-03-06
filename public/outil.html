@@ -7,6 +7,8 @@
 
 <style>
 
+/* ================= GLOBAL ================= */
+
 body{
 margin:0;
 background:black;
@@ -22,40 +24,20 @@ position:fixed;
 width:100%;
 height:100%;
 z-index:-1;
+overflow:hidden;
 }
 
 .bee{
 position:absolute;
-width:20px;
-height:20px;
-background:yellow;
+width:18px;
+height:18px;
+background:gold;
 border-radius:50%;
-animation:fly 10s linear infinite;
-opacity:0.8;
+opacity:0.9;
+box-shadow:0 0 15px rgba(255,255,0,0.8);
 }
 
-.bee::after{
-content:"";
-position:absolute;
-width:6px;
-height:6px;
-background:black;
-border-radius:50%;
-top:7px;
-left:7px;
-}
-
-/* Animation abeille qui vole */
-
-@keyframes fly{
-0%{ transform:translate(0,0); }
-25%{ transform:translate(200px, -100px); }
-50%{ transform:translate(400px, 100px); }
-75%{ transform:translate(200px, 200px); }
-100%{ transform:translate(0,0); }
-}
-
-/* ================= CENTER BOX ================= */
+/* ================= CENTER CONTENT ================= */
 
 .container{
 height:100vh;
@@ -68,28 +50,35 @@ gap:20px;
 
 input{
 padding:15px;
-width:300px;
+width:320px;
 border-radius:15px;
 border:none;
 outline:none;
+font-size:16px;
 }
 
 button{
 padding:15px 25px;
 border:none;
 border-radius:15px;
-background:yellow;
+background:gold;
 font-weight:bold;
 cursor:pointer;
+transition:0.3s;
 }
 
-/* ================= LOADING LENS ================= */
+button:hover{
+transform:scale(1.05);
+opacity:0.8;
+}
+
+/* ================= LOADER LENS ================= */
 
 .loader{
 display:none;
-width:60px;
-height:60px;
-border:6px solid yellow;
+width:70px;
+height:70px;
+border:6px solid gold;
 border-top:6px solid transparent;
 border-radius:50%;
 animation:spin 1s linear infinite;
@@ -101,21 +90,22 @@ animation:spin 1s linear infinite;
 }
 
 .result{
-margin-top:20px;
-color:yellow;
+margin-top:15px;
+color:gold;
 font-weight:bold;
+text-align:center;
 }
 
 </style>
 </head>
 <body>
 
-<!-- 🐝 BEES BACKGROUND -->
+<!-- 🐝 BACKGROUND -->
 <div class="bees" id="bees"></div>
 
 <div class="container">
 
-<h1>🔎 Mon Outil IA</h1>
+<h1>🔎 Outil Premium</h1>
 
 <input type="text" id="query" placeholder="Tape ta recherche">
 
@@ -129,23 +119,64 @@ font-weight:bold;
 
 <script>
 
-/* ================= CREATE BEES ================= */
+/* ===================================================== */
+/* ================== REALISTIC BEES =================== */
+/* ===================================================== */
 
 const beesContainer = document.getElementById("bees");
+const bees = [];
 
-for(let i=0;i<15;i++){
+for(let i=0;i<25;i++){
 
 const bee = document.createElement("div");
 bee.classList.add("bee");
 
-bee.style.top = Math.random()*100 + "%";
-bee.style.left = Math.random()*100 + "%";
-bee.style.animationDuration = (5 + Math.random()*10) + "s";
+bee.style.left = Math.random()*100 + "vw";
+bee.style.top = Math.random()*100 + "vh";
 
 beesContainer.appendChild(bee);
+
+bees.push({
+element: bee,
+x: Math.random()*window.innerWidth,
+y: Math.random()*window.innerHeight,
+vx: (Math.random()-0.5)*3,
+vy: (Math.random()-0.5)*3
+});
+
 }
 
-/* ================= SEARCH FUNCTION ================= */
+/* 🔥 Animation réaliste */
+
+function animateBees(){
+
+bees.forEach(b=>{
+
+b.x += b.vx;
+b.y += b.vy;
+
+/* changement direction aléatoire */
+if(Math.random() < 0.01){
+b.vx = (Math.random()-0.5)*4;
+b.vy = (Math.random()-0.5)*4;
+}
+
+/* rebond sur bords */
+if(b.x < 0 || b.x > window.innerWidth) b.vx *= -1;
+if(b.y < 0 || b.y > window.innerHeight) b.vy *= -1;
+
+b.element.style.transform = `translate(${b.x}px, ${b.y}px)`;
+
+});
+
+requestAnimationFrame(animateBees);
+}
+
+animateBees();
+
+/* ===================================================== */
+/* ================= SEARCH FUNCTION =================== */
+/* ===================================================== */
 
 async function search(){
 
@@ -179,7 +210,7 @@ loader.style.display = "none";
 if(res.ok){
 result.innerHTML = "✅ Résultat : " + data.message;
 }else{
-result.innerHTML = "❌ Erreur : " + data.message;
+result.innerHTML = "❌ " + data.message;
 }
 
 }
