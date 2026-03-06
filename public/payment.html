@@ -1,17 +1,15 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ajouter Carte</title>
-
 <script src="https://js.stripe.com/v3/"></script>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial, sans-serif;
+font-family:Arial;
 background:black;
 color:white;
 display:flex;
@@ -26,11 +24,6 @@ padding:40px;
 border-radius:15px;
 width:400px;
 text-align:center;
-backdrop-filter:blur(10px);
-}
-
-h2{
-margin-bottom:20px;
 }
 
 #card-element{
@@ -49,11 +42,6 @@ border:none;
 border-radius:8px;
 font-weight:bold;
 cursor:pointer;
-transition:0.3s;
-}
-
-button:hover{
-transform:scale(1.05);
 }
 
 </style>
@@ -70,7 +58,7 @@ transform:scale(1.05);
 <button onclick="saveCard()">Enregistrer Carte</button>
 
 <p style="margin-top:15px;">
-<a href="/dashboard" style="color:#00e676;">Retour Dashboard</a>
+<a href="/dashboard" style="color:#00e676;">Retour</a>
 </p>
 
 </div>
@@ -78,7 +66,7 @@ transform:scale(1.05);
 <script>
 
 /* 🔥 METS TA VRAIE CLÉ PUBLIQUE ICI */
-const stripe = Stripe(pk_live_51T7tExGaaKHR3H6cYk0dqaId2i0ByoKPAAt7gsiosHw7Jg0VoMazHvXFyYo1EmjxsVk8nQ4RWQgdUS7EPvC5UuG700S5aUHblq);
+const stripe = Stripe("pk_live_xxxxxxxxx");
 
 const elements = stripe.elements();
 const cardElement = elements.create("card");
@@ -89,15 +77,15 @@ async function saveCard(){
 const token = localStorage.getItem("token");
 
 if(!token){
-alert("Connecte-toi d'abord");
+alert("Connecte-toi");
 return;
 }
 
-/* 🔥 Création Payment Method */
+/* 🔥 CREATE PAYMENT METHOD */
 
 const result = await stripe.createPaymentMethod({
-type: "card",
-card: cardElement
+type:"card",
+card:cardElement
 });
 
 if(result.error){
@@ -105,9 +93,9 @@ alert(result.error.message);
 return;
 }
 
-/* 🔥 Envoi au backend */
+/* 🔥 ENVOI AU BACKEND */
 
-const response = await fetch("/attach-card",{
+const res = await fetch("/attach-card",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -118,13 +106,13 @@ paymentMethodId: result.paymentMethod.id
 })
 });
 
-const data = await response.json();
+const data = await res.json();
 
-if(response.ok){
+if(res.ok){
 alert("Carte enregistrée ✅");
 window.location="/dashboard";
 }else{
-alert(data.message || "Erreur lors de l'enregistrement");
+alert("Erreur carte");
 }
 
 }
