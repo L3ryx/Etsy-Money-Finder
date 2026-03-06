@@ -1,9 +1,7 @@
 {
   "name": "etsy-ai-engine",
   "version": "3.0.0",
-  "description": "AI engine to find Etsy products on AliExpress using Google Lens and image similarity",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
