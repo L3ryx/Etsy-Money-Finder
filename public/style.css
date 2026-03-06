@@ -4,7 +4,7 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family:Arial, Helvetica, sans-serif;
+font-family:'Poppins', sans-serif;
 }
 
 body{
@@ -36,15 +36,15 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-gap:30px;
+gap:35px;
 text-align:center;
 }
 
 /* ================= TITLE ================= */
 
 .title{
-font-size:42px;
-font-weight:bold;
+font-size:48px;
+font-weight:800;
 letter-spacing:2px;
 }
 
@@ -53,7 +53,7 @@ letter-spacing:2px;
 .form-container{
 display:flex;
 flex-direction:column;
-gap:15px;
+gap:18px;
 align-items:center;
 }
 
@@ -61,14 +61,20 @@ align-items:center;
 
 .input-field,
 .dropdown{
-width:260px;
-padding:12px;
-border-radius:10px;
+width:280px;
+padding:14px;
+border-radius:12px;
 border:none;
 outline:none;
-font-size:14px;
+font-size:15px;
 background:white;
 color:black;
+transition:0.3s ease;
+}
+
+.input-field:focus,
+.dropdown:focus{
+box-shadow:0 0 15px #00ff66;
 }
 
 /* ================= BUTTON ================= */
@@ -76,17 +82,17 @@ color:black;
 .start-btn{
 background:#00ff66;
 border:none;
-padding:12px 35px;
-border-radius:25px;
-font-weight:bold;
+padding:14px 40px;
+border-radius:30px;
+font-weight:700;
 cursor:pointer;
 transition:0.3s ease;
-font-size:14px;
+font-size:15px;
 }
 
 .start-btn:hover{
 transform:scale(1.1);
-box-shadow:0 0 20px #00ff66;
+box-shadow:0 0 25px #00ff66;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -94,12 +100,12 @@ box-shadow:0 0 20px #00ff66;
 @media(max-width:600px){
 
 .title{
-font-size:28px;
+font-size:30px;
 }
 
 .input-field,
 .dropdown{
-width:200px;
+width:220px;
 }
 
 }
