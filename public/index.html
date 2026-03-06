@@ -1,8 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Niche Finder</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sky">
+
+<!-- 🎨 IMAGE SOURCE -->
+<img id="sourceImage" src="/background.jpg" style="display:none;">
+
+<!-- 🚀 CANVAS 4K + ANIMATIONS -->
+<canvas id="gameCanvas"></canvas>
+
+<!-- 🔥 INTERFACE -->
+<h1 class="title">Niche Finder</h1>
+
+<div class="form-container">
+
+<input type="text" class="input-field" placeholder="Keyword">
+
+<select class="dropdown">
+<option value="5">Analyse 5 annonces</option>
+<option value="10">Analyse 10 annonces</option>
+<option value="20">Analyse 20 annonces</option>
+<option value="50">Analyse 50 annonces</option>
+</select>
+
+<button class="start-btn" id="startBtn">START</button>
+
+</div>
+
+</div>
+
+<!-- 🚀 SCRIPT COMPLET -->
+
 <script>
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d",{ willReadFrequently:true });
 const img = document.getElementById("sourceImage");
+const startBtn = document.getElementById("startBtn");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -43,17 +84,17 @@ animate();
 
 };
 
-/* ================= MONEY ================= */
+/* ================= MONEY SPAWN ================= */
 
 function spawnMoney(){
 
-for(let i=0;i<6;i++){
+for(let i=0;i<8;i++){
 
 moneyParticles.push({
 x:canvas.width/2,
-y:canvas.height-220,
-vx:(Math.random()-0.5)*5,
-vy:-Math.random()*8 -3,
+y:canvas.height-250,
+vx:(Math.random()-0.5)*6,
+vy:-Math.random()*9 -2,
 alpha:1
 });
 
@@ -61,16 +102,22 @@ alpha:1
 
 }
 
+/* Lancer argent quand START cliqué */
+startBtn.addEventListener("click",()=>{
+spawnMoney();
+});
+
+/* Auto spawn toutes les 2.5s */
 setInterval(spawnMoney,2500);
 
 /* ================= 🐕 CARTOON DOG ================= */
 
 let dog = {
 x:canvas.width/2,
-y:canvas.height-200,
+y:canvas.height-220,
 vy:0,
-jumpForce:-15,
-gravity:0.6,
+jumpForce:-18,
+gravity:0.8,
 onGround:true,
 direction:1
 };
@@ -78,7 +125,7 @@ direction:1
 function updateDog(){
 
 /* Mouvement horizontal */
-dog.x += 1.2 * dog.direction;
+dog.x += 1.5 * dog.direction;
 
 if(dog.x > canvas.width - 200 || dog.x < 100){
 dog.direction *= -1;
@@ -94,15 +141,15 @@ dog.onGround = false;
 dog.vy += dog.gravity;
 dog.y += dog.vy;
 
-if(dog.y >= canvas.height - 200){
-dog.y = canvas.height - 200;
+if(dog.y >= canvas.height - 220){
+dog.y = canvas.height - 220;
 dog.vy = 0;
 dog.onGround = true;
 }
 
 }
 
-/* ================= DRAW DOG (REAL CARTOON) ================= */
+/* ================= DRAW DOG ================= */
 
 function drawDog(){
 
@@ -112,52 +159,51 @@ ctx.translate(dog.x,dog.y);
 /* BODY */
 ctx.fillStyle = "#8B5A2B";
 ctx.beginPath();
-ctx.ellipse(0,0,70,40,0,0,Math.PI*2);
+ctx.ellipse(0,0,80,45,0,0,Math.PI*2);
 ctx.fill();
 
 /* HEAD */
 ctx.beginPath();
-ctx.arc(90,-10,30,0,Math.PI*2);
+ctx.arc(110,-15,35,0,Math.PI*2);
 ctx.fill();
 
 /* EARS */
 ctx.beginPath();
-ctx.moveTo(80,-40);
-ctx.lineTo(90,-80);
-ctx.lineTo(100,-40);
+ctx.moveTo(95,-50);
+ctx.lineTo(110,-90);
+ctx.lineTo(125,-50);
 ctx.fill();
 
 /* EYES */
-ctx.fillStyle = "white";
+ctx.fillStyle="white";
 ctx.beginPath();
-ctx.arc(105,-20,6,0,Math.PI*2);
-ctx.arc(85,-20,6,0,Math.PI*2);
+ctx.arc(125,-20,6,0,Math.PI*2);
+ctx.arc(100,-20,6,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle = "black";
+ctx.fillStyle="black";
 ctx.beginPath();
-ctx.arc(105,-20,3,0,Math.PI*2);
-ctx.arc(85,-20,3,0,Math.PI*2);
+ctx.arc(125,-20,3,0,Math.PI*2);
+ctx.arc(100,-20,3,0,Math.PI*2);
 ctx.fill();
 
 /* NOSE */
-ctx.fillStyle = "black";
 ctx.beginPath();
-ctx.arc(95,-5,4,0,Math.PI*2);
+ctx.arc(112,-5,5,0,Math.PI*2);
 ctx.fill();
 
 /* LEGS */
-ctx.fillStyle = "#6B3E1E";
-ctx.fillRect(-50,30,15,30);
-ctx.fillRect(-10,30,15,30);
-ctx.fillRect(30,30,15,30);
-ctx.fillRect(60,30,15,30);
+ctx.fillStyle="#6B3E1E";
+ctx.fillRect(-60,35,15,35);
+ctx.fillRect(-20,35,15,35);
+ctx.fillRect(20,35,15,35);
+ctx.fillRect(60,35,15,35);
 
-/* TAIL ANIMÉE */
+/* TAIL ANIMATION */
 ctx.save();
-ctx.translate(-70,-10);
+ctx.translate(-90,-10);
 ctx.rotate(Math.sin(Date.now()/200)*0.8);
-ctx.fillRect(-40,-5,40,10);
+ctx.fillRect(-50,-5,50,10);
 ctx.restore();
 
 ctx.restore();
@@ -172,11 +218,13 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 
 /* Pixels */
 pixels.forEach(p=>{
+
 p.y += p.vy;
 p.alpha -= 0.0004;
 
 ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.alpha})`;
 ctx.fillRect(p.x,p.y,2,2);
+
 });
 
 /* Money */
@@ -207,3 +255,6 @@ requestAnimationFrame(animate);
 }
 
 </script>
+
+</body>
+</html>
