@@ -4,14 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Connexion</title>
-
 <link rel="stylesheet" href="/style.css">
-
 </head>
 <body>
 
 <div class="box">
-
 <h2>Connexion</h2>
 
 <input type="email" id="email" placeholder="Email">
@@ -32,13 +29,6 @@ async function login(){
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
 
-if(!email || !password){
-alert("Remplis tous les champs");
-return;
-}
-
-try {
-
 const res = await fetch("/login",{
 method:"POST",
 headers:{
@@ -49,24 +39,29 @@ body:JSON.stringify({email,password})
 
 const data = await res.json();
 
-if(res.ok){
-
-// 🔐 On stocke le token
-localStorage.setItem("token", data.token);
-
-alert("Connexion réussie ✅");
-
-// 🚀 Redirection (modifie si tu veux une autre page)
-window.location.href="/payment.html";
-
-}else{
-
-alert(data.message || "Erreur de connexion");
-
+if(!res.ok){
+alert(data.message || "Erreur connexion");
+return;
 }
 
-} catch(err){
-alert("Erreur serveur");
+/* 🔥 Sauvegarde du token */
+localStorage.setItem("token", data.token);
+
+/* 🔥 Récupération infos utilisateur */
+const userRes = await fetch("/me",{
+headers:{
+Authorization:"Bearer "+data.token
+}
+});
+
+const userData = await userRes.json();
+
+/* 🔥 Redirection selon rôle */
+if(userData.role === "unlimited"){
+window.location.href = "/outil.html";
+}
+else{
+window.location.href = "/payment.html";
 }
 
 }
