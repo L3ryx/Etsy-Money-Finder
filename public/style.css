@@ -1,4 +1,6 @@
-/* ================= RESET ================= */
+/* ===================================================== */
+/* ====================== RESET ======================== */
+/* ===================================================== */
 
 *{
 margin:0;
@@ -13,7 +15,9 @@ color:white;
 overflow-x:hidden;
 }
 
-/* ================= BACKGROUND ================= */
+/* ===================================================== */
+/* ================= BACKGROUND ======================== */
+/* ===================================================== */
 
 .gif-background{
 position:fixed;
@@ -25,7 +29,9 @@ object-fit:cover;
 z-index:-3;
 }
 
-/* ================= SMOKE ================= */
+/* ===================================================== */
+/* ===================== SMOKE ========================= */
+/* ===================================================== */
 
 .smoke-container{
 position:fixed;
@@ -60,7 +66,9 @@ animation:smokeFloat 15s infinite linear;
 100%{transform:translateY(-800px) scale(2);opacity:0;}
 }
 
-/* ================= CONTAINER ================= */
+/* ===================================================== */
+/* ===================== CONTAINER ===================== */
+/* ===================================================== */
 
 .container{
 position:relative;
@@ -75,14 +83,18 @@ text-align:center;
 padding:40px 0;
 }
 
-/* ================= TITLE ================= */
+/* ===================================================== */
+/* ======================= TITLE ======================= */
+/* ===================================================== */
 
 .title{
 font-size:50px;
 font-weight:400;
 }
 
-/* ================= FORM ================= */
+/* ===================================================== */
+/* ======================== FORM ======================= */
+/* ===================================================== */
 
 .form-container{
 display:flex;
@@ -109,7 +121,9 @@ transition:0.3s ease;
 box-shadow:0 0 0 4px rgba(0,113,227,0.3);
 }
 
-/* ================= BUTTON ================= */
+/* ===================================================== */
+/* ======================= BUTTON ====================== */
+/* ===================================================== */
 
 .start-btn{
 background:#00ff66;
@@ -133,25 +147,28 @@ opacity:0.6;
 cursor:not-allowed;
 }
 
-/* ================= RESULTS GRID 2 BY 2 (FORCED) ================= */
+/* ===================================================== */
+/* ================= RESULTS GRID 2 BY 2 ================ */
+/* ===================================================== */
 
 #results{
-width:95% !important;
-margin:60px auto !important;
-display:grid !important;
-grid-template-columns:repeat(2, minmax(0,1fr)) !important;
-gap:30px !important;
+width:100%;
+max-width:1400px;
+margin:60px auto;
+display:grid;
+grid-template-columns:repeat(2, 1fr); /* 🔥 FORCÉ 2 PAR LIGNE */
+gap:40px;
+padding:0 40px;
 justify-items:center;
-align-items:start;
 }
 
-/* 🔥 Force cards to respect grid */
+/* 🔥 FORCE LES CARTES À NE PAS ÉCRASER LE GRID */
 
 .result-card{
+width:100%;
+max-width:none;
 background:white;
 color:black;
-width:100% !important;
-max-width:350px;
 border-radius:20px;
 padding:15px;
 text-align:center;
@@ -159,22 +176,21 @@ box-shadow:0 5px 20px rgba(0,0,0,0.2);
 transition:0.3s ease;
 }
 
-/* Hover */
-
 .result-card:hover{
 transform:translateY(-5px);
 }
 
-/* Image Fix */
+/* Images fixes */
 
 .result-card img{
 width:100%;
-height:200px;
+height:220px;
 object-fit:cover;
 border-radius:14px;
+display:block;
 }
 
-/* Link */
+/* Links */
 
 .result-card a{
 display:inline-block;
@@ -184,14 +200,18 @@ color:#0071e3;
 font-weight:600;
 }
 
-/* ================= MOBILE ================= */
+/* ===================================================== */
+/* ================= RESPONSIVE ======================== */
+/* ===================================================== */
 
-@media(max-width:800px){
-
+@media(max-width:900px){
 #results{
-grid-template-columns:1fr !important;
+grid-template-columns:1fr; /* 🔥 Mobile = 1 colonne */
+padding:0 20px;
+}
 }
 
+@media(max-width:600px){
 .title{
 font-size:30px;
 }
@@ -200,10 +220,11 @@ font-size:30px;
 .dropdown{
 width:220px;
 }
-
 }
 
-/* ================= LOADER ================= */
+/* ===================================================== */
+/* ====================== LOADER ======================= */
+/* ===================================================== */
 
 .loader{
 position:fixed;
