@@ -7,26 +7,26 @@ html, body{
   padding:0;
   width:100%;
   height:100%;
-  overflow:hidden;
-  font-family:Arial, sans-serif;
+  overflow-x:hidden;
+  background:black;
+  font-family:"Courier New", monospace;
+  color:white;
+  position:relative;
 }
 
 /* ===================================================== */
-/* SCENE */
+/* ANIMATED WORLD */
 /* ===================================================== */
 
-.scene{
+.world{
   position:fixed;
   width:100%;
   height:100%;
-  top:0;
-  left:0;
   z-index:-1;
+  overflow:hidden;
 }
 
-/* ===================================================== */
 /* SKY */
-/* ===================================================== */
 
 .sky{
   position:absolute;
@@ -35,16 +35,14 @@ html, body{
   background:linear-gradient(to bottom,#4da6ff,#87ceeb);
 }
 
-/* ===================================================== */
 /* SUN */
-/* ===================================================== */
 
 .sun{
   position:absolute;
   top:40px;
   right:80px;
-  width:130px;
-  height:130px;
+  width:120px;
+  height:120px;
   background:yellow;
   border-radius:50%;
   box-shadow:0 0 120px yellow;
@@ -52,13 +50,11 @@ html, body{
 }
 
 @keyframes sunPulse{
-  from{ transform:scale(1);}
-  to{ transform:scale(1.15);}
+  from{transform:scale(1);}
+  to{transform:scale(1.2);}
 }
 
-/* ===================================================== */
 /* GRASS */
-/* ===================================================== */
 
 .grass{
   position:absolute;
@@ -68,59 +64,39 @@ html, body{
   background:#2ecc71;
 }
 
-/* ===================================================== */
 /* DOGHOUSE */
-/* ===================================================== */
 
 .doghouse{
   position:absolute;
-  bottom:28%;
+  bottom:30%;
   left:50%;
   transform:translateX(-50%);
-  font-size:140px;
+  font-size:120px;
 }
 
-/* ===================================================== */
-/* DOG */
-/* ===================================================== */
+/* DOGS */
 
-.dog{
+.dogs{
   position:absolute;
   bottom:15%;
-  font-size:70px;
-  animation:dogMove 8s ease-in-out infinite;
-  filter:drop-shadow(0 20px 15px rgba(0,0,0,0.4));
+  font-size:60px;
+  animation:dogRun 6s linear infinite;
 }
 
-/* ===================================================== */
-/* DOG ANIMATION */
-/* ===================================================== */
-
-@keyframes dogMove{
+@keyframes dogRun{
 
   0%{
     left:-20%;
-    transform:translateY(0) scale(1);
     opacity:1;
   }
 
-  30%{
-    left:30%;
-    transform:translateY(0) scale(1);
-  }
-
   40%{
-    transform:translateY(-120px) scale(1.1);
-  }
-
-  50%{
-    transform:translateY(0) scale(1);
     left:45%;
   }
 
   60%{
-    left:50%;
     opacity:0;
+    left:50%;
   }
 
   100%{
@@ -129,50 +105,137 @@ html, body{
   }
 }
 
-/* ===================================================== */
-/* DUST EFFECT */
-/* ===================================================== */
+/* MONEY DOLLARS */
 
-.dust{
+.money{
   position:absolute;
-  width:25px;
-  height:25px;
-  background:white;
-  border-radius:50%;
-  animation:dustAnim 1s linear forwards;
-  opacity:0;
+  font-size:30px;
+  color:gold;
+  animation:moneyFly 4s linear infinite;
+  text-shadow:0 0 10px gold;
 }
 
-@keyframes dustAnim{
+@keyframes moneyFly{
 
   0%{
-    transform:scale(0);
-    opacity:0;
-  }
-
-  30%{
-    transform:scale(1);
+    transform:translateY(0) scale(1);
     opacity:1;
   }
 
   100%{
-    transform:translateY(-50px) scale(0);
+    transform:translateY(-400px) scale(0);
     opacity:0;
   }
-
 }
 
 /* ===================================================== */
-/* CARTOON EFFECT */
+/* TITLE */
 /* ===================================================== */
 
-.doghouse,
-.dog{
-  text-shadow:
-    2px 2px 0 black,
-    -2px -2px 0 black,
-    2px -2px 0 black,
-    -2px 2px 0 black;
+.title{
+  text-align:center;
+  font-size:60px;
+  margin-top:40px;
+  text-shadow:0 0 20px red;
+}
+
+/* ===================================================== */
+/* SEARCH BOX */
+/* ===================================================== */
+
+.main-center{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:40px;
+  padding-bottom:120px;
+}
+
+.search-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:25px;
+
+  backdrop-filter:blur(25px);
+  background:rgba(255,0,0,0.1);
+  padding:50px;
+  border-radius:40px;
+  border:2px solid red;
+  box-shadow:0 0 60px red;
+}
+
+input, select{
+  width:300px;
+  padding:15px;
+  border-radius:20px;
+  border:2px solid red;
+  background:black;
+  color:white;
+  text-align:center;
+  font-size:16px;
+}
+
+/* ===================================================== */
+/* START BUTTON (RED) */
+/* ===================================================== */
+
+.start-btn{
+  background:red;
+  color:white;
+  border:none;
+  padding:20px 80px;
+  border-radius:50px;
+  font-size:22px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 0 40px red;
+}
+
+.start-btn:hover{
+  transform:scale(1.1);
+  box-shadow:0 0 80px red;
+}
+
+/* ===================================================== */
+/* RESULTS */
+/* ===================================================== */
+
+#results{
+  width:95%;
+  max-width:1400px;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:30px;
+  justify-items:center;
+}
+
+.result-card{
+  background:rgba(255,0,0,0.1);
+  border:2px solid red;
+  border-radius:30px;
+  padding:30px;
+  width:100%;
+  max-width:350px;
+  text-align:center;
+  transition:0.3s;
+}
+
+.result-card:hover{
+  transform:scale(1.08);
+  box-shadow:0 0 60px red;
+}
+
+.result-card img{
+  width:100%;
+  border-radius:20px;
+}
+
+.result-card a{
+  color:red;
+  text-decoration:none;
+  font-weight:bold;
 }
 
 /* ===================================================== */
@@ -181,17 +244,21 @@ html, body{
 
 @media(max-width:600px){
 
-  .doghouse{
-    font-size:90px;
+  .title{
+    font-size:30px;
   }
 
-  .dog{
-    font-size:45px;
+  input, select{
+    width:220px;
   }
 
-  .sun{
-    width:80px;
-    height:80px;
+  .start-btn{
+    width:220px;
+    padding:15px;
+    font-size:16px;
   }
 
+  #results{
+    grid-template-columns:1fr;
+  }
 }
