@@ -13,13 +13,15 @@
 </head>
 <body>
 
-<!-- 🎬 BACKGROUND GIF -->
-<img src="/background.gif" class="gif-background" alt="background">
+<!-- 🎬 BACKGROUND -->
+<img src="/background.gif" class="gif-background">
 
-<!-- 🔥 SMOKE EFFECT -->
-<div class="smoke"></div>
-<div class="smoke"></div>
-<div class="smoke"></div>
+<!-- 🔥 FUMÉE -->
+<div class="smoke-container">
+  <div class="smoke"></div>
+  <div class="smoke"></div>
+  <div class="smoke"></div>
+</div>
 
 <!-- 🔥 CONTENU -->
 <div class="container">
@@ -40,7 +42,6 @@
 <button class="start-btn">START</button>
 
 </div>
-
 </div>
 
 <!-- ================= RESULTATS ================= -->
@@ -52,7 +53,7 @@
 <p>Recherche en cours...</p>
 </div>
 
-<!-- 🚀 SCRIPT BACKEND -->
+<!-- 🚀 SCRIPT -->
 <script>
 
 const startBtn = document.querySelector(".start-btn");
@@ -81,13 +82,12 @@ headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-keyword: keyword,
-limit: limit
+keyword,
+limit
 })
 });
 
 const data = await response.json();
-
 resultsContainer.innerHTML = "";
 
 if(data.results && data.results.length > 0){
@@ -98,7 +98,7 @@ const card = document.createElement("div");
 card.className = "result-card";
 
 card.innerHTML = `
-<img src="${item.image}" />
+<img src="${item.image}">
 <br>
 <a href="${item.link}" target="_blank">Voir annonce</a>
 `;
@@ -112,8 +112,8 @@ resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
 } catch(error){
-console.error(error);
 alert("Erreur serveur ❌");
+console.error(error);
 }
 
 loader.classList.add("hidden");
