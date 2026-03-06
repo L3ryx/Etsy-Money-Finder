@@ -1,105 +1,174 @@
-/* ============================= */
+/* ========================================= */
 /* GLOBAL */
-/* ============================= */
+/* ========================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  min-height: 100vh;
   background: black;
+  font-family: Arial, sans-serif;
   color: white;
-  overflow-x: hidden;
+
+  overflow-x: hidden;   /* ❌ bloque scroll horizontal */
+  overflow-y: auto;     /* ✅ permet scroll vertical */
+  -webkit-overflow-scrolling: touch; /* ✅ smooth iPhone */
 }
 
-/* ============================= */
-/* MATRIX CANVAS */
-/* ============================= */
+/* ========================================= */
+/* MATRIX BACKGROUND */
+/* ========================================= */
 
 #matrix {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
 }
 
-/* ============================= */
-/* TITLE (TOP CENTER) */
-/* ============================= */
+/* ========================================= */
+/* TITLE */
+/* ========================================= */
 
 .title {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 50px;
+  text-align: center;
+  font-size: 28px;
   font-weight: bold;
-  text-shadow:
-    0 0 10px #00ff88,
-    0 0 20px #00ff88;
+  margin-top: 30px;
 }
 
-/* ============================= */
+/* ========================================= */
 /* CENTER CONTAINER */
-/* ============================= */
+/* ========================================= */
 
 .main-center {
-  height: 100vh;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  margin-top: 40px;
+  padding-bottom: 60px; /* ✅ évite blocage bas écran mobile */
+}
+
+/* ========================================= */
+/* SEARCH BOX */
+/* ========================================= */
+
+.search-box {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+input,
+select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+/* ========================================= */
+/* START BUTTON */
+/* ========================================= */
+
+.start-btn {
+  background: #00ff66;
+  border: none;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.start-btn:hover {
+  transform: scale(1.1);
+}
+
+/* ========================================= */
+/* LOADER ROTATING ICON */
+/* ========================================= */
+
+.loader-container {
+  margin-top: 25px;
+  display: none;
   justify-content: center;
   align-items: center;
 }
 
-/* ============================= */
-/* BIG START BUTTON */
-/* ============================= */
-
-.big-start-btn {
-  background: #00ff00;
-  border: none;
-  padding: 25px 120px;
-  font-size: 35px;
-  font-weight: bold;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: 0.3s;
-  box-shadow: 0 0 40px #00ff00;
+.loader {
+  font-size: 40px;
+  animation: spin 1s linear infinite;
 }
 
-.big-start-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 80px #00ff00;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* ============================= */
-/* LOADING BAR (FIRE STYLE) */
-/* ============================= */
+/* ========================================= */
+/* RESULTS */
+/* ========================================= */
 
-.loading-container {
-  width: 70%;
-  height: 40px;
+#results {
+  margin-top: 20px;
+  width: 90%;
+  text-align: center;
+}
+
+.result-card {
   background: #111;
-  border-radius: 20px;
-  overflow: hidden;
-  margin-top: 50px;
-  box-shadow: 0 0 20px red;
+  padding: 15px;
+  border-radius: 15px;
+  margin: 10px 0;
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
 }
 
-.flame-bar {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(
-    90deg,
-    red,
-    orange,
-    yellow
-  );
-  transition: width 0.8s ease;
+.result-card img {
+  max-width: 100%;
+  border-radius: 10px;
 }
 
-/* ============================= */
-/* HIDE LOGS VISUALLY */
-/* ============================= */
+.result-card a {
+  color: #00ffcc;
+  text-decoration: none;
+  font-weight: bold;
+}
 
-#logs {
-  display: none;
+/* ========================================= */
+/* MOBILE OPTIMIZATION */
+/* ========================================= */
+
+@media (max-width: 600px) {
+
+  .title {
+    font-size: 22px;
+  }
+
+  input,
+  select {
+    font-size: 12px;
+  }
+
+  .start-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+  }
+
 }
