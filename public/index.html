@@ -4,215 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Niche Finder</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
-
 </head>
 <body>
 
-<!-- 🔴 POPUP OBLIGATOIRE PRO (IMPOSSIBLE À FERMER) -->
+<!-- 🔴 POPUP INSCRIPTION OBLIGATOIRE -->
 
-<div id="authPopup" style="
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.95);
-backdrop-filter:blur(20px);
-display:flex;
-justify-content:center;
-align-items:center;
-z-index:9999;
-">
+<div id="signupPopup" class="popup">
 
-<div id="authBox" style="
-background:#111;
-padding:50px;
-border-radius:30px;
-width:420px;
-text-align:center;
-box-shadow:0 30px 80px rgba(0,0,0,0.8);
-color:white;
-">
+<div class="popup-box">
 
-<h1 style="font-size:28px;margin-bottom:10px;">
-Bienvenue dans ma niche
-</h1>
+<h2>Créer un compte</h2>
 
-<p id="popupSubtitle" style="color:#aaa;margin-bottom:25px;">
-Crée un compte pour continuer
-</p>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Mot de passe">
 
-<!-- 🔵 SIGNUP -->
-
-<div id="signupStep">
-
-<input type="email" id="email" placeholder="Email"
-style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
-
-<input type="password" id="password" placeholder="Mot de passe"
-style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
-
-<button onclick="registerUser()"
-style="
-width:100%;
-padding:14px;
-margin-top:15px;
-background:yellow;
-border:none;
-border-radius:15px;
-font-weight:bold;
-cursor:pointer;
-">
-Créer compte
-</button>
-
-<p style="margin-top:15px;color:#ccc;">
-Déjà un compte ?
-<span onclick="switchToLogin()" style="color:yellow;cursor:pointer;">
-Se connecter
-</span>
-</p>
-
-</div>
-
-<!-- 🔵 LOGIN -->
-
-<div id="loginStep" style="display:none;">
-
-<input type="email" id="loginEmail" placeholder="Email"
-style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
-
-<input type="password" id="loginPassword" placeholder="Mot de passe"
-style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
-
-<button onclick="loginUser()"
-style="
-width:100%;
-padding:14px;
-margin-top:15px;
-background:yellow;
-border:none;
-border-radius:15px;
-font-weight:bold;
-cursor:pointer;
-">
-Connexion
-</button>
-
-<p style="margin-top:15px;color:#ccc;">
-Pas encore de compte ?
-<span onclick="switchToSignup()" style="color:yellow;cursor:pointer;">
-Créer un compte
-</span>
-</p>
-
-</div>
+<button onclick="register()">S'inscrire</button>
 
 </div>
 </div>
 
-<!-- ================= USER BUTTON ================= -->
-
-<div style="position:fixed;top:20px;right:20px;z-index:999;">
-<button onclick="openPopup()"
-style="
-background:white;
-border:none;
-width:50px;
-height:50px;
-border-radius:50%;
-font-size:20px;
-cursor:pointer;
-box-shadow:0 5px 15px rgba(0,0,0,0.3);
-">
-👤
-</button>
-</div>
-
-<!-- ================= BACKGROUND ================= -->
-
-<img src="/background.gif" class="gif-background">
-
-<div class="smoke-container">
-<div class="smoke"></div>
-<div class="smoke"></div>
-<div class="smoke"></div>
-</div>
-
-<!-- ================= MAIN CONTENT ================= -->
+<!-- 🔥 CONTENU OUTIL -->
 
 <div class="container">
 
-<h1 class="title">Niche Finder</h1>
+<h1>Niche Finder</h1>
 
-<p style="
-font-size:24px;
-margin-top:15px;
-font-weight:bold;
-background:linear-gradient(90deg,#00e676,#ffffff);
--webkit-background-clip:text;
--webkit-text-fill-color:transparent;
-">
-Les niches n'ont plus de secrets !
-</p>
+<div id="lockedArea">
 
-<div class="form-container">
+<div class="arrow">⬇</div>
 
-<input type="text" class="input-field" placeholder="Keyword">
+<div class="flames">🔥🔥🔥</div>
 
-<select class="dropdown">
-<option value="5">Analyse 5 annonces</option>
-<option value="10">Analyse 10 annonces</option>
-<option value="20">Analyse 20 annonces</option>
-<option value="50">Analyse 50 annonces</option>
-</select>
+<div class="lock">🔒</div>
 
-<button class="start-btn">START</button>
+<button class="unlock-btn" onclick="goPayment()">
+Déverrouillé
+</button>
 
 </div>
+
 </div>
-
-<!-- ================= RESULTS ================= -->
-
-<div id="results"></div>
-
-<!-- ================= LOADER ================= -->
-
-<div id="loader" class="loader hidden">
-<div class="spinner"></div>
-<p>Recherche en cours...</p>
-</div>
-
-<!-- ================= SCRIPT ================= -->
 
 <script>
 
-/* 🔥 OPEN POPUP */
+/* 🔥 INSCRIPTION */
 
-function openPopup(){
-document.getElementById("authPopup").style.display="flex";
-}
-
-/* 🔥 SWITCH */
-
-function switchToLogin(){
-document.getElementById("signupStep").style.display="none";
-document.getElementById("loginStep").style.display="block";
-document.getElementById("popupSubtitle").innerText="Connecte-toi pour continuer";
-}
-
-function switchToSignup(){
-document.getElementById("signupStep").style.display="block";
-document.getElementById("loginStep").style.display="none";
-document.getElementById("popupSubtitle").innerText="Crée un compte pour continuer";
-}
-
-/* 🔥 REGISTER */
-
-async function registerUser(){
+async function register(){
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
@@ -225,100 +63,19 @@ headers:{
 body:JSON.stringify({email,password})
 });
 
-const data = await res.json();
-
 if(res.ok){
-alert("Compte créé ✅");
+document.getElementById("signupPopup").style.display="none";
+}else{
+alert("Erreur inscription");
+}
+
+}
+
+/* 🔥 PAYMENT */
+
+function goPayment(){
 window.location="/payment";
-}else{
-alert(data.message);
 }
-
-}
-
-/* 🔥 LOGIN */
-
-async function loginUser(){
-
-const email = document.getElementById("loginEmail").value;
-const password = document.getElementById("loginPassword").value;
-
-const res = await fetch("/login",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({email,password})
-});
-
-const data = await res.json();
-
-if(res.ok){
-
-localStorage.setItem("token",data.token);
-document.getElementById("authPopup").style.display="none";
-
-}else{
-alert("Login failed");
-}
-
-}
-
-/* 🔥 SEARCH */
-
-const startBtn = document.querySelector(".start-btn");
-const resultsContainer = document.getElementById("results");
-const loader = document.getElementById("loader");
-
-startBtn.addEventListener("click", async () => {
-
-const keyword = document.querySelector(".input-field").value;
-const limit = document.querySelector(".dropdown").value;
-
-const token = localStorage.getItem("token");
-
-if(!token){
-alert("Connecte-toi !");
-openPopup();
-return;
-}
-
-loader.classList.remove("hidden");
-startBtn.innerText="Loading...";
-
-const res = await fetch("/search-etsy",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+token
-},
-body:JSON.stringify({keyword,limit})
-});
-
-const data = await res.json();
-
-resultsContainer.innerHTML="";
-
-if(data.results){
-
-data.results.forEach(item=>{
-resultsContainer.innerHTML += `
-<div class="result-card">
-<img src="${item.image}" width="200">
-<br>
-<a href="${item.link}" target="_blank">Voir annonce</a>
-</div>
-`;
-});
-
-}else{
-alert(data.message);
-}
-
-loader.classList.add("hidden");
-startBtn.innerText="START";
-
-});
 
 </script>
 
