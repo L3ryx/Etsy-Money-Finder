@@ -1,36 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard</title>
+
 <link rel="stylesheet" href="/style.css">
+
 </head>
 <body>
 
-<!-- 🔥 BOUTON BUY EN HAUT À GAUCHE -->
-<div style="position:fixed;top:20px;left:20px;z-index:9999;">
+<!-- ================= BUY BUTTON CENTRÉ HAUT ================= -->
+
+<div style="text-align:center;margin-top:40px;">
+
 <button onclick="window.location='/payment'"
 style="
 background:yellow;
-padding:12px 25px;
+padding:18px 70px;
 border:none;
-border-radius:12px;
+border-radius:15px;
+font-size:22px;
 font-weight:bold;
 cursor:pointer;
+box-shadow:0 10px 30px rgba(0,0,0,0.4);
 ">
 💵 BUY
 </button>
+
 </div>
 
-<h1 style="text-align:center;margin-top:120px;">Dashboard</h1>
+<!-- ================= INFO BOX ================= -->
 
-<h2 style="text-align:center;">Mes recherches sauvegardées</h2>
+<div style="
+margin:40px auto;
+max-width:900px;
+background:rgba(255,255,255,0.1);
+padding:30px;
+border-radius:20px;
+text-align:center;
+">
+
+<p style="font-size:18px;font-weight:bold;">
+Chaque recherche coûte 0,50 cts.
+</p>
+
+<br>
+
+<p style="font-size:26px;font-weight:bold;">
+Ceci est un moteur de recherche intelligent qui analyse,  
+par un simple ajout de mot clé, les produits et affiche ceux  
+qui peuvent être trouvés sur AliExpress.
+</p>
+
+<br>
+
+<p style="font-size:18px;opacity:0.8;">
+Un outil puissant qui vous fera gagner du temps.
+</p>
+
+</div>
+
+<!-- ================= TITRE ================= -->
+
+<h2 style="text-align:center;margin-top:40px;">
+Mes recherches sauvegardées
+</h2>
+
+<!-- ================= RESULTS ================= -->
 
 <div id="savedResults"
-style="display:flex;flex-wrap:wrap;justify-content:center;gap:20px;margin-top:40px;">
+style="
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:20px;
+margin-top:40px;
+">
 </div>
 
 <script>
+
+/* ================= TOKEN CHECK ================= */
 
 const token = localStorage.getItem("token");
 
@@ -38,7 +89,7 @@ if(!token){
 window.location="/login";
 }
 
-/* 🔥 CHARGER LES DONNÉES */
+/* ================= LOAD DASHBOARD ================= */
 
 async function loadDashboard(){
 
@@ -50,11 +101,12 @@ Authorization:"Bearer "+token
 }
 });
 
-console.log("Dashboard status:",res.status);
+if(!res.ok){
+console.log("Erreur dashboard");
+return;
+}
 
 const data = await res.json();
-
-console.log("Dashboard data:",data);
 
 const container = document.getElementById("savedResults");
 container.innerHTML = "";
@@ -64,7 +116,7 @@ if(data.products && data.products.length > 0){
 data.products.forEach(product => {
 
 const card = document.createElement("div");
-card.className="result-card";
+card.className = "result-card";
 
 card.innerHTML = `
 <img src="${product.image}" width="200">
@@ -78,12 +130,12 @@ container.appendChild(card);
 
 }else{
 
-container.innerHTML = "<p>Aucun résultat sauvegardé</p>";
+container.innerHTML = "<p>Aucune recherche sauvegardée.</p>";
 
 }
 
 }catch(err){
-console.log("Dashboard error",err);
+console.log("Dashboard error:",err);
 }
 
 }
