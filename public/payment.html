@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paiement</title>
-
-<script src="https://js.stripe.com/v3/"></script>
+<title>Activation Premium</title>
 
 <style>
 
@@ -20,65 +18,57 @@ align-items:center;
 height:100vh;
 }
 
-/* ================= CONTAINER ================= */
+/* ================= CARD ================= */
 
 .container{
 width:500px;
 background:#111;
-padding:40px;
-border-radius:25px;
-box-shadow:0 0 60px rgba(255,255,255,0.1);
+padding:50px;
+border-radius:30px;
+box-shadow:0 0 80px rgba(255,255,255,0.1);
 text-align:center;
 }
 
 /* ================= TEXT ================= */
 
 .title{
-font-size:20px;
+font-size:22px;
 font-weight:bold;
 line-height:1.6;
 }
 
-.price{
-margin-top:20px;
-font-size:18px;
+.highlight{
 color:yellow;
 font-weight:bold;
-}
-
-/* ================= CARD BOX ================= */
-
-.card-box{
-margin-top:30px;
-display:flex;
-flex-direction:column;
-gap:15px;
-}
-
-/* Stripe Card */
-
-#card-element{
-background:white;
-padding:15px;
-border-radius:12px;
+margin-top:15px;
+font-size:20px;
 }
 
 /* ================= BUTTON ================= */
 
 button{
-margin-top:20px;
+margin-top:40px;
 width:100%;
-padding:15px;
+padding:18px;
 border:none;
 border-radius:15px;
 background:yellow;
 font-weight:bold;
+font-size:16px;
 cursor:pointer;
 transition:0.3s;
 }
 
 button:hover{
 transform:scale(1.05);
+}
+
+/* ================= BADGE ================= */
+
+.badge{
+margin-top:20px;
+font-size:14px;
+opacity:0.6;
 }
 
 </style>
@@ -93,87 +83,47 @@ Un moteur de recherche intelligent qui analyse les produits à partir d’un sim
 Les niches n'ont plus de secrets !
 </div>
 
-<div class="price">
+<div class="highlight">
 0,50€ par recherche
 </div>
 
-<!-- ================= PAYMENT FORM ================= -->
-
-<div class="card-box">
-
-<div id="card-element"></div>
-
-<button onclick="saveCard()">
-Enregistrer et Activer
-</button>
-
+<div class="badge">
+Paiement sécurisé via Stripe
 </div>
+
+<button onclick="goCheckout()">
+Activer le système de paiement
+</button>
 
 </div>
 
 <script>
 
-/* ================= STRIPE ================= */
+/* ================= REDIRECTION STRIPE ================= */
 
-const stripe = Stripe("TON_PUBLIC_KEY_ICI");
+async function goCheckout(){
 
-const elements = stripe.elements();
-const card = elements.create("card");
+const token = localStorage.getItem("token");
 
-card.mount("#card-element");
+if(!token){
+alert("Vous devez être connecté");
+return;
+}
 
-let clientSecret;
-
-/* ================= GET SETUP INTENT ================= */
-
-async function getSetupIntent(){
-
-const res = await fetch("/create-setup-intent",{
+const res = await fetch("/create-checkout-session",{
 method:"POST",
 headers:{
-Authorization:"Bearer "+localStorage.getItem("token")
+Authorization:"Bearer "+token
 }
 });
 
 const data = await res.json();
 
-clientSecret = data.clientSecret;
-
+if(data.url){
+window.location.href = data.url;
+}else{
+alert("Erreur création session");
 }
-
-getSetupIntent();
-
-/* ================= SAVE CARD ================= */
-
-async function saveCard(){
-
-const result = await stripe.confirmCardSetup(clientSecret,{
-payment_method:{
-card:card
-}
-});
-
-if(result.error){
-alert(result.error.message);
-return;
-}
-
-/* 🔥 Attache carte côté serveur */
-
-await fetch("/attach-card",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+localStorage.getItem("token")
-},
-body:JSON.stringify({
-paymentMethodId: result.setupIntent.payment_method
-})
-});
-
-alert("Paiement activé ✅");
-
-window.location="/dashboard.html";
 
 }
 
