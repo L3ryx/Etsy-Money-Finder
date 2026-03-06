@@ -8,7 +8,9 @@
 </head>
 <body>
 
-<!-- ================= BACKGROUND TOOL ================= -->
+<!-- ===================================================== -->
+<!-- ================= TOOL ============================== -->
+<!-- ===================================================== -->
 
 <div class="container">
 
@@ -17,13 +19,15 @@
 
 </div>
 
-<!-- ================= AUTH BOX PREMIUM ================= -->
+<!-- ===================================================== -->
+<!-- ================= AUTH BOX ========================== -->
+<!-- ===================================================== -->
 
 <div id="authBox">
 
-<div class="form-container" id="formContainer">
+<div class="form-container">
 
-<!-- 🔵 INSCRIPTION FORM -->
+<!-- ================= REGISTER ================= -->
 
 <div class="form active" id="registerForm">
 
@@ -45,7 +49,7 @@ Sign in
 
 </div>
 
-<!-- 🔴 LOGIN FORM -->
+<!-- ================= LOGIN ================= -->
 
 <div class="form" id="loginForm">
 
@@ -70,13 +74,13 @@ Créer un compte
 </div>
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ===================================================== -->
+<!-- ================= SCRIPT ============================ -->
+<!-- ===================================================== -->
 
 <script>
 
-/* ================================================= */
-/* ================= REGISTER ====================== */
-/* ================================================= */
+/* ================= REGISTER ================= */
 
 async function register(){
 
@@ -100,9 +104,7 @@ alert("Erreur inscription");
 
 }
 
-/* ================================================= */
-/* ================= LOGIN ========================= */
-/* ================================================= */
+/* ================= LOGIN ================= */
 
 async function login(){
 
@@ -133,17 +135,12 @@ alert("Login échoué");
 
 }
 
-/* ================================================= */
-/* ========== SWITCH AVEC ANIMATION ================= */
-/* ================================================= */
+/* ================= SWITCH ANIMATION ================= */
 
 function switchForm(){
 
-const registerForm = document.getElementById("registerForm");
-const loginForm = document.getElementById("loginForm");
-
-registerForm.classList.toggle("active");
-loginForm.classList.toggle("active");
+document.getElementById("registerForm").classList.toggle("active");
+document.getElementById("loginForm").classList.toggle("active");
 
 }
 
