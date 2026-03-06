@@ -1,91 +1,31 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Créer un compte</title>
 
-<style>
-
-body{
-margin:0;
-background:black;
-color:white;
-font-family:Arial;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.container{
-background:#111;
-padding:40px;
-border-radius:25px;
-width:350px;
-box-shadow:0 0 60px rgba(255,255,255,0.1);
-text-align:center;
-}
-
-h2{
-color:yellow;
-margin-bottom:20px;
-}
-
-input{
-width:100%;
-padding:12px;
-margin:10px 0;
-border-radius:10px;
-border:none;
-outline:none;
-background:#222;
-color:white;
-}
-
-button{
-width:100%;
-padding:12px;
-border:none;
-border-radius:10px;
-background:yellow;
-font-weight:bold;
-cursor:pointer;
-transition:0.3s;
-}
-
-button:hover{
-transform:scale(1.05);
-}
-
-.switch{
-margin-top:15px;
-font-size:14px;
-}
-
-.switch a{
-color:#00aaff;
-cursor:pointer;
-text-decoration:none;
-}
-
-</style>
+<link rel="stylesheet" href="style.css">
 
 </head>
+
 <body>
 
-<div class="container">
+<div class="auth-container">
 
 <h2>Créer un compte</h2>
 
 <input type="email" id="email" placeholder="Email">
+
 <input type="password" id="password" placeholder="Mot de passe">
 
-<button onclick="register()">Créer un compte</button>
+<button class="yellow-btn" onclick="register()">Créer un compte</button>
 
-<div class="switch">
+<p class="switch">
 Déjà inscrit ? <a href="/login.html">Se connecter</a>
-</div>
+</p>
 
 </div>
 
@@ -110,8 +50,8 @@ if(res.ok){
 
 alert("Compte créé ✅");
 
-/* 🔥 REDIRECTION DIRECTE VERS PAIEMENT */
-window.location.href = "/payment.html";
+/* redirection directe vers paiement */
+window.location.href="/payment.html";
 
 }else{
 alert(data.message || "Erreur");
