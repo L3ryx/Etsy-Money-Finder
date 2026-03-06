@@ -13,6 +13,18 @@ const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Stripe = require("stripe");
+
+/* ===================================================== */
+/* ================= CONFIG ============================ */
+/* ===================================================== */
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+const upload = multer({ storage: multer.memoryStorage() });
+
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ===================================================== */
 /* ================= MODELS ============================ */
@@ -22,21 +34,7 @@ const User = require("./models/User");
 const SavedProduct = require("./models/SavedProduct");
 
 /* ===================================================== */
-/* ================= APP SETUP ========================= */
-/* ===================================================== */
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-const upload = multer({ storage: multer.memoryStorage() });
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
-
-/* ===================================================== */
-/* =============== DATABASE CONNECTION ================= */
+/* ================= DATABASE ========================== */
 /* ===================================================== */
 
 const mongoURI = `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(
@@ -46,21 +44,16 @@ const mongoURI = `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(
 mongoose
   .connect(mongoURI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ MongoDB Error:", err));
+  .catch((err) => console.error("❌ Mongo Error:", err));
 
 /* ===================================================== */
-/* ================= SOCKET LOGGER ===================== */
+/* ================= MIDDLEWARE ======================== */
 /* ===================================================== */
 
-function sendLog(socket, message) {
-  console.log(message);
-  if (socket) {
-    socket.emit("log", {
-      message,
-      time: new Date().toISOString(),
-    });
-  }
-}
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.raw({ type: "application/json" }));
+app.use(express.static("public"));
 
 /* ===================================================== */
 /* ================= AUTH MIDDLEWARE =================== */
@@ -69,9 +62,7 @@ function sendLog(socket, message) {
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "No token" });
-  }
+  if (!token) return res.status(401).json({ message: "No token" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -89,40 +80,35 @@ function authMiddleware(req, res, next) {
 app.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
-  const existing = await User.findOne({ email });
-
-  if (existing) {
+  const exists = await User.findOne({ email });
+  if (exists)
     return res.status(400).json({ message: "User already exists" });
-  }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashed = await bcrypt.hash(password, 10);
 
   await User.create({
     email,
-    password: hashedPassword,
+    password: hashed,
+    tokens: 0
   });
 
   res.json({ message: "User created ✅" });
 });
 
 /* ===================================================== */
-/* ================= LOGIN (JWT) ======================= */
+/* ================= LOGIN ============================= */
 /* ===================================================== */
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-
-  if (!user) {
+  if (!user)
     return res.status(400).json({ message: "Invalid credentials" });
-  }
 
   const match = await bcrypt.compare(password, user.password);
-
-  if (!match) {
+  if (!match)
     return res.status(400).json({ message: "Invalid credentials" });
-  }
 
   const token = jwt.sign(
     { userId: user._id },
@@ -134,7 +120,67 @@ app.post("/login", async (req, res) => {
 });
 
 /* ===================================================== */
-/* =============== SAVE PRODUCT ======================== */
+/* ============== TOKEN DEDUCTION ====================== */
+/* ===================================================== */
+
+async function consumeToken(userId) {
+  await User.findByIdAndUpdate(userId, {
+    $inc: { tokens: -1 }
+  });
+}
+
+/* ===================================================== */
+/* ============== ETSY SCRAPER ========================= */
+/* ===================================================== */
+
+app.post("/search-etsy", async (req, res) => {
+  const { keyword, limit } = req.body;
+
+  try {
+    const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+    const response = await axios.get("https://api.scraperapi.com/", {
+      params: {
+        api_key: process.env.SCRAPAPI_KEY,
+        url,
+        render: true
+      }
+    });
+
+    const $ = cheerio.load(response.data);
+    const results = [];
+
+    $("a").each((i, el) => {
+      if (results.length >= limit) return;
+
+      const href = $(el).attr("href");
+      if (!href || !href.includes("/listing/")) return;
+
+      let image =
+        $(el).find("img").first().attr("src") ||
+        $(el).find("img").first().attr("data-src");
+
+      if (!image) return;
+
+      if (image.startsWith("//")) image = "https:" + image;
+
+      results.push({
+        image,
+        link: href.startsWith("http")
+          ? href
+          : "https://www.etsy.com" + href
+      });
+    });
+
+    res.json({ results });
+
+  } catch (err) {
+    res.status(500).json({ error: "Scraping failed" });
+  }
+});
+
+/* ===================================================== */
+/* ============== SAVE PRODUCT ========================= */
 /* ===================================================== */
 
 app.post("/save-product", authMiddleware, async (req, res) => {
@@ -143,164 +189,107 @@ app.post("/save-product", authMiddleware, async (req, res) => {
   const product = await SavedProduct.create({
     userId: req.user.userId,
     image,
-    link,
+    link
   });
 
-  res.json({ message: "Saved ✅", product });
+  res.json(product);
 });
 
 /* ===================================================== */
-/* =============== DASHBOARD =========================== */
+/* ============== DASHBOARD ============================ */
 /* ===================================================== */
 
 app.get("/dashboard", authMiddleware, async (req, res) => {
   const products = await SavedProduct.find({
-    userId: req.user.userId,
+    userId: req.user.userId
   });
 
-  res.json({ products });
+  const user = await User.findById(req.user.userId);
+
+  res.json({
+    tokens: user.tokens,
+    products
+  });
 });
 
 /* ===================================================== */
-/* ================= ETSY SCRAPER ====================== */
+/* ============== STRIPE CHECKOUT ====================== */
 /* ===================================================== */
 
-app.post("/search-etsy", async (req, res) => {
-  const { keyword, limit } = req.body;
+app.post("/create-checkout-session", authMiddleware, async (req, res) => {
 
-  if (!keyword) {
-    return res.status(400).json({ error: "Keyword required" });
-  }
+  const { pack } = req.body;
 
-  const maxItems = Math.min(parseInt(limit) || 10, 100);
+  let priceId;
+
+  if (pack === "15") priceId = "PRICE_ID_15";
+  if (pack === "30") priceId = "PRICE_ID_30";
+  if (pack === "50") priceId = "PRICE_ID_50";
+
+  if (!priceId)
+    return res.status(400).json({ message: "Invalid pack" });
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1
+      }
+    ],
+    metadata: {
+      userId: req.user.userId,
+      pack
+    },
+    success_url: "https://tonsite.com/success",
+    cancel_url: "https://tonsite.com/cancel"
+  });
+
+  res.json({ url: session.url });
+});
+
+/* ===================================================== */
+/* ============== STRIPE WEBHOOK ======================= */
+/* ===================================================== */
+
+app.post("/webhook", async (req, res) => {
+
+  const sig = req.headers["stripe-signature"];
+
+  let event;
 
   try {
-    const etsyUrl = `https://www.etsy.com/search?q=${encodeURIComponent(
-      keyword
-    )}`;
-
-    const scraperResponse = await axios.get(
-      "https://api.scraperapi.com/",
-      {
-        params: {
-          api_key: process.env.SCRAPAPI_KEY,
-          url: etsyUrl,
-          render: true,
-        },
-      }
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
     );
+  } catch (err) {
+    return res.status(400).send("Webhook error");
+  }
 
-    const html = scraperResponse.data;
-    const $ = cheerio.load(html);
+  if (event.type === "checkout.session.completed") {
 
-    const results = [];
+    const session = event.data.object;
 
-    $("a").each((i, el) => {
-      if (results.length >= maxItems) return;
+    const userId = session.metadata.userId;
+    const pack = session.metadata.pack;
 
-      const href = $(el).attr("href");
-      if (!href || !href.includes("/listing/")) return;
+    let tokens = 0;
 
-      const link = href.startsWith("http")
-        ? href
-        : "https://www.etsy.com" + href;
+    if (pack === "15") tokens = 15;
+    if (pack === "30") tokens = 30;
+    if (pack === "50") tokens = 50;
 
-      let image = $(el).find("img").first().attr("src") ||
-                  $(el).find("img").first().attr("data-src");
-
-      if (!image) return;
-
-      if (image.startsWith("//")) {
-        image = "https:" + image;
-      }
-
-      results.push({ image, link });
+    await User.findByIdAndUpdate(userId, {
+      $inc: { tokens }
     });
 
-    res.json({ results });
-
-  } catch (err) {
-    console.error("Scraper Error:", err.message);
-    res.status(500).json({ error: "Scraping failed" });
-  }
-});
-
-/* ===================================================== */
-/* ================= IMAGE ANALYSIS ==================== */
-/* ===================================================== */
-
-app.post("/analyze-images", upload.array("images"), async (req, res) => {
-  const socketId = req.body.socketId;
-  const socket = io.sockets.sockets.get(socketId);
-
-  const results = [];
-
-  for (const file of req.files) {
-    sendLog(socket, `Processing ${file.originalname}`);
-
-    const base64 = file.buffer.toString("base64");
-
-    try {
-      const uploadRes = await axios.post(
-        "https://api.imgbb.com/1/upload",
-        new URLSearchParams({
-          key: process.env.IMGBB_KEY,
-          image: base64,
-        })
-      );
-
-      const imageUrl = uploadRes.data.data.url;
-
-      const vision = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Return similarity score between 0 and 100.",
-                },
-                {
-                  type: "image_url",
-                  image_url: { url: imageUrl },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-        }
-      );
-
-      const match = vision.data.choices[0].message.content.match(/\d+/);
-      const similarity = match ? parseInt(match[0]) : 0;
-
-      results.push({
-        image: file.originalname,
-        similarity,
-      });
-
-    } catch (err) {
-      sendLog(socket, "Image analysis failed");
-    }
+    console.log("✅ Tokens added");
   }
 
-  res.json({ results });
-});
-
-/* ===================================================== */
-/* ================= SOCKET ============================ */
-/* ===================================================== */
-
-io.on("connection", (socket) => {
-  socket.emit("connected", { socketId: socket.id });
-  console.log("🟢 Client connected");
+  res.json({ received: true });
 });
 
 /* ===================================================== */
