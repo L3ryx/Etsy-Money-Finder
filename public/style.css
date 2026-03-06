@@ -73,14 +73,14 @@ animation:smokeFloat 15s infinite linear;
 .container{
 position:relative;
 z-index:1;
-min-height:100vh;
+min-height:auto;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-gap:35px;
+gap:25px;
 text-align:center;
-padding:60px 20px;
+padding:60px 20px 80px 20px;
 }
 
 /* ===================================================== */
@@ -88,7 +88,7 @@ padding:60px 20px;
 /* ===================================================== */
 
 .title{
-font-size:50px;
+font-size:45px;
 font-weight:400;
 }
 
@@ -102,6 +102,8 @@ flex-direction:column;
 gap:20px;
 align-items:center;
 }
+
+/* Inputs + Dropdown */
 
 .input-field,
 .dropdown{
@@ -118,7 +120,7 @@ transition:0.3s ease;
 
 .input-field:focus,
 .dropdown:focus{
-box-shadow:0 0 0 4px rgba(0,255,102,0.3);
+box-shadow:0 0 0 4px rgba(0,255,102,0.4);
 }
 
 /* ===================================================== */
@@ -186,15 +188,15 @@ margin-bottom:6px;
 #results{
 width:100%;
 max-width:1600px;
-margin:60px auto;
+margin:40px auto;
 display:grid;
-grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
-gap:40px;
+grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+gap:30px;
 padding:0 40px;
 justify-items:center;
 }
 
-/* Result Card */
+/* ================= RESULT CARD ================= */
 
 .result-card{
 width:100%;
@@ -212,7 +214,7 @@ transition:0.3s ease;
 transform:translateY(-5px);
 }
 
-/* Images */
+/* Image */
 
 .result-card img{
 width:100%;
@@ -221,7 +223,7 @@ object-fit:cover;
 border-radius:14px;
 }
 
-/* Links */
+/* Link */
 
 .result-card a{
 display:inline-block;
@@ -237,6 +239,10 @@ font-weight:600;
 
 @media(max-width:768px){
 
+.title{
+font-size:28px;
+}
+
 #results{
 grid-template-columns:repeat(2, 1fr);
 gap:15px;
@@ -249,10 +255,6 @@ max-width:none;
 
 .result-card img{
 height:150px;
-}
-
-.title{
-font-size:32px;
 }
 
 }
@@ -304,4 +306,17 @@ margin-bottom:15px;
 @keyframes spin{
 from{transform:rotate(0deg);}
 to{transform:rotate(360deg);}
+}
+
+/* ===================================================== */
+/* 🔥 SUPPRESSION ESPACE VIDE SOUS BOUTON */
+/* ===================================================== */
+
+#results:empty,
+.logs:empty{
+display:none;
+}
+
+.container{
+gap:20px !important;
 }
