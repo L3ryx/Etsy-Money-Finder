@@ -1,35 +1,27 @@
 {
-  "name": "etsy-money-finder",
+  "name": "etsy-niche-finder",
   "version": "1.0.0",
-  "description": "SaaS Platform with Stripe, Credits, AI, Scraping & Image Analysis",
+  "description": "Etsy niche finder with authentication, credits, stripe payment and scraping",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [
-    "saas",
-    "stripe",
-    "ai",
-    "scraping",
-    "mongodb",
-    "etsy",
-    "image-analysis"
-  ],
-  "author": "YourName",
+  "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.6.0",
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.0",
-    "express": "^4.18.2",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.0",
-    "stripe": "^14.0.0",
+    "mongoose": "^8.2.1",
     "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.7.0"
+    "socket.io": "^4.7.5",
+    "stripe": "^14.21.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.1.0"
   }
 }
