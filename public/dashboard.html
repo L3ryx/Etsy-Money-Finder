@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:black;
+color:white;
+padding:50px;
+}
+
+.container{
+max-width:800px;
+margin:auto;
+}
+
+.box{
+background:rgba(255,255,255,0.1);
+padding:30px;
+border-radius:15px;
+backdrop-filter:blur(10px);
+margin-bottom:30px;
+}
+
+button{
+padding:12px 20px;
+border:none;
+border-radius:8px;
+background:#00e676;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+.logout{
+background:red;
+color:white;
+float:right;
+}
+
+input{
+padding:10px;
+border-radius:8px;
+border:none;
+width:60%;
+}
+
+.result{
+margin-top:20px;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<button class="logout" onclick="logout()">Logout</button>
+
+<h1>Dashboard</h1>
+
+<h3>Tokens disponibles : <span id="tokens">0</span></h3>
+
+<p><b>Chaque recherche coûte 0,50€</b></p>
+
+<hr>
+
+<div class="box">
+
+<h2>Recharge crédit</h2>
+
+<button onclick="buy()">Payer 0,50€</button>
+
+</div>
+
+<div class="box">
+
+<h2>Recherche</h2>
+
+<input type="text" id="keyword" placeholder="Keyword">
+<button onclick="search()">Search</button>
+
+<div class="result" id="results"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+/* ================= LOAD TOKENS ================= */
+
+async function load(){
+
+const res = await fetch("/dashboard",{
+headers:{
+Authorization:"Bearer "+token
+}
+});
+
+const data = await res.json();
+
+document.getElementById("tokens").innerText = data.tokens;
+
+}
+
+load();
+
+/* ================= PAYMENT ================= */
+
+async function buy(){
+
+const res = await fetch("/create-payment",{
+method:"POST",
+headers:{
+Authorization:"Bearer "+token
+}
+});
+
+const data = await res.json();
+
+window.location = data.url;
+
+}
+
+/* ================= SEARCH ================= */
+
+async function search(){
+
+const keyword = document.getElementById("keyword").value;
+
+const res = await fetch("/search-etsy",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify({
+keyword,
+limit:10
+})
+});
+
+const data = await res.json();
+
+document.getElementById("results").innerHTML =
+JSON.stringify(data.results,null,2);
+
+load();
+
+}
+
+/* ================= LOGOUT ================= */
+
+function logout(){
+localStorage.removeItem("token");
+window.location="/";
+}
+
+</script>
+
+</body>
+</html>
