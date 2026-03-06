@@ -12,6 +12,18 @@ const { Server } = require("socket.io");
 const imageHash = require("image-hash");
 
 /* ===================================================== */
+/* GLOBAL CRASH LOGS */
+/* ===================================================== */
+
+process.on("uncaughtException", err => {
+console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", err => {
+console.error("🔥 UNHANDLED REJECTION:", err);
+});
+
+/* ===================================================== */
 /* APP SETUP */
 /* ===================================================== */
 
@@ -20,6 +32,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
 const User = require("./models/User");
 const ComparisonCache = require("./models/ComparisonCache");
 
@@ -58,10 +71,12 @@ return res.status(401).json({message:"Invalid token"});
 }
 
 /* ===================================================== */
-/* REGISTER / LOGIN */
+/* REGISTER */
 /* ===================================================== */
 
 app.post("/register", async(req,res)=>{
+
+try{
 
 const {email,password} = req.body;
 
@@ -82,14 +97,24 @@ purchaseHistory:[]
 
 const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
-
 await user.save();
 
 res.json({message:"User created"});
 
+}catch(err){
+console.error(err);
+res.status(500).json({message:"Register failed"});
+}
+
 });
 
+/* ===================================================== */
+/* LOGIN */
+/* ===================================================== */
+
 app.post("/login", async(req,res)=>{
+
+try{
 
 const {email,password} = req.body;
 
@@ -107,41 +132,47 @@ process.env.JWT_SECRET,
 
 res.json({token});
 
+}catch(err){
+console.error(err);
+res.status(500).json({message:"Login error"});
+}
+
 });
 
 /* ===================================================== */
-/* 🚀 SMART IMAGE HASH */
+/* SMART IMAGE HASH */
 /* ===================================================== */
 
 function getHash(imageUrl){
+
 return new Promise((resolve,reject)=>{
+
 imageHash(imageUrl,16,true,(err,data)=>{
 if(err) return reject(err);
 resolve(data);
 });
+
 });
+
 }
 
-function calculateDistance(hash1,hash2){
+function calculateDistance(h1,h2){
 
 let distance = 0;
 
-for(let i=0;i<hash1.length;i++){
-if(hash1[i] !== hash2[i]){
-distance++;
-}
+for(let i=0;i<h1.length;i++){
+if(h1[i] !== h2[i]) distance++;
 }
 
 return distance;
+
 }
 
 /* ===================================================== */
-/* 🔥 SMART COMPARISON SYSTEM */
+/* SMART COMPARE WITH CACHE */
 /* ===================================================== */
 
 async function smartCompare(etsyImage, aliImage){
-
-/* 1️⃣ CHECK CACHE */
 
 const cached = await ComparisonCache.findOne({
 imageA:etsyImage,
@@ -152,16 +183,12 @@ if(cached){
 return cached.similarity;
 }
 
-/* 2️⃣ LOCAL HASH FILTER */
-
 try{
 
 const hash1 = await getHash(etsyImage);
 const hash2 = await getHash(aliImage);
 
 const distance = calculateDistance(hash1,hash2);
-
-/* Si images trop différentes → skip OpenAI */
 
 if(distance > 15){
 return 0;
@@ -171,7 +198,7 @@ return 0;
 console.log("Hash failed");
 }
 
-/* 3️⃣ OPENAI CALL ONLY IF NEEDED */
+/* 🔥 OPENAI ONLY IF NECESSARY */
 
 try{
 
@@ -202,8 +229,6 @@ const text = vision.data.choices[0].message.content;
 const match = text.match(/\d+/);
 const similarity = match ? parseInt(match[0]) : 0;
 
-/* 4️⃣ SAVE CACHE */
-
 await ComparisonCache.create({
 imageA:etsyImage,
 imageB:aliImage,
@@ -213,17 +238,19 @@ similarity
 return similarity;
 
 }catch(err){
-console.log("OpenAI failed");
+console.log("OpenAI error");
 return 0;
 }
 
 }
 
 /* ===================================================== */
-/* 🚀 DEEP SEARCH */
+/* DEEP SEARCH */
 /* ===================================================== */
 
 app.post("/deep-search", auth, async(req,res)=>{
+
+try{
 
 const user = await User.findById(req.user.userId);
 if(!user) return res.status(401).json({message:"User not found"});
@@ -237,13 +264,12 @@ if(!keyword) return res.status(400).json({message:"Keyword required"});
 
 const maxItems = Math.min(parseInt(limit) || 5,10);
 
-let finalResults = [];
-
-try{
+let results = [];
 
 /* ================= ETSY SCRAPE ================= */
 
-const etsyUrl = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+const etsyUrl =
+`https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
 const scraperResponse = await axios.get(
 "https://api.scraperapi.com/",
@@ -264,14 +290,10 @@ const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 const etsyImages = [...html.matchAll(imageRegex)].map(m=>m[0]);
 const etsyLinks = [...html.matchAll(linkRegex)].map(m=>m[0]);
 
-/* ================= LOOP ETSY ================= */
-
 for(let i=0;i<Math.min(maxItems,etsyImages.length);i++){
 
 const etsyImage = etsyImages[i];
 const etsyLink = etsyLinks[i] || etsyUrl;
-
-/* ================= GOOGLE + ALI FILTER ================= */
 
 const searchUrl =
 `https://www.google.com/searchbyimage?image_url=${encodeURIComponent(etsyImage)}&tbm=shop&q=site:aliexpress.com`;
@@ -293,16 +315,14 @@ const aliImageRegex = /https:\/\/[^"]+\.jpg/g;
 const aliLinkRegex = /https:\/\/www\.aliexpress\.com\/item\/\d+\.html/g;
 
 const aliImages = [...googleHtml.matchAll(aliImageRegex)]
-.slice(0,10)
+.slice(0,5)
 .map(m=>m[0]);
 
 const aliLinks = [...googleHtml.matchAll(aliLinkRegex)]
-.slice(0,10)
+.slice(0,5)
 .map(m=>m[0]);
 
-let aliexpressMatches = [];
-
-/* ================= SMART COMPARE ================= */
+let matches = [];
 
 for(let j=0;j<aliImages.length;j++){
 
@@ -310,7 +330,7 @@ const similarity = await smartCompare(etsyImage,aliImages[j]);
 
 if(similarity >= 70){
 
-aliexpressMatches.push({
+matches.push({
 image:aliImages[j],
 link:aliLinks[j] || null,
 similarity
@@ -320,41 +340,33 @@ similarity
 
 }
 
-if(aliexpressMatches.length > 0){
+if(matches.length > 0){
 
-finalResults.push({
-etsy:{
-image:etsyImage,
-link:etsyLink
-},
-aliexpressMatches
+results.push({
+etsy:{image:etsyImage,link:etsyLink},
+aliexpressMatches:matches
 });
 
 }
 
 }
 
-/* ===== CREDIT DEDUCTION ===== */
+/* CREDIT DEDUCTION */
 
 if(user.role !== "unlimited"){
 user.credits -= 1;
-user.searchHistory.push({
-query:keyword,
-date:new Date()
-});
+user.searchHistory.push({query:keyword,date:new Date()});
 await user.save();
 }
 
 res.json({
-results:finalResults,
+results,
 creditsLeft:user.credits
 });
 
 }catch(err){
-
-console.log(err);
+console.error("Deep search failed",err);
 res.status(500).json({message:"Deep search failed"});
-
 }
 
 });
