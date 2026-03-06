@@ -8,39 +8,104 @@
 <!-- Police -->
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
 </head>
 <body>
 
 <!-- Background -->
-<img src="/background.png" class="gif-background">
+<img src="/background.png" class="background">
 
-<!-- Smoke -->
-<div class="smoke-container">
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-</div>
+<!-- Dashboard bouton -->
+<div class="dashboard" id="dashboardBtn">Dashboard</div>
 
-<!-- Top right user button -->
-<div class="user-btn-container">
-  <button id="dashboard-btn">⚡ Mon compte</button>
-</div>
-
-<!-- Main centered form -->
+<!-- Container central -->
 <div class="container">
-  <div class="form-container">
-    <input type="text" class="input-field" placeholder="Keyword">
-    <select class="dropdown">
-      <!-- chiffres de 1 à 100 -->
-      ${Array.from({length: 100}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('')}
+
+  <div class="form">
+    <input type="text" id="keyword" placeholder="Entrez votre mot clé">
+    <select id="limit">
+      <!-- Options 1 à 100 -->
+      <script>
+        for(let i=1;i<=100;i++){
+          document.write(`<option value="${i}">${i} résultats</option>`);
+        }
+      </script>
     </select>
-    <button class="start-btn">START</button>
+    <button id="startBtn">START</button>
   </div>
+
 </div>
 
-<!-- Results -->
+<!-- Résultats -->
 <div id="results"></div>
 
-<script src="index.js"></script>
+<script>
+const startBtn = document.getElementById("startBtn");
+const resultsContainer = document.getElementById("results");
+
+startBtn.addEventListener("click", async () => {
+
+  const keyword = document.getElementById("keyword").value;
+  const limit = document.getElementById("limit").value;
+
+  const token = localStorage.getItem("token");
+  if(!token){
+    alert("⚠️ Vous devez être connecté !");
+    return;
+  }
+
+  if(!keyword){
+    alert("⚠️ Entrez un mot clé !");
+    return;
+  }
+
+  startBtn.disabled = true;
+  startBtn.innerText = "Recherche en cours...";
+
+  try{
+    const response = await fetch("/search-etsy", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer " + token
+      },
+      body:JSON.stringify({keyword, limit})
+    });
+
+    const data = await response.json();
+
+    resultsContainer.innerHTML = "";
+
+    if(data.results && data.results.length>0){
+      data.results.forEach(item=>{
+        const card = document.createElement("div");
+        card.className = "result-card";
+        card.innerHTML = `
+          <img src="${item.image}">
+          <a href="${item.link}" target="_blank">Voir l'annonce</a>
+        `;
+        resultsContainer.appendChild(card);
+      });
+    } else {
+      resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+    }
+
+  } catch(err){
+    console.error(err);
+    alert("Erreur serveur ❌");
+  }
+
+  startBtn.disabled = false;
+  startBtn.innerText = "START";
+
+});
+
+// Dashboard bouton click
+document.getElementById("dashboardBtn").addEventListener("click", () => {
+  window.location.href="/dashboard.html";
+});
+
+</script>
+
 </body>
 </html>
