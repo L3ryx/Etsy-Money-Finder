@@ -54,10 +54,14 @@ return res.status(401).json({message:"No token"});
 }
 
 try{
+
 req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
+
 }catch(err){
+
 return res.status(401).json({message:"Invalid token"});
+
 }
 
 }
@@ -68,9 +72,12 @@ return res.status(401).json({message:"Invalid token"});
 
 app.post("/register", async(req,res)=>{
 
+try{
+
 const {email,password} = req.body;
 
 const exists = await User.findOne({email});
+
 if(exists){
 return res.status(400).json({message:"User exists"});
 }
@@ -83,6 +90,7 @@ password:hashed,
 credits:0,
 role:"user",
 paid:false,
+searchesUsed:0,
 purchaseHistory:[],
 searchHistory:[]
 });
@@ -90,11 +98,20 @@ searchHistory:[]
 /* Stripe customer */
 
 const customer = await stripe.customers.create({email});
+
 user.stripeCustomerId = customer.id;
 
 await user.save();
 
 res.json({message:"User created"});
+
+}catch(err){
+
+console.log(err);
+res.status(500).json({message:"Register error"});
+
+}
+
 });
 
 /* ===================================================== */
@@ -103,14 +120,18 @@ res.json({message:"User created"});
 
 app.post("/login", async(req,res)=>{
 
+try{
+
 const {email,password} = req.body;
 
 const user = await User.findOne({email});
+
 if(!user){
 return res.status(400).json({message:"Invalid"});
 }
 
 const match = await bcrypt.compare(password,user.password);
+
 if(!match){
 return res.status(400).json({message:"Invalid"});
 }
@@ -122,6 +143,14 @@ process.env.JWT_SECRET,
 );
 
 res.json({token});
+
+}catch(err){
+
+console.log(err);
+res.status(500).json({message:"Login error"});
+
+}
+
 });
 
 /* ===================================================== */
@@ -199,13 +228,17 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 let event;
 
 try{
+
 event = stripe.webhooks.constructEvent(
 req.body,
 req.headers["stripe-signature"],
 endpointSecret
 );
+
 }catch(err){
+
 return res.status(400).send("Webhook error");
+
 }
 
 if(event.type === "checkout.session.completed"){
@@ -235,11 +268,13 @@ date:new Date()
 });
 
 await user.save();
+
 }
 
 }
 
 res.json({received:true});
+
 });
 
 /* ===================================================== */
@@ -247,10 +282,13 @@ res.json({received:true});
 /* ===================================================== */
 
 function sendLog(socket,message){
+
 console.log(message);
+
 if(socket){
 socket.emit("log",{message,time:new Date().toISOString()});
 }
+
 }
 
 io.on("connection",(socket)=>{
@@ -258,10 +296,12 @@ socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* 🔥 SECURE ETSY SEARCH */
+/* 🔥 ETSY SEARCH */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
+
+try{
 
 const user = await User.findById(req.user.userId);
 
@@ -269,7 +309,8 @@ if(!user){
 return res.status(401).json({message:"User not found"});
 }
 
-/* 🔥 Vérification crédits */
+/* crédits */
+
 if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
 }
@@ -282,10 +323,10 @@ return res.status(400).json({message:"Keyword required"});
 
 const maxItems = Math.min(parseInt(limit) || 10,100);
 
-try{
-
 const etsyUrl =
 `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+/* ScraperAPI */
 
 const scraperResponse = await axios.get(
 "https://api.scraperapi.com/",
@@ -300,38 +341,41 @@ render:true
 
 const html = scraperResponse.data;
 
-/* 🔥 Extraction bloc propre */
+/* extraction */
 
-const productRegex =
-/<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+)[^>]*>([\s\S]*?)<\/a>/g;
+const linkRegex = /href="(https:\/\/www\.etsy\.com\/listing\/[0-9]+[^"]*)"/g;
+const imageRegex = /https:\/\/i\.etsystatic\.com\/[^\s"]+/g;
 
-const matches = [...html.matchAll(productRegex)];
+const links = [...html.matchAll(linkRegex)];
+const images = [...html.matchAll(imageRegex)];
 
 const results = [];
 
-for(let i=0;i<matches.length && results.length<maxItems;i++){
+for (let i = 0; i < links.length && results.length < maxItems; i++) {
 
-const block = matches[i][0];
-const link = matches[i][1];
+const link = links[i][1];
+const image = images[i] ? images[i][0] : null;
 
-const imageMatch = block.match(/https:\/\/i\.etsystatic\.com[^"]+/);
-
-if(imageMatch){
+if (link && image) {
 
 results.push({
-image:imageMatch[0],
-link:link
+image,
+link
 });
 
 }
 
 }
 
-/* 🔥 Déduction crédit */
+console.log("Etsy results found:",results.length);
+
+/* deduction credit */
 
 if(user.role !== "unlimited"){
+
 user.credits -= 1;
 user.searchesUsed += 1;
+
 }
 
 user.searchHistory.push({
@@ -341,11 +385,16 @@ date:new Date()
 
 await user.save();
 
-res.json({results,creditsLeft:user.credits});
+res.json({
+results,
+creditsLeft:user.credits
+});
 
 }catch(err){
+
 console.log(err);
 res.status(500).json({message:"Scraping failed"});
+
 }
 
 });
@@ -405,7 +454,9 @@ matches:[{url:"AI_ANALYSIS",similarity}]
 });
 
 }catch(err){
+
 console.log("Image pipeline error");
+
 }
 
 }
