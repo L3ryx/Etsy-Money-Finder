@@ -10,11 +10,6 @@
 
 <div class="sky">
 
-<!-- 🎨 CANVAS BACKGROUND -->
-<canvas id="gameCanvas"></canvas>
-<img id="sourceImage" src="/background.jpg" style="display:none;">
-
-<!-- 🔥 INTERFACE -->
 <h1 class="title">Niche Finder</h1>
 
 <div class="form-container">
@@ -22,20 +17,27 @@
 <input type="text" class="input-field" placeholder="Keyword">
 
 <select class="dropdown">
-<option value="5">Analyse 5 annonces</option>
-<option value="10">Analyse 10 annonces</option>
-<option value="20">Analyse 20 annonces</option>
-<option value="50">Analyse 50 annonces</option>
+<option>5</option>
+<option>10</option>
+<option>20</option>
+<option>50</option>
 </select>
 
 <button class="start-btn">START</button>
 
 </div>
 
+<!-- 🎨 IMAGE SOURCE -->
+<img id="sourceImage" src="/background.jpg" style="display:none;">
+
+<!-- 🚀 CANVAS -->
+<canvas id="gameCanvas"></canvas>
+
 </div>
 
-<!-- 🚀 PIXEL ANIMATION SCRIPT -->
 <script>
+
+/* ================= SETUP ================= */
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -44,51 +46,52 @@ const img = document.getElementById("sourceImage");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let particles = [];
+let pixels = [];
+
+/* ================= LOAD IMAGE ================= */
 
 img.onload = function(){
-initPixels();
-animate();
-};
-
-function initPixels(){
 
 ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-const data = imageData.data;
+const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
 
-for(let y=0;y<canvas.height;y+=20){
-for(let x=0;x<canvas.width;x+=20){
+/* 🔥 Création des pixels */
+for(let y=0;y<canvas.height;y+=12){
+for(let x=0;x<canvas.width;x+=12){
 
 let index = (y*canvas.width + x)*4;
-let r = data[index];
-let g = data[index+1];
-let b = data[index+2];
 
-particles.push({
+pixels.push({
 x:x,
 y:y,
-color:`rgb(${r},${g},${b})`,
-size:20,
+r:data[index],
+g:data[index+1],
+b:data[index+2],
+alpha:1,
 vy:Math.random()*2
 });
 
 }
 }
 
-}
+animate();
+
+};
+
+/* ================= ANIMATION ================= */
 
 function animate(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-particles.forEach(p=>{
+pixels.forEach(p=>{
 
 p.y += p.vy;
+p.alpha -= 0.002;
 
-ctx.fillStyle = p.color;
-ctx.fillRect(p.x,p.y,p.size,p.size);
+ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.alpha})`;
+ctx.fillRect(p.x,p.y,12,12);
 
 });
 
