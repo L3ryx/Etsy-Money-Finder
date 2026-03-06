@@ -3,44 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inscription</title>
+<title>Créer un compte</title>
+<link rel="stylesheet" href="/style.css">
 
 <style>
 
-html, body {
-margin:0;
-padding:0;
-width:100%;
-height:100%;
-background:black !important; /* 🔥 FORCE LE FOND NOIR */
-font-family:Arial;
+body{
 display:flex;
 justify-content:center;
 align-items:center;
-color:white;
+height:100vh;
+background:black;
 }
 
-/* BOX */
-
-.box{
+.auth-card{
 background:#111;
 padding:40px;
 border-radius:30px;
 width:350px;
 text-align:center;
-box-shadow:0 0 80px rgba(255,255,255,0.15);
+box-shadow:0 0 60px rgba(255,255,255,0.1);
 }
 
-/* TITRE */
-
-.box h2{
+.auth-card h2{
 color:yellow;
 margin-bottom:20px;
 }
 
-/* INPUT */
-
-.box input{
+.auth-card input{
 width:100%;
 padding:12px;
 margin:10px 0;
@@ -51,9 +41,7 @@ background:#222;
 color:white;
 }
 
-/* BOUTON JAUNE */
-
-.box button{
+.auth-card button{
 width:100%;
 padding:12px;
 border:none;
@@ -64,11 +52,9 @@ cursor:pointer;
 transition:0.3s;
 }
 
-.box button:hover{
+.auth-card button:hover{
 transform:scale(1.05);
 }
-
-/* SWITCH */
 
 .switch{
 margin-top:15px;
@@ -78,13 +64,15 @@ font-size:14px;
 .switch a{
 color:#00aaff;
 text-decoration:none;
+cursor:pointer;
 }
 
 </style>
+
 </head>
 <body>
 
-<div class="box">
+<div class="auth-card">
 
 <h2>Créer un compte</h2>
 
@@ -117,10 +105,14 @@ body:JSON.stringify({email,password})
 const data = await res.json();
 
 if(res.ok){
+
 alert("Compte créé ✅");
-window.location.href="/payment.html";
+
+/* 🔥 REDIRECTION DIRECTE VERS PAIEMENT */
+window.location.href = "/payment.html";
+
 }else{
-alert(data.message);
+alert(data.message || "Erreur inscription");
 }
 
 }
