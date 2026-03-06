@@ -49,7 +49,6 @@ const EtsyCache = mongoose.model("EtsyCache",CacheSchema);
 function auth(req,res,next){
 const token = req.headers.authorization?.split(" ")[1];
 if(!token) return res.status(401).json({message:"No token"});
-
 try{
 req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
@@ -59,15 +58,15 @@ return res.status(401).json({message:"Invalid token"});
 }
 
 /* ===================================================== */
-/* SMART HASH (ANTI OPENAI COST) */
+/* HASH QUICK FILTER (ANTI OPENAI COST) */
 /* ===================================================== */
 
-function imageHash(url){
-return crypto.createHash("md5").update(url).digest("hex");
+function imageHash(value){
+return crypto.createHash("md5").update(value).digest("hex");
 }
 
 /* ===================================================== */
-/* 🔥 SEARCH ENGINE OPTIMIZED */
+/* 🔥 SEARCH ENGINE */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -88,10 +87,11 @@ if(!keyword) return res.status(400).json({message:"Keyword required"});
 
 const cache = await EtsyCache.findOne({keyword});
 if(cache){
+console.log("✅ Cache used");
 return res.json({results:cache.results,creditsLeft:user.credits});
 }
 
-/* ================= SCRAPE ETSY ================= */
+/* ================= ETSY SCRAPE ================= */
 
 const etsyUrl =
 `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
@@ -109,15 +109,18 @@ render:true
 
 const html = etsyResponse.data;
 
-/* Extract title + image + link */
+/* ===== Improved Extraction (More Stable Regex) ===== */
 
-const titleRegex = /<h3[^>]*>(.*?)<\/h3>/g;
+const titleRegex = /data-listing-title="([^"]+)"/g;
 const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
 const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
 const titles = [...html.matchAll(titleRegex)].map(m=>m[1]);
 const images = [...html.matchAll(imageRegex)].map(m=>m[0]);
 const links = [...html.matchAll(linkRegex)].map(m=>m[0]);
+
+console.log("🔥 Titles:",titles.length);
+console.log("🔥 Images:",images.length);
 
 const maxItems = Math.min(parseInt(limit) || 5,10);
 
@@ -137,7 +140,7 @@ const etsyLink = links[i];
 
 const params = {
 engine:"google_shopping",
-q: etsyTitle + " aliexpress",
+q: etsyTitle.split(" ").slice(0,4).join(" ") + " aliexpress",
 hl:"fr",
 gl:"fr"
 };
@@ -156,6 +159,8 @@ aliProducts = serpData.shopping_results
 
 }
 
+console.log("🔥 Ali Products:",aliProducts.length);
+
 let verifiedMatches = [];
 
 /* ================= LOOP ALI PRODUCTS ================= */
@@ -165,23 +170,25 @@ for(const ali of aliProducts){
 const aliImage = ali.thumbnail || ali.image || "";
 const aliLink = ali.link || "";
 
-/* ================= ANTI COST FILTER ================= */
+/* ================= QUICK FILTER ================= */
 
 let similarity = 0;
 
-/* Fast text filter */
+/* Text quick match */
 if(ali.title && etsyTitle){
 if(ali.title.toLowerCase().includes(etsyTitle.toLowerCase())){
 similarity += 40;
 }
 }
 
-/* Hash quick filter */
+/* Hash quick match */
+if(etsyImage && aliImage){
 if(imageHash(etsyImage) === imageHash(aliImage)){
 similarity += 40;
 }
+}
 
-/* ================= CALL OPENAI ONLY IF NECESSARY ================= */
+/* ================= OPENAI ONLY IF NECESSARY ================= */
 
 if(similarity < 70 && etsyImage && aliImage){
 
@@ -220,7 +227,7 @@ console.log("OpenAI skipped");
 
 }
 
-/* ================= FILTER 70% ================= */
+/* ================= FINAL FILTER ================= */
 
 if(similarity >= 70){
 
