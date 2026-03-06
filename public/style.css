@@ -1,104 +1,81 @@
-/* ===================================================== */
-/* GLOBAL */
-/* ===================================================== */
-
-*{
-  box-sizing:border-box;
-}
-
 html, body{
   margin:0;
   padding:0;
   width:100%;
-  min-height:100%;
-  background:black;
-  font-family: 'Courier New', monospace;
-  color:#00ff66;
+  min-height:100vh;
   overflow-x:hidden;
+  background:black;
+  font-family:"Courier New", monospace;
+  color:#00ff66;
 }
 
 /* ===================================================== */
-/* MATRIX BACKGROUND */
+/* MATRIX */
 /* ===================================================== */
 
 #matrix{
   position:fixed;
   top:0;
   left:0;
-  width:100vw;
-  height:100vh;
+  width:100%;
+  height:100%;
   z-index:-1;
+  background:transparent;
   pointer-events:none;
-  background:black;
-  display:block;
 }
 
 /* ===================================================== */
-/* TITLE (STYLE HACKER) */
+/* TITLE */
 /* ===================================================== */
 
 .title{
   text-align:center;
-  font-size:42px;
-  font-weight:bold;
-  margin-top:40px;
-  letter-spacing:4px;
-  text-shadow:
-    0 0 10px #00ff66,
-    0 0 20px #00ff66,
-    0 0 40px #00ff66;
+  font-size:50px;
+  margin-top:50px;
+  letter-spacing:5px;
+  text-shadow:0 0 20px #00ff66;
 }
 
 /* ===================================================== */
-/* CENTER LAYOUT */
+/* MAIN LAYOUT */
 /* ===================================================== */
 
 .main-center{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:25px;
+  gap:30px;
   margin-top:40px;
-  padding-bottom:80px;
+  padding-bottom:100px;
 }
 
 /* ===================================================== */
-/* SEARCH SECTION */
+/* SEARCH BOX */
 /* ===================================================== */
 
 .search-box{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:15px;
+  gap:20px;
 }
 
-/* Keyword Input */
-
-#keyword{
-  width:250px;
+#keyword, #limit{
+  width:260px;
   padding:12px;
-  border-radius:10px;
+  border-radius:15px;
   border:2px solid #00ff66;
   background:black;
   color:#00ff66;
-  font-size:16px;
   text-align:center;
+  font-size:16px;
   outline:none;
+  transition:0.3s;
 }
 
-/* Select */
-
-#limit{
-  width:200px;
-  padding:10px;
-  border-radius:10px;
-  border:2px solid #00ff66;
-  background:black;
-  color:#00ff66;
-  font-size:14px;
-  text-align:center;
-  cursor:pointer;
+#keyword:focus,
+#limit:focus{
+  box-shadow:0 0 20px #00ff66;
 }
 
 /* ===================================================== */
@@ -109,22 +86,22 @@ html, body{
   background:#00ff66;
   color:black;
   border:none;
-  padding:15px 40px;
-  border-radius:30px;
-  font-size:18px;
+  padding:20px 70px;
+  border-radius:50px;
+  font-size:22px;
   font-weight:bold;
   cursor:pointer;
   transition:0.3s;
-  box-shadow:0 0 15px #00ff66;
+  box-shadow:0 0 30px #00ff66;
 }
 
 .start-btn:hover{
-  transform:scale(1.15);
-  box-shadow:0 0 40px #00ff66;
+  transform:scale(1.2);
+  box-shadow:0 0 60px #00ff66;
 }
 
 /* ===================================================== */
-/* LOADER (ROTATING ICON) */
+/* LOADER */
 /* ===================================================== */
 
 .loader-container{
@@ -132,9 +109,8 @@ html, body{
 }
 
 .loader{
-  font-size:60px;
+  font-size:80px;
   animation:spin 1s linear infinite;
-  text-shadow:0 0 20px red;
 }
 
 @keyframes spin{
@@ -147,50 +123,80 @@ html, body{
 /* ===================================================== */
 
 #results{
-  width:90%;
-  max-width:1200px;
+  width:95%;
+  max-width:1400px;
   text-align:center;
 }
 
 .result-card{
-  background:#111;
+  background:#0a0a0a;
   border:1px solid #00ff66;
-  border-radius:15px;
-  padding:15px;
-  margin:15px auto;
+  border-radius:20px;
+  padding:20px;
+  margin:20px auto;
   transition:0.3s;
 }
 
 .result-card:hover{
   transform:scale(1.05);
-  box-shadow:0 0 25px #00ff66;
+  box-shadow:0 0 40px #00ff66;
 }
 
 .result-card img{
-  width:180px;
-  border-radius:10px;
-  margin-bottom:10px;
+  width:200px;
+  border-radius:15px;
+  margin-bottom:15px;
 }
 
 .result-card a{
   color:#00ff66;
   text-decoration:none;
   font-weight:bold;
+  font-size:18px;
+}
+
+.result-card a:hover{
+  text-shadow:0 0 15px #00ff66;
 }
 
 /* ===================================================== */
-/* SCROLL BAR STYLE */
+/* SCROLLBAR FIX */
 /* ===================================================== */
 
+html{
+  overflow-y:auto;
+}
+
 ::-webkit-scrollbar{
-  width:8px;
+  width:10px;
 }
 
 ::-webkit-scrollbar-thumb{
   background:#00ff66;
-  border-radius:10px;
+  border-radius:20px;
 }
 
 ::-webkit-scrollbar-track{
   background:black;
+}
+
+/* ===================================================== */
+/* MOBILE FIX */
+/* ===================================================== */
+
+@media(max-width:768px){
+
+  .title{
+    font-size:30px;
+  }
+
+  .start-btn{
+    padding:15px 40px;
+    font-size:18px;
+  }
+
+  .result-card img{
+    width:150px;
+  }
+
 }
