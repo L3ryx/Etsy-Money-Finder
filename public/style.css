@@ -1,17 +1,31 @@
-/* ================= PREMIUM AUTH STYLE ================= */
+/* ===================================================== */
+/* ================= GLOBAL ============================ */
+/* ===================================================== */
 
-body{
-background:black;
-color:white;
-font-family:Arial, Helvetica, sans-serif;
-overflow:hidden;
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
 }
 
-/* ================= TOOL TEXT ================= */
+body{
+font-family:Arial, Helvetica, sans-serif;
+background:black;
+color:white;
+overflow-x:hidden;
+}
+
+/* ===================================================== */
+/* ================= TOOL PAGE ========================= */
+/* ===================================================== */
 
 .container{
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+height:100vh;
 text-align:center;
-margin-top:100px;
 }
 
 .title{
@@ -19,13 +33,17 @@ font-size:60px;
 background:linear-gradient(90deg,#00e676,#ffffff);
 -webkit-background-clip:text;
 -webkit-text-fill-color:transparent;
+margin-bottom:10px;
 }
 
 .subtitle{
 opacity:0.6;
+font-size:18px;
 }
 
-/* ================= AUTH BOX ================= */
+/* ===================================================== */
+/* ================= AUTH BOX PREMIUM ================== */
+/* ===================================================== */
 
 #authBox{
 position:fixed;
@@ -37,28 +55,35 @@ padding:60px;
 border-radius:30px;
 width:400px;
 box-shadow:0 0 80px rgba(255,255,255,0.1);
-overflow:hidden;
+z-index:9999;
 }
-
-/* ================= FORMS ================= */
 
 .form-container{
 position:relative;
 width:100%;
 }
 
+/* ================= FORMS ANIMATION ================= */
+
 .form{
-position:absolute;
+display:none;
 width:100%;
-opacity:0;
-transform:translateX(100%);
-transition:0.5s ease;
 }
 
 .form.active{
+display:block;
+animation:fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn{
+from{
+opacity:0;
+transform:translateX(40px);
+}
+to{
 opacity:1;
 transform:translateX(0);
-position:relative;
+}
 }
 
 /* ================= INPUT ================= */
@@ -70,6 +95,7 @@ margin:10px 0;
 border-radius:12px;
 border:none;
 outline:none;
+font-size:14px;
 }
 
 /* ================= BUTTON ================= */
@@ -100,4 +126,80 @@ font-size:14px;
 color:#00e676;
 cursor:pointer;
 font-weight:bold;
+}
+
+/* ===================================================== */
+/* ================= RESULTS =========================== */
+/* ===================================================== */
+
+#results{
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:20px;
+padding:40px;
+}
+
+.result-card{
+background:#111;
+padding:20px;
+border-radius:20px;
+width:220px;
+text-align:center;
+transition:0.3s;
+}
+
+.result-card:hover{
+transform:translateY(-10px);
+box-shadow:0 10px 30px rgba(255,255,255,0.1);
+}
+
+.result-card img{
+width:100%;
+border-radius:15px;
+}
+
+.result-card a{
+display:inline-block;
+margin-top:10px;
+color:yellow;
+text-decoration:none;
+font-weight:bold;
+}
+
+/* ===================================================== */
+/* ================= LOADER ============================ */
+/* ===================================================== */
+
+.loader{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.8);
+display:flex;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+z-index:9998;
+}
+
+.loader.hidden{
+display:none;
+}
+
+.spinner{
+width:60px;
+height:60px;
+border:6px solid #fff;
+border-top:6px solid yellow;
+border-radius:50%;
+animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+to{
+transform:rotate(360deg);
+}
 }
