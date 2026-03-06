@@ -2,38 +2,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Paiement</title>
+<title>Ajouter Carte</title>
 <script src="https://js.stripe.com/v3/"></script>
 
 <style>
 
 body{
-margin:0;
 background:black;
 color:white;
+font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-font-family:Arial;
 }
 
 .box{
 background:#111;
-padding:50px;
-border-radius:25px;
+padding:40px;
+border-radius:20px;
 width:400px;
 text-align:center;
+box-shadow:0 0 40px rgba(255,255,255,0.1);
 }
 
 button{
 width:100%;
-padding:15px;
+padding:12px;
 background:yellow;
 border:none;
-border-radius:12px;
+border-radius:10px;
 font-weight:bold;
 cursor:pointer;
+}
+
+#card-element{
+background:white;
+padding:15px;
+border-radius:10px;
+margin:20px 0;
 }
 
 </style>
@@ -43,25 +50,27 @@ cursor:pointer;
 
 <div class="box">
 
-<h2>Ajouter votre carte</h2>
+<h2>Ajouter votre carte 💳</h2>
 
 <div id="card-element"></div>
 
-<br>
-
-<button onclick="saveCard()">Valider Carte</button>
+<button onclick="saveCard()">Enregistrer Carte</button>
 
 </div>
 
 <script>
 
-const stripe = Stripe("TA_CLE_PUBLIQUE_ICI");
+const stripe = Stripe("TON_PUBLIC_KEY_ICI");
 
 const elements = stripe.elements();
 const card = elements.create("card");
 card.mount("#card-element");
 
-async function saveCard(){
+let clientSecret;
+
+/* 🔥 GET SETUP INTENT */
+
+async function getSetupIntent(){
 
 const res = await fetch("/create-setup-intent",{
 method:"POST",
@@ -72,19 +81,28 @@ Authorization:"Bearer "+localStorage.getItem("token")
 
 const data = await res.json();
 
-const result = await stripe.confirmCardSetup(
-data.client_secret,
-{
+clientSecret = data.clientSecret;
+
+}
+
+getSetupIntent();
+
+/* 🔥 SAVE CARD */
+
+async function saveCard(){
+
+const result = await stripe.confirmCardSetup(clientSecret,{
 payment_method:{
 card:card
 }
-}
-);
+});
 
 if(result.error){
-alert("Erreur carte");
+alert(result.error.message);
 return;
 }
+
+/* 🔥 Attache carte côté serveur */
 
 await fetch("/attach-card",{
 method:"POST",
@@ -93,13 +111,13 @@ headers:{
 Authorization:"Bearer "+localStorage.getItem("token")
 },
 body:JSON.stringify({
-paymentMethodId:result.setupIntent.payment_method
+paymentMethodId: result.setupIntent.payment_method
 })
 });
 
 alert("Carte enregistrée ✅");
 
-window.location="/";
+window.location="/dashboard.html";
 
 }
 
