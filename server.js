@@ -1,268 +1,413 @@
-const express = require("express")
-const axios = require("axios")
-const cheerio = require("cheerio")
-const mongoose = require("mongoose")
-const cors = require("cors")
-const crypto = require("crypto")
-const OpenAI = require("openai")
+require("dotenv").config();
 
-const app = express()
+const express = require("express");
+const axios = require("axios");
+const http = require("http");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Stripe = require("stripe");
+const FormData = require("form-data");
+const { Server } = require("socket.io");
+const imageHash = require("image-hash");
 
-app.use(cors())
-app.use(express.json())
-app.use(express.static("public"))
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-const PORT = process.env.PORT || 10000
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const User = require("./models/User");
 
-const openai = new OpenAI({
- apiKey: process.env.OPENAI_API_KEY
-})
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
-/* ---------------- MONGO ---------------- */
+/* ===================================================== */
+/* DATABASE */
+/* ===================================================== */
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(
+`mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
+)
+.then(()=>console.log("✅ Mongo Connected"))
+.catch(err=>console.log("Mongo error",err));
 
-const CacheSchema = new mongoose.Schema({
- keyword:String,
- results:Array
-})
+/* ===================================================== */
+/* AUTH */
+/* ===================================================== */
 
-const Cache = mongoose.model("cache",CacheSchema)
+function auth(req,res,next){
 
-/* ---------------- IMAGE HASH ---------------- */
+const token = req.headers.authorization?.split(" ")[1];
 
-async function imageHash(url){
+if(!token) return res.status(401).json({message:"No token"});
 
- try{
+try{
 
- const img = await axios.get(url,{responseType:"arraybuffer"})
- const hash = crypto.createHash("md5").update(img.data).digest("hex")
+req.user = jwt.verify(token,process.env.JWT_SECRET);
+next();
 
- return hash
+}catch{
 
- }catch(e){
-
- return null
-
- }
-
-}
-
-/* ---------------- HASH SIMILARITY ---------------- */
-
-function similarity(hash1,hash2){
-
- if(!hash1 || !hash2) return 0
-
- let same = 0
-
- for(let i=0;i<hash1.length;i++){
-
-  if(hash1[i] === hash2[i]) same++
-
- }
-
- return (same/hash1.length)*100
+return res.status(401).json({message:"Invalid token"});
 
 }
 
-/* ---------------- OPENAI IMAGE COMPARISON ---------------- */
+}
 
-async function aiCompare(img1,img2){
+/* ===================================================== */
+/* REGISTER */
+/* ===================================================== */
 
- try{
+app.post("/register", async(req,res)=>{
 
- const response = await openai.chat.completions.create({
+const {email,password} = req.body;
 
-  model:"gpt-4o-mini",
+const exists = await User.findOne({email});
+if(exists) return res.status(400).json({message:"User exists"});
 
-  messages:[
-  {
-   role:"user",
-   content:[
-    {type:"text",text:"Compare these 2 product images and return similarity percentage only"},
-    {type:"image_url",image_url:{url:img1}},
-    {type:"image_url",image_url:{url:img2}}
-   ]
-  }
-  ]
+const hashed = await bcrypt.hash(password,10);
 
- })
+const user = await User.create({
+email,
+password:hashed,
+credits:5,
+role:"user"
+});
 
- const text = response.choices[0].message.content
+const customer = await stripe.customers.create({email});
+user.stripeCustomerId = customer.id;
 
- const number = parseInt(text.match(/\d+/)?.[0])
+await user.save();
 
- return number || 0
+res.json({message:"User created"});
 
- }catch(e){
+});
 
- console.log("OpenAI error")
+/* ===================================================== */
+/* LOGIN */
+/* ===================================================== */
 
- return 0
+app.post("/login", async(req,res)=>{
 
- }
+const {email,password} = req.body;
+
+const user = await User.findOne({email});
+if(!user) return res.status(400).json({message:"Invalid login"});
+
+const match = await bcrypt.compare(password,user.password);
+if(!match) return res.status(400).json({message:"Invalid login"});
+
+const token = jwt.sign(
+{userId:user._id},
+process.env.JWT_SECRET,
+{expiresIn:"7d"}
+);
+
+res.json({token});
+
+});
+
+/* ===================================================== */
+/* IMAGE HASH */
+/* ===================================================== */
+
+function getHash(imageUrl){
+
+return new Promise((resolve,reject)=>{
+
+imageHash(imageUrl,16,true,(err,data)=>{
+
+if(err) reject(err);
+else resolve(data);
+
+});
+
+});
 
 }
 
-/* ---------------- ROUTE ---------------- */
+function hashDistance(hash1,hash2){
 
-app.get("/search", async(req,res)=>{
+let distance = 0;
 
- try{
+for(let i=0;i<hash1.length;i++){
 
- console.log("🚀 ROUTE CALLED")
+if(hash1[i] !== hash2[i]) distance++;
 
- const keyword = req.query.keyword
+}
 
- console.log("🔥 KEYWORD:",keyword)
+return distance;
 
- /* ----- CACHE ----- */
+}
 
- const cache = await Cache.findOne({keyword})
+/* ===================================================== */
+/* UPLOAD IMAGE TO IMGBB */
+/* ===================================================== */
 
- if(cache){
+async function uploadToImgBB(imageUrl){
 
- console.log("✅ CACHE HIT")
+try{
 
- return res.json(cache.results)
+const img = await axios.get(imageUrl,{responseType:"arraybuffer"});
 
- }
+const form = new FormData();
 
- /* ----- SCRAPE ETSY ----- */
+form.append("image",Buffer.from(img.data).toString("base64"));
 
- console.log("🌍 Scraping Etsy...")
+const upload = await axios.post(
+`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`,
+form,
+{headers:form.getHeaders()}
+);
 
- const etsyURL = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`
+return upload.data.data.url;
 
- const {data} = await axios.get(etsyURL)
+}catch{
 
- const $ = cheerio.load(data)
+console.log("IMGBB upload failed");
 
- const titles = []
- const images = []
- const links = []
+return imageUrl;
 
- $("a.listing-link").each((i,el)=>{
+}
 
- const title = $(el).attr("title")
- const link = "https://etsy.com"+$(el).attr("href")
+}
 
- const img = $(el).find("img").attr("src")
+/* ===================================================== */
+/* SMART COMPARE */
+/* ===================================================== */
 
- if(title && img){
+async function smartCompare(etsyImage,aliImage){
 
- titles.push(title)
- images.push(img)
- links.push(link)
+/* HASH FILTER */
 
- }
+try{
 
- })
+const hash1 = await getHash(etsyImage);
+const hash2 = await getHash(aliImage);
 
- console.log("🔥 ETSY TITLES:",titles.length)
+const distance = hashDistance(hash1,hash2);
 
- const results = []
+/* trop différent */
 
- /* ----- LOOP ETSY ----- */
+if(distance > 15){
 
- for(let i=0;i<Math.min(10,titles.length);i++){
+return 0;
 
- const title = titles[i]
- const etsyImage = images[i]
- const etsyLink = links[i]
+}
 
- console.log("🔎 GOOGLE SEARCH:",title)
+}catch{
 
- /* ----- GOOGLE SHOPPING ----- */
+console.log("Hash error");
 
- const serp = await axios.get("https://serpapi.com/search",{
+}
 
- params:{
-  api_key:process.env.SERPAPI_KEY,
-  engine:"google",
-  tbm:"shop",
-  q:title
- }
+/* OPENAI COMPARE */
 
- })
+try{
 
- const shopping = serp.data.shopping_results || []
+const response = await axios.post(
+"https://api.openai.com/v1/chat/completions",
+{
+model:"gpt-4o-mini",
+messages:[
+{
+role:"user",
+content:[
+{type:"text",text:"Return similarity percentage between these two product images"},
+{type:"image_url",image_url:{url:etsyImage}},
+{type:"image_url",image_url:{url:aliImage}}
+]
+}
+]
+},
+{
+headers:{
+Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,
+"Content-Type":"application/json"
+}
+}
+);
 
- const aliProducts = shopping.filter(p=>
+const text = response.data.choices[0].message.content;
 
- p.link && p.link.includes("aliexpress")
+const match = text.match(/\d+/);
 
- )
+return match ? parseInt(match[0]) : 0;
 
- console.log("🛒 ALI PRODUCTS:",aliProducts.length)
+}catch{
 
- const etsyHash = await imageHash(etsyImage)
+console.log("OpenAI error");
 
- for(let ali of aliProducts.slice(0,10)){
+return 0;
 
- const aliImg = ali.thumbnail
- const aliLink = ali.link
+}
 
- const aliHash = await imageHash(aliImg)
+}
 
- const sim = similarity(etsyHash,aliHash)
+/* ===================================================== */
+/* DEEP SEARCH */
+/* ===================================================== */
 
- console.log("⚡ HASH SIM:",sim)
+app.post("/deep-search", auth, async(req,res)=>{
 
- if(sim > 60){
+console.log("🚀 SEARCH START");
 
- const aiScore = await aiCompare(etsyImage,aliImg)
+const user = await User.findById(req.user.userId);
 
- console.log("🤖 AI SCORE:",aiScore)
+if(!user) return res.status(401).json({message:"User not found"});
 
- if(aiScore >= 70){
+if(user.credits <= 0 && user.role !== "unlimited"){
 
- results.push({
+return res.status(403).json({message:"No credits"});
 
- etsyImage,
- etsyLink,
- aliImage:aliImg,
- aliLink,
- similarity:aiScore
+}
 
- })
+const {keyword,limit} = req.body;
 
- }
+const maxItems = Math.min(parseInt(limit)||5,10);
 
- }
+let results = [];
 
- }
+try{
 
- }
+/* ================= ETSY SCRAPE ================= */
 
- /* ----- SAVE CACHE ----- */
+const etsyUrl =
+`https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
- await Cache.create({
+const scrape = await axios.get(
+"https://api.scraperapi.com/",
+{
+params:{
+api_key:process.env.SCRAPAPI_KEY,
+url:etsyUrl,
+render:true
+}
+}
+);
 
- keyword,
- results
+const html = scrape.data;
 
- })
+const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
- console.log("💾 CACHE SAVED")
+const etsyImages = [...html.matchAll(imageRegex)].map(m=>m[0]);
+const etsyLinks = [...html.matchAll(linkRegex)].map(m=>m[0]);
 
- res.json(results)
+console.log("Etsy images:",etsyImages.length);
 
- }catch(e){
+/* ================= LOOP ETSY ================= */
 
- console.log("SERVER ERROR",e)
+for(let i=0;i<Math.min(maxItems,etsyImages.length);i++){
 
- res.status(500).json({error:"server error"})
+const etsyImage = etsyImages[i];
+const etsyLink = etsyLinks[i] || etsyUrl;
 
- }
+/* IMGBB */
 
-})
+const hostedImage = await uploadToImgBB(etsyImage);
 
-/* ---------------- START ---------------- */
+/* GOOGLE IMAGE SEARCH */
 
-app.listen(PORT,()=>{
+const googleUrl =
+`https://www.google.com/searchbyimage?image_url=${encodeURIComponent(hostedImage)}&tbm=shop&q=site:aliexpress.com`;
 
- console.log("🚀 SERVER RUNNING ON PORT",PORT)
+const google = await axios.get(
+"https://api.scraperapi.com/",
+{
+params:{
+api_key:process.env.SCRAPAPI_KEY,
+url:googleUrl,
+render:true
+}
+}
+);
 
-})
+const googleHtml = google.data;
+
+const aliImageRegex = /https:\/\/[^"]+\.jpg/g;
+const aliLinkRegex = /https:\/\/www\.aliexpress\.com\/item\/\d+\.html/g;
+
+const aliImages = [...googleHtml.matchAll(aliImageRegex)]
+.slice(0,10)
+.map(m=>m[0]);
+
+const aliLinks = [...googleHtml.matchAll(aliLinkRegex)]
+.slice(0,10)
+.map(m=>m[0]);
+
+let matches = [];
+
+/* SMARTCOMPARE */
+
+for(let j=0;j<aliImages.length;j++){
+
+const similarity = await smartCompare(etsyImage,aliImages[j]);
+
+if(similarity >= 70){
+
+matches.push({
+
+image:aliImages[j],
+link:aliLinks[j] || null,
+similarity
+
+});
+
+}
+
+}
+
+if(matches.length>0){
+
+results.push({
+
+etsy:{
+image:etsyImage,
+link:etsyLink
+},
+
+aliexpress:matches
+
+});
+
+}
+
+}
+
+/* CREDIT */
+
+if(user.role !== "unlimited"){
+
+user.credits -= 1;
+await user.save();
+
+}
+
+res.json({
+results,
+credits:user.credits
+});
+
+}catch(err){
+
+console.log(err);
+
+res.status(500).json({message:"Search failed"});
+
+}
+
+});
+
+/* ===================================================== */
+/* SERVER */
+/* ===================================================== */
+
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT,()=>{
+
+console.log("🚀 Server running on port",PORT);
+
+});
