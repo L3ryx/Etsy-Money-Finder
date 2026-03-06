@@ -1,264 +1,95 @@
-/* ===================================================== */
-/* ================= GLOBAL RESET ====================== */
-/* ===================================================== */
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Arial, Helvetica, sans-serif;
-}
-
 body{
+margin:0;
+font-family:Arial;
 background:black;
 color:white;
-overflow-x:hidden;
+overflow:hidden;
 }
 
-/* ===================================================== */
-/* ================= BACKGROUND ======================== */
-/* ===================================================== */
+/* ================= POPUP ================= */
 
-.gif-background{
+.popup{
 position:fixed;
 top:0;
 left:0;
 width:100%;
 height:100%;
-object-fit:cover;
-z-index:-2;
-}
-
-/* ===================================================== */
-/* ================= SMOKE EFFECT ====================== */
-/* ===================================================== */
-
-.smoke-container{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-z-index:-1;
-pointer-events:none;
-}
-
-.smoke{
-position:absolute;
-width:250px;
-height:250px;
-background:rgba(255,255,255,0.05);
-filter:blur(80px);
-animation:float 15s infinite alternate;
-}
-
-.smoke:nth-child(1){top:20%;left:10%;}
-.smoke:nth-child(2){top:50%;left:50%;}
-.smoke:nth-child(3){top:70%;left:30%;}
-
-@keyframes float{
-from{transform:translateY(0) scale(1);}
-to{transform:translateY(-120px) scale(1.2);}
-}
-
-/* ===================================================== */
-/* ================= MAIN CONTAINER ==================== */
-/* ===================================================== */
-
-.container{
-text-align:center;
-padding-top:120px;
-}
-
-.title{
-font-size:55px;
-text-shadow:0 0 25px white;
-}
-
-/* ===================================================== */
-/* ================= FORM ============================== */
-/* ===================================================== */
-
-.form-container{
-margin-top:40px;
+background:rgba(0,0,0,0.6);
+backdrop-filter:blur(20px);
 display:flex;
-flex-direction:column;
-align-items:center;
-gap:20px;
-}
-
-.input-field,
-.dropdown{
-width:300px;
-padding:12px;
-border:none;
-border-radius:8px;
-outline:none;
-font-size:16px;
-}
-
-.start-btn{
-padding:12px 40px;
-border:none;
-border-radius:10px;
-background:linear-gradient(45deg,#00c853,#00e676);
-color:white;
-font-size:18px;
-cursor:pointer;
-transition:0.3s;
-}
-
-.start-btn:hover{
-transform:scale(1.1);
-}
-
-/* ===================================================== */
-/* ================= RESULTS =========================== */
-/* ===================================================== */
-
-#results{
-margin-top:80px;
-display:grid;
-grid-template-columns:repeat(auto-fill,250px);
-gap:25px;
 justify-content:center;
-padding-bottom:100px;
-}
-
-.result-card{
-background:rgba(255,255,255,0.1);
-backdrop-filter:blur(10px);
-padding:15px;
-border-radius:15px;
-box-shadow:0 5px 20px rgba(0,0,0,0.4);
-transition:0.3s;
-}
-
-.result-card:hover{
-transform:translateY(-10px);
-}
-
-.result-card img{
-width:100%;
-border-radius:10px;
-margin-bottom:10px;
-}
-
-.result-card a{
-color:#00e676;
-text-decoration:none;
-font-weight:bold;
-}
-
-/* ===================================================== */
-/* ================= LOADER ============================ */
-/* ===================================================== */
-
-.loader{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.8);
-display:flex;
-flex-direction:column;
 align-items:center;
-justify-content:center;
 z-index:9999;
 }
 
-.loader.hidden{
-display:none;
+.popup-box{
+background:#111;
+padding:50px;
+border-radius:30px;
+width:350px;
+text-align:center;
 }
 
-.spinner{
-width:60px;
-height:60px;
-border:6px solid white;
-border-top:6px solid #00e676;
-border-radius:50%;
-animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-to{transform:rotate(360deg);}
-}
-
-/* ===================================================== */
-/* ================= PREMIUM BUY BUTTON ================ */
-/* ===================================================== */
-
-.buy-button{
-width:90%;
-max-width:600px;
-padding:25px;
-border:none;
-border-radius:25px;
-background:#FFD700;
-cursor:pointer;
-box-shadow:0 15px 40px rgba(0,0,0,0.4);
-transition:0.3s ease;
-}
-
-.buy-button:hover{
-transform:scale(1.05);
-background:#ffdf33;
-}
-
-.buy-content{
-display:flex;
-align-items:center;
-justify-content:center;
-gap:20px;
-}
-
-.money-icon{
-font-size:35px;
-}
-
-.text-content{
-text-align:left;
-}
-
-.buy-title{
-font-size:22px;
-font-weight:bold;
-color:black;
-}
-
-.buy-subtitle{
-font-size:14px;
-opacity:0.8;
-color:black;
-}
-
-/* ===================================================== */
-/* ================= RESPONSIVE ======================== */
-/* ===================================================== */
-
-@media(max-width:768px){
-
-.title{
-font-size:35px;
-}
-
-.input-field,
-.dropdown{
-width:90%;
-}
-
-#results{
-grid-template-columns:repeat(2,1fr);
-padding:20px;
-}
-
-.result-card{
+.popup-box input{
 width:100%;
+padding:12px;
+margin:10px 0;
+border-radius:10px;
+border:none;
 }
 
-.buy-button{
-width:95%;
+.popup-box button{
+width:100%;
+padding:12px;
+background:yellow;
+border:none;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
 }
 
+/* ================= TOOL ================= */
+
+.container{
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
+text-align:center;
+}
+
+/* ================= LOCK SECTION ================= */
+
+.arrow{
+font-size:60px;
+color:red;
+animation:bounce 1s infinite;
+}
+
+.flames{
+font-size:40px;
+}
+
+.lock{
+font-size:90px;
+margin:20px 0;
+}
+
+.unlock-btn{
+background:yellow;
+padding:15px 40px;
+border:none;
+border-radius:15px;
+font-size:18px;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* 🔥 ANIMATION */
+
+@keyframes bounce{
+0%{transform:translateY(0);}
+50%{transform:translateY(20px);}
+100%{transform:translateY(0);}
 }
