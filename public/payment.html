@@ -2,44 +2,36 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ajouter Carte</title>
+<title>Paiement</title>
 <script src="https://js.stripe.com/v3/"></script>
 
 <style>
 
 body{
 margin:0;
-font-family:Arial;
 background:black;
 color:white;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+font-family:Arial;
 }
 
 .box{
-background:rgba(255,255,255,0.1);
-padding:40px;
-border-radius:15px;
+background:#111;
+padding:50px;
+border-radius:25px;
 width:400px;
 text-align:center;
 }
 
-#card-element{
-background:white;
-padding:15px;
-border-radius:10px;
-color:black;
-}
-
 button{
-margin-top:20px;
 width:100%;
-padding:12px;
-background:#00e676;
+padding:15px;
+background:yellow;
 border:none;
-border-radius:8px;
+border-radius:12px;
 font-weight:bold;
 cursor:pointer;
 }
@@ -51,69 +43,63 @@ cursor:pointer;
 
 <div class="box">
 
-<h2>💳 Ajouter votre carte</h2>
+<h2>Ajouter votre carte</h2>
 
 <div id="card-element"></div>
 
-<button onclick="saveCard()">Enregistrer Carte</button>
+<br>
 
-<p style="margin-top:15px;">
-<a href="/dashboard" style="color:#00e676;">Retour</a>
-</p>
+<button onclick="saveCard()">Valider Carte</button>
 
 </div>
 
 <script>
 
-/* 🔥 METS TA VRAIE CLÉ PUBLIQUE ICI */
-const stripe = Stripe("pk_live_xxxxxxxxx");
+const stripe = Stripe("TA_CLE_PUBLIQUE_ICI");
 
 const elements = stripe.elements();
-const cardElement = elements.create("card");
-cardElement.mount("#card-element");
+const card = elements.create("card");
+card.mount("#card-element");
 
 async function saveCard(){
 
-const token = localStorage.getItem("token");
-
-if(!token){
-alert("Connecte-toi");
-return;
-}
-
-/* 🔥 CREATE PAYMENT METHOD */
-
-const result = await stripe.createPaymentMethod({
-type:"card",
-card:cardElement
-});
-
-if(result.error){
-alert(result.error.message);
-return;
-}
-
-/* 🔥 ENVOI AU BACKEND */
-
-const res = await fetch("/attach-card",{
+const res = await fetch("/create-setup-intent",{
 method:"POST",
 headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer "+token
-},
-body:JSON.stringify({
-paymentMethodId: result.paymentMethod.id
-})
+Authorization:"Bearer "+localStorage.getItem("token")
+}
 });
 
 const data = await res.json();
 
-if(res.ok){
-alert("Carte enregistrée ✅");
-window.location="/dashboard";
-}else{
-alert("Erreur carte");
+const result = await stripe.confirmCardSetup(
+data.client_secret,
+{
+payment_method:{
+card:card
 }
+}
+);
+
+if(result.error){
+alert("Erreur carte");
+return;
+}
+
+await fetch("/attach-card",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+localStorage.getItem("token")
+},
+body:JSON.stringify({
+paymentMethodId:result.setupIntent.payment_method
+})
+});
+
+alert("Carte enregistrée ✅");
+
+window.location="/";
 
 }
 
