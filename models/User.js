@@ -1,26 +1,38 @@
 const mongoose = require("mongoose");
 
-const UserSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
 
-email: {
-type: String,
-required: true,
-unique: true
+email:{
+type:String,
+required:true,
+unique:true
 },
 
-password: {
-type: String,
-required: true
+password:{
+type:String,
+required:true
 },
 
-stripeCustomerId: {
-type: String
+tokens:{
+type:Number,
+default:0
 },
 
-defaultPaymentMethod: {
-type: String
+stripeCustomerId:{
+type:String
+},
+
+defaultPaymentMethod:{
+type:String
+},
+
+/* 🔥 ANTI FRAUDE */
+
+lastSearch:{
+type:Number,
+default:0
 }
 
-}, { timestamps: true });
+},{timestamps:true});
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("User",userSchema);
