@@ -1,63 +1,56 @@
 body{
 margin:0;
-background:#000;
-color:white;
+background:black;
 font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+color:white;
 }
 
-/* boite */
+/* BOX DESIGN */
 
-.auth-container{
+.box{
 background:#111;
-padding:40px;
-border-radius:25px;
-width:350px;
-box-shadow:0 0 60px rgba(255,255,255,0.08);
+padding:50px;
+border-radius:30px;
+width:400px;
 text-align:center;
+box-shadow:0 0 80px rgba(255,255,255,0.1);
 }
 
-/* titre */
-
-.auth-container h2{
-color:#FFD700;
-margin-bottom:20px;
+.box h2{
+color:yellow;
+margin-bottom:25px;
 }
 
-/* champs */
-
-input{
+.box input{
 width:100%;
-padding:12px;
+padding:15px;
 margin:10px 0;
-border-radius:10px;
+border-radius:15px;
 border:none;
+outline:none;
 background:#222;
 color:white;
 font-size:14px;
 }
 
-/* bouton jaune */
-
-.yellow-btn{
+.box button{
 width:100%;
-padding:12px;
+padding:15px;
 border:none;
-border-radius:10px;
-background:#FFD700;
+border-radius:15px;
+background:yellow;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
 }
 
-.yellow-btn:hover{
+.box button:hover{
 transform:scale(1.05);
 }
-
-/* lien */
 
 .switch{
 margin-top:15px;
@@ -67,4 +60,5 @@ font-size:14px;
 .switch a{
 color:#00aaff;
 text-decoration:none;
+cursor:pointer;
 }
