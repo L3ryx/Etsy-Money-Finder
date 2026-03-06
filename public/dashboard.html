@@ -3,63 +3,159 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard</title>
+<title>Dashboard Pro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
 <style>
 
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Inter',sans-serif;
+}
+
 body{
-background:black;
+background:linear-gradient(135deg,#000,#0f0f0f);
 color:white;
-font-family:Arial;
 padding:40px;
 }
 
-.card{
-background:#111;
-padding:20px;
-border-radius:20px;
-margin-bottom:20px;
+/* ================= HEADER ================= */
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:40px;
 }
 
-h2{
-color:yellow;
+.header h1{
+font-weight:800;
 }
+
+.badge{
+background:yellow;
+color:black;
+padding:6px 12px;
+border-radius:20px;
+font-size:12px;
+font-weight:bold;
+}
+
+/* ================= GRID ================= */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:20px;
+}
+
+/* ================= CARDS ================= */
+
+.card{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(15px);
+padding:25px;
+border-radius:25px;
+box-shadow:0 10px 30px rgba(0,0,0,0.4);
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-5px);
+background:rgba(255,255,255,0.08);
+}
+
+.card h3{
+color:yellow;
+margin-bottom:10px;
+}
+
+/* ================= HISTORY ================= */
 
 .history{
-background:#1a1a1a;
-padding:15px;
-border-radius:15px;
-margin-top:10px;
-max-height:200px;
+margin-top:15px;
+max-height:180px;
 overflow:auto;
 }
 
 .item{
-border-bottom:1px solid #333;
 padding:10px 0;
+border-bottom:1px solid rgba(255,255,255,0.1);
+font-size:14px;
+opacity:0.85;
+}
+
+.item:last-child{
+border:none;
+}
+
+/* ================= SMALL TEXT ================= */
+
+.small{
+font-size:14px;
+opacity:0.6;
+}
+
+/* ================= BUTTON ================= */
+
+button{
+background:yellow;
+border:none;
+padding:10px 15px;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+opacity:0.8;
 }
 
 </style>
 </head>
 <body>
 
-<h1>Dashboard</h1>
-
-<div class="card">
-<h2>📊 Statistiques</h2>
-<p>Email: <span id="email"></span></p>
-<p>Crédits restants: <span id="credits"></span></p>
-<p>Recherches utilisées: <span id="used"></span></p>
+<div class="header">
+<h1>🚀 Dashboard</h1>
+<span class="badge">Premium</span>
 </div>
 
+<div class="grid">
+
+<!-- ================= STATS ================= -->
+
 <div class="card">
-<h2>💳 Historique des achats</h2>
+<h3>📊 Statistiques</h3>
+
+<p>Email</p>
+<div id="email" class="small"></div>
+
+<p style="margin-top:10px;">Crédits Restants</p>
+<h2 id="credits"></h2>
+
+<p class="small">Recherches utilisées : <span id="used"></span></p>
+
+</div>
+
+<!-- ================= PURCHASE HISTORY ================= -->
+
+<div class="card">
+<h3>💳 Historique Achats</h3>
 <div id="purchases" class="history"></div>
 </div>
 
+<!-- ================= SEARCH HISTORY ================= -->
+
 <div class="card">
-<h2>🔎 Historique des recherches</h2>
+<h3>🔎 Historique Recherches</h3>
 <div id="searches" class="history"></div>
+</div>
+
 </div>
 
 <script>
@@ -80,7 +176,7 @@ document.getElementById("email").innerText = data.email;
 document.getElementById("credits").innerText = data.credits;
 document.getElementById("used").innerText = data.searchesUsed;
 
-/* PURCHASES */
+/* ================= PURCHASES ================= */
 
 const purchaseDiv = document.getElementById("purchases");
 
@@ -90,16 +186,16 @@ const div = document.createElement("div");
 div.className="item";
 
 div.innerHTML = `
-Plan: ${p.plan} <br>
-Recherches: ${p.searches} <br>
-Date: ${new Date(p.date).toLocaleString()}
+<strong>${p.plan}</strong><br>
+${p.searches} recherches<br>
+<span class="small">${new Date(p.date).toLocaleString()}</span>
 `;
 
 purchaseDiv.appendChild(div);
 
 });
 
-/* SEARCH HISTORY */
+/* ================= SEARCH HISTORY ================= */
 
 const searchDiv = document.getElementById("searches");
 
@@ -109,9 +205,9 @@ const div = document.createElement("div");
 div.className="item";
 
 div.innerHTML = `
-Query: ${s.query} <br>
-Résultat: ${s.result} <br>
-Date: ${new Date(s.date).toLocaleString()}
+<strong>${s.query}</strong><br>
+${s.result}<br>
+<span class="small">${new Date(s.date).toLocaleString()}</span>
 `;
 
 searchDiv.appendChild(div);
