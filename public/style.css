@@ -1,69 +1,135 @@
+/* ===================================================== */
+/* GLOBAL FIX */
+/* ===================================================== */
+
 html, body{
   margin:0;
   padding:0;
   width:100%;
-  min-height:100vh;
+  height:100%;
   overflow-x:hidden;
+  overflow-y:auto;
   background:black;
   font-family:"Courier New", monospace;
   color:#00ff66;
 }
 
 /* ===================================================== */
-/* MATRIX */
+/* MATRIX (ANTI CARRÉ NOIR) */
 /* ===================================================== */
 
 #matrix{
   position:fixed;
   top:0;
   left:0;
-  width:100%;
-  height:100%;
+  width:100vw;
+  height:100vh;
   z-index:-1;
-  background:transparent;
   pointer-events:none;
+  display:block;
+  background:black;
+}
+
+canvas{
+  background:transparent;
+}
+
+/* Animation légère sur la matrix */
+@keyframes matrixGlow{
+  0%{ filter:brightness(1); }
+  50%{ filter:brightness(1.3); }
+  100%{ filter:brightness(1); }
+}
+
+#matrix{
+  animation:matrixGlow 6s infinite;
 }
 
 /* ===================================================== */
-/* TITLE */
+/* TITLE + GLITCH */
 /* ===================================================== */
 
 .title{
   text-align:center;
-  font-size:50px;
+  font-size:60px;
   margin-top:50px;
-  letter-spacing:5px;
-  text-shadow:0 0 20px #00ff66;
+  letter-spacing:6px;
+  text-shadow:0 0 15px #00ff66;
+  position:relative;
+}
+
+/* Glitch effect */
+.title::before,
+.title::after{
+  content:"Etsy Money Finder";
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+}
+
+.title::before{
+  color:red;
+  animation:glitch1 2s infinite;
+  clip-path: inset(0 0 60% 0);
+}
+
+.title::after{
+  color:cyan;
+  animation:glitch2 2s infinite;
+  clip-path: inset(40% 0 0 0);
+}
+
+@keyframes glitch1{
+  0%{ transform:translate(0); }
+  20%{ transform:translate(-4px,2px); }
+  40%{ transform:translate(4px,-2px); }
+  60%{ transform:translate(-3px,1px); }
+  100%{ transform:translate(0); }
+}
+
+@keyframes glitch2{
+  0%{ transform:translate(0); }
+  20%{ transform:translate(3px,-2px); }
+  50%{ transform:translate(-3px,2px); }
+  100%{ transform:translate(0); }
 }
 
 /* ===================================================== */
-/* MAIN LAYOUT */
+/* CENTER */
 /* ===================================================== */
 
 .main-center{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:30px;
+  gap:40px;
   margin-top:40px;
-  padding-bottom:100px;
+  padding-bottom:120px;
 }
 
 /* ===================================================== */
-/* SEARCH BOX */
+/* SEARCH BOX (GLASS EFFECT) */
 /* ===================================================== */
 
 .search-box{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:20px;
+  gap:25px;
+
+  backdrop-filter: blur(25px);
+  background:rgba(0,255,102,0.05);
+  padding:50px;
+  border-radius:35px;
+  border:1px solid rgba(0,255,102,0.3);
+  box-shadow:0 0 60px rgba(0,255,102,0.2);
 }
 
 #keyword, #limit{
-  width:260px;
-  padding:12px;
-  border-radius:15px;
+  width:300px;
+  padding:15px;
+  border-radius:20px;
   border:2px solid #00ff66;
   background:black;
   color:#00ff66;
@@ -75,29 +141,53 @@ html, body{
 
 #keyword:focus,
 #limit:focus{
-  box-shadow:0 0 20px #00ff66;
+  box-shadow:0 0 25px #00ff66;
 }
 
 /* ===================================================== */
-/* START BUTTON */
+/* START BUTTON (FIRE EFFECT) */
 /* ===================================================== */
 
 .start-btn{
+  position:relative;
   background:#00ff66;
   color:black;
   border:none;
-  padding:20px 70px;
-  border-radius:50px;
-  font-size:22px;
+  padding:25px 100px;
+  border-radius:60px;
+  font-size:24px;
   font-weight:bold;
   cursor:pointer;
   transition:0.3s;
-  box-shadow:0 0 30px #00ff66;
+  box-shadow:0 0 50px #00ff66;
+}
+
+/* 🔥 Fire border */
+.start-btn::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:70px;
+  background:linear-gradient(
+    45deg,
+    red,
+    orange,
+    yellow,
+    red
+  );
+  z-index:-1;
+  filter:blur(15px);
+  animation:fireRotate 1.5s infinite linear;
+}
+
+@keyframes fireRotate{
+  0%{ transform:rotate(0deg); }
+  100%{ transform:rotate(360deg); }
 }
 
 .start-btn:hover{
-  transform:scale(1.2);
-  box-shadow:0 0 60px #00ff66;
+  transform:scale(1.15);
+  box-shadow:0 0 90px #00ff66;
 }
 
 /* ===================================================== */
@@ -109,7 +199,7 @@ html, body{
 }
 
 .loader{
-  font-size:80px;
+  font-size:90px;
   animation:spin 1s linear infinite;
 }
 
@@ -129,30 +219,31 @@ html, body{
 }
 
 .result-card{
-  background:#0a0a0a;
-  border:1px solid #00ff66;
-  border-radius:20px;
-  padding:20px;
-  margin:20px auto;
+  backdrop-filter: blur(20px);
+  background:rgba(0,255,102,0.05);
+  border:1px solid rgba(0,255,102,0.4);
+  border-radius:30px;
+  padding:30px;
+  margin:30px auto;
   transition:0.3s;
 }
 
 .result-card:hover{
-  transform:scale(1.05);
-  box-shadow:0 0 40px #00ff66;
+  transform:scale(1.08);
+  box-shadow:0 0 70px #00ff66;
 }
 
 .result-card img{
-  width:200px;
-  border-radius:15px;
-  margin-bottom:15px;
+  width:230px;
+  border-radius:20px;
+  margin-bottom:20px;
 }
 
 .result-card a{
   color:#00ff66;
   text-decoration:none;
   font-weight:bold;
-  font-size:18px;
+  font-size:20px;
 }
 
 .result-card a:hover{
@@ -160,15 +251,11 @@ html, body{
 }
 
 /* ===================================================== */
-/* SCROLLBAR FIX */
+/* SCROLLBAR */
 /* ===================================================== */
 
-html{
-  overflow-y:auto;
-}
-
 ::-webkit-scrollbar{
-  width:10px;
+  width:12px;
 }
 
 ::-webkit-scrollbar-thumb{
@@ -181,22 +268,22 @@ html{
 }
 
 /* ===================================================== */
-/* MOBILE FIX */
+/* MOBILE */
 /* ===================================================== */
 
 @media(max-width:768px){
 
   .title{
-    font-size:30px;
+    font-size:35px;
   }
 
   .start-btn{
-    padding:15px 40px;
+    padding:18px 50px;
     font-size:18px;
   }
 
   .result-card img{
-    width:150px;
+    width:160px;
   }
 
 }
