@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
 
 <meta charset="UTF-8">
@@ -14,34 +13,25 @@
 
 <body>
 
+<!-- 🐕 LOADING DOG -->
+<div class="loader-dog">🐕</div>
+
 <div class="sky">
 
-<div class="stars"></div>
-
 <!-- 🔥 TITLE -->
-
 <h1 class="title">Niche Finder</h1>
 
 <!-- 🎯 FORM -->
-
 <div class="form-container">
 
-<input 
-type="text" 
-id="keyword" 
-class="input-field" 
-placeholder="Keyword">
-
-<!-- 🔢 Nombre d'annonces à analyser -->
+<input type="text" id="keyword" class="input-field" placeholder="Keyword">
 
 <select id="limit" class="dropdown">
-<option value="5">Analyser 5 annonces</option>
-<option value="10">Analyser 10 annonces</option>
-<option value="20">Analyser 20 annonces</option>
-<option value="50">Analyser 50 annonces</option>
+<option value="5">Analyse 5 annonces</option>
+<option value="10">Analyse 10 annonces</option>
+<option value="20">Analyse 20 annonces</option>
+<option value="50">Analyse 50 annonces</option>
 </select>
-
-<!-- 🚀 START BUTTON -->
 
 <button class="start-btn" onclick="startSearch()">
 START
@@ -49,34 +39,17 @@ START
 
 </div>
 
-<!-- 🌍 SCENE ANIMATION -->
-
-<div class="scene">
-
-<div class="doghouse">🏠</div>
-<div class="dog">🐕</div>
-
-<div class="money m1">💵</div>
-<div class="money m2">💵</div>
-<div class="money m3">💵</div>
-<div class="money m4">💵</div>
-<div class="money m5">💵</div>
-
-</div>
-
-<div class="grass"></div>
-
-<!-- 🔎 RESULTS -->
-
+<!-- 📦 RESULTS -->
 <div id="results"></div>
+
+<!-- 🌿 GRASS -->
+<div class="grass"></div>
 
 </div>
 
 <script>
 
-/* ============================= */
-/* SEARCH FUNCTION */
-/* ============================= */
+/* 🔎 SEARCH */
 
 async function startSearch(){
 
@@ -84,19 +57,16 @@ const keyword = document.getElementById("keyword").value;
 const limit = document.getElementById("limit").value;
 
 if(!keyword){
-alert("Enter a keyword !");
+alert("Enter keyword");
 return;
 }
 
-const res = await fetch("/search-etsy", {
+const res = await fetch("/search-etsy",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({
-keyword: keyword,
-limit: limit
-})
+body:JSON.stringify({keyword,limit})
 });
 
 const data = await res.json();
@@ -105,9 +75,7 @@ displayResults(data.results);
 
 }
 
-/* ============================= */
-/* DISPLAY RESULTS */
-/* ============================= */
+/* 📦 DISPLAY RESULTS */
 
 function displayResults(results){
 
@@ -134,6 +102,14 @@ container.appendChild(card);
 });
 
 }
+
+/* 🐕 REMOVE LOADER AFTER LOAD */
+
+window.addEventListener("load",()=>{
+
+document.querySelector(".loader-dog").style.display="none";
+
+});
 
 </script>
 
