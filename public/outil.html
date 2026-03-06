@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outil</title>
+
+<style>
+
+/* ================= GLOBAL ================= */
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:Arial, Helvetica, sans-serif;
+overflow:hidden;
+
+/* 🔥 Fond image */
+background:url("/images/background.jpg") no-repeat center center fixed;
+background-size:cover;
+color:white;
+}
+
+/* Overlay noir premium */
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+z-index:-1;
+}
+
+/* ================= CONTAINER ================= */
+
+.container{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+gap:20px;
+text-align:center;
+}
+
+input, select{
+padding:15px;
+width:320px;
+border-radius:12px;
+border:none;
+outline:none;
+font-size:15px;
+background:rgba(255,255,255,0.1);
+color:white;
+backdrop-filter:blur(6px);
+}
+
+select option{
+color:black;
+}
+
+button{
+padding:15px 25px;
+border:none;
+border-radius:12px;
+background:orange;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+/* ================= METEORITE LOADING ================= */
+
+.loading-container{
+width:80%;
+max-width:500px;
+display:none;
+flex-direction:column;
+align-items:center;
+gap:15px;
+}
+
+/* Barre */
+
+.progress-bar{
+width:100%;
+height:10px;
+background:rgba(255,255,255,0.2);
+border-radius:20px;
+overflow:hidden;
+}
+
+.progress-fill{
+height:100%;
+width:0%;
+background:linear-gradient(90deg, orange, red);
+transition:width 0.5s ease;
+position:relative;
+}
+
+/* Meteorite */
+
+.meteor{
+position:absolute;
+right:-40px;
+top:-10px;
+width:25px;
+height:25px;
+background:orange;
+border-radius:50%;
+box-shadow:0 0 20px orange;
+animation:fly 1.5s linear infinite;
+}
+
+.meteor::after{
+content:"";
+position:absolute;
+width:60px;
+height:6px;
+background:linear-gradient(90deg, orange, transparent);
+right:20px;
+top:9px;
+border-radius:50%;
+}
+
+/* Animation trajectoire */
+
+@keyframes fly{
+0%{transform:translateX(0) translateY(0);}
+50%{transform:translateX(-10px) translateY(5px);}
+100%{transform:translateX(0) translateY(0);}
+}
+
+/* Result */
+
+.result{
+margin-top:10px;
+color:orange;
+font-weight:bold;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>🔎 Niche Finder</h1>
+
+<input type="text" id="query" placeholder="Tape ta niche">
+
+<select id="numberSelect">
+<script>
+for(let i=1;i<=100;i++){
+document.write(`<option value="${i}">${i}</option>`);
+}
+</script>
+</select>
+
+<button onclick="search()">Rechercher</button>
+
+<!-- 🔥 LOADING METEOR -->
+<div class="loading-container" id="loading">
+
+<div style="position:relative;width:100%">
+<div class="progress-bar">
+<div class="progress-fill" id="progress"></div>
+</div>
+<div class="meteor"></div>
+</div>
+
+<div id="stepText">Initialisation...</div>
+
+</div>
+
+<div class="result" id="result"></div>
+
+</div>
+
+<script>
+
+/* ================= LOADING SYSTEM ================= */
+
+const loading = document.getElementById("loading");
+const progress = document.getElementById("progress");
+const stepText = document.getElementById("stepText");
+
+function updateProgress(percent, text){
+
+progress.style.width = percent + "%";
+stepText.innerText = text;
+
+}
+
+/* ================= SEARCH ================= */
+
+async function search(){
+
+const query = document.getElementById("query").value;
+const number = document.getElementById("numberSelect").value;
+const result = document.getElementById("result");
+
+if(!query){
+alert("Tape une niche !");
+return;
+}
+
+result.innerHTML = "";
+loading.style.display = "flex";
+
+/* 🔥 Étape 1 - Recherche */
+updateProgress(20,"🔍 Recherche des données...");
+
+await new Promise(r=>setTimeout(r,1000));
+
+/* 🔥 Étape 2 - Analyse */
+updateProgress(60,"🧠 Analyse des résultats...");
+
+await new Promise(r=>setTimeout(r,1500));
+
+/* 🔥 Étape 3 - Optimisation */
+updateProgress(90,"🚀 Finalisation...");
+
+const token = localStorage.getItem("token");
+
+await fetch("/search",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify({query,number})
+});
+
+await new Promise(r=>setTimeout(r,800));
+
+updateProgress(100,"✅ Terminé !");
+
+setTimeout(()=>{
+loading.style.display="none";
+result.innerHTML="🔥 Recherche complétée avec succès";
+progress.style.width="0%";
+stepText.innerText="Initialisation...";
+},800);
+
+}
+
+</script>
+
+</body>
+</html>
