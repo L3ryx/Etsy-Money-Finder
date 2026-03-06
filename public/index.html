@@ -10,10 +10,10 @@
 
 <div class="sky">
 
-<!-- 🎨 IMAGE SOURCE -->
+<!-- 🎨 IMAGE -->
 <img id="sourceImage" src="/background.jpg" style="display:none;">
 
-<!-- 🚀 CANVAS PIXEL ANIMATION -->
+<!-- 🚀 CANVAS 4K PIXEL -->
 <canvas id="gameCanvas"></canvas>
 
 <!-- 🔥 INTERFACE -->
@@ -24,57 +24,62 @@
 <input type="text" class="input-field" placeholder="Keyword">
 
 <select class="dropdown">
-<option value="5">Analyse 5 annonces</option>
-<option value="10">Analyse 10 annonces</option>
-<option value="20">Analyse 20 annonces</option>
-<option value="50">Analyse 50 annonces</option>
+<option>5</option>
+<option>10</option>
+<option>20</option>
+<option>50</option>
 </select>
 
 <button class="start-btn">START</button>
 
 </div>
 
+<!-- 🐕 DOG -->
+<div class="dog"></div>
+
+<!-- 💵 MONEY CONTAINER -->
+<div id="moneyContainer"></div>
+
 </div>
 
-<!-- 🚀 PIXEL ENGINE -->
+<!-- 🚀 SCRIPT 4K + MONEY + TAIL -->
 <script>
 
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d", { willReadFrequently: true });
+const ctx = canvas.getContext("2d",{ willReadFrequently:true });
 const img = document.getElementById("sourceImage");
+const moneyContainer = document.getElementById("moneyContainer");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let pixels = [];
 
-/* ================= IMAGE LOAD ================= */
+/* ================= 4K PIXEL ENGINE ================= */
 
 img.onload = function(){
 
 ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-const pixelSize = 2; // 🔥 MAX RÉSOLUTION
+const pixelSize = 2; // 🔥 Ultra résolution
 
 const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-/* ================= CREATE PIXELS ================= */
-
 for(let y=0;y<canvas.height;y+=pixelSize){
 for(let x=0;x<canvas.width;x+=pixelSize){
 
-let index = (y*canvas.width + x)*4;
+let i = (y*canvas.width + x)*4;
 
 pixels.push({
 x:x,
 y:y,
-r:data[index],
-g:data[index+1],
-b:data[index+2],
+r:data[i],
+g:data[i+1],
+b:data[i+2],
 alpha:1,
-vy:Math.random()*0.4
+vy:Math.random()*0.5
 });
 
 }
@@ -84,7 +89,7 @@ animate();
 
 };
 
-/* ================= ANIMATION LOOP ================= */
+/* ================= PIXEL ANIMATION ================= */
 
 function animate(){
 
@@ -102,6 +107,32 @@ ctx.fillRect(p.x,p.y,2,2);
 
 requestAnimationFrame(animate);
 }
+
+/* ================= MONEY ANIMATION ================= */
+
+function spawnMoney(){
+
+for(let i=0;i<20;i++){
+
+let money = document.createElement("div");
+money.className = "money";
+money.innerText = "💵";
+
+money.style.left = "50%";
+money.style.bottom = "180px";
+
+moneyContainer.appendChild(money);
+
+setTimeout(()=>{
+money.remove();
+},4000);
+
+}
+
+}
+
+/* Lance argent toutes les 3 secondes */
+setInterval(spawnMoney,3000);
 
 </script>
 
