@@ -13,341 +13,203 @@ body{
 background:black;
 color:white;
 overflow-x:hidden;
-min-height:100vh;
 }
-
 
 /* ===================================================== */
 /* BACKGROUND */
 /* ===================================================== */
 
 .background-image{
-
 position:fixed;
-
 top:0;
 left:0;
-
 width:100vw;
 height:100vh;
-
 object-fit:cover;
-
 z-index:-10;
-
 pointer-events:none;
-
 }
 
-
 /* ===================================================== */
-/* TOP BAR */
+/* TOP USER BUTTON */
 /* ===================================================== */
 
 .top-bar{
-
 position:fixed;
-
 top:20px;
 right:30px;
-
-z-index:10;
-
+z-index:20;
 }
 
 .user-btn{
-
 background:yellow;
-
 border:none;
-
 padding:12px 20px;
-
 border-radius:20px;
-
 font-weight:bold;
-
 cursor:pointer;
-
-transition:0.3s;
-
 }
-
-.user-btn:hover{
-
-transform:scale(1.05);
-
-}
-
 
 /* ===================================================== */
-/* CONTAINER */
+/* DASHBOARD */
+/* ===================================================== */
+
+.dashboard{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.7);
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:100;
+}
+
+.dashboard.hidden{
+display:none;
+}
+
+.dashboard-box{
+background:#111;
+padding:40px;
+border-radius:30px;
+width:400px;
+text-align:center;
+}
+
+.logout-btn{
+background:red;
+color:white;
+border:none;
+padding:10px;
+margin-top:20px;
+border-radius:15px;
+cursor:pointer;
+}
+
+.close-btn{
+background:gray;
+color:white;
+border:none;
+padding:10px;
+margin-top:10px;
+border-radius:15px;
+cursor:pointer;
+}
+
+/* ===================================================== */
+/* TOOL CENTER */
 /* ===================================================== */
 
 .container{
-
+height:100vh;
 display:flex;
-
 justify-content:center;
 align-items:center;
-
-height:100vh;
-
-text-align:center;
-
 }
-
-
-/* ===================================================== */
-/* FORM */
-/* ===================================================== */
 
 .form-container{
-
 display:flex;
-
 flex-direction:column;
-
 gap:20px;
-
 align-items:center;
-
 }
 
-
-/* INPUT */
-
-.input-field{
-
-width:300px;
-
-padding:14px;
-
-border-radius:20px;
-
-border:none;
-
-outline:none;
-
-font-size:15px;
-
-color:black;
-
-}
-
-
-/* DROPDOWN */
-
+.input-field,
 .dropdown{
-
 width:300px;
-
 padding:14px;
-
 border-radius:20px;
-
 border:none;
-
 outline:none;
-
-font-size:15px;
-
 }
 
-
+/* ===================================================== */
 /* BUTTON */
+/* ===================================================== */
 
 .start-btn{
-
 background:#00ff66;
-
 border:none;
-
 padding:14px 40px;
-
 border-radius:25px;
-
 font-weight:bold;
-
 cursor:pointer;
-
 transition:0.3s;
-
 }
 
 .start-btn:hover{
-
-transform:scale(1.07);
-
-box-shadow:0 0 20px #00ff66;
-
+transform:scale(1.05);
 }
-
-.start-btn:disabled{
-
-opacity:0.6;
-
-}
-
 
 /* ===================================================== */
 /* RESULTS */
 /* ===================================================== */
 
 #results{
-
-width:100%;
-
 max-width:1600px;
-
 margin:80px auto;
-
 display:grid;
-
 grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-
 gap:30px;
-
 padding:0 40px;
-
 }
 
-
-/* CARD */
-
 .result-card{
-
 background:white;
-
 color:black;
-
 border-radius:20px;
-
 padding:15px;
-
 text-align:center;
-
 transition:0.3s;
-
 }
 
 .result-card:hover{
-
 transform:translateY(-5px);
-
 }
-
-
-/* IMAGE */
 
 .result-card img{
-
 width:100%;
-
 height:220px;
-
 object-fit:cover;
-
 border-radius:15px;
-
 }
-
-
-/* LINK */
 
 .result-card a{
-
 display:block;
-
 margin-top:10px;
-
 text-decoration:none;
-
 color:#0071e3;
-
 font-weight:bold;
-
 }
-
 
 /* ===================================================== */
 /* LOADER */
 /* ===================================================== */
 
 .loader{
-
 position:fixed;
-
-top:0;
-left:0;
-
-width:100%;
-height:100%;
-
-background:rgba(0,0,0,0.7);
-
+inset:0;
+background:rgba(0,0,0,0.6);
 display:flex;
-
 flex-direction:column;
-
 justify-content:center;
 align-items:center;
-
-z-index:100;
-
+z-index:200;
 }
 
 .loader.hidden{
-
 display:none;
-
 }
 
 .spinner{
-
 width:60px;
 height:60px;
-
-border:6px solid rgba(255,255,255,0.2);
-
+border:6px solid rgba(255,255,255,0.3);
 border-top:6px solid #00ff66;
-
 border-radius:50%;
-
 animation:spin 1s linear infinite;
-
-margin-bottom:20px;
-
 }
 
 @keyframes spin{
-
-from{transform:rotate(0deg);}
 to{transform:rotate(360deg);}
-
-}
-
-
-/* ===================================================== */
-/* MOBILE */
-/* ===================================================== */
-
-@media(max-width:768px){
-
-#results{
-
-grid-template-columns:repeat(2,1fr);
-
-gap:15px;
-
-padding:10px;
-
-}
-
-.result-card img{
-
-height:150px;
-
-}
-
 }
