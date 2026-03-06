@@ -3,44 +3,239 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Niche Finder</title>
 
-<!-- Police -->
+<title>Niche finder</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
 </head>
 <body>
 
-<!-- Background -->
-<img src="/background.png" class="gif-background">
+<!-- BACKGROUND -->
+<img src="/background.png" class="background-image">
 
-<!-- Smoke -->
-<div class="smoke-container">
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-  <div class="smoke"></div>
+<!-- USER BUTTON -->
+<div class="top-bar">
+<button id="userBtn" class="user-btn">Espace utilisateur</button>
 </div>
 
-<!-- Top right user button -->
-<div class="user-btn-container">
-  <button id="dashboard-btn">⚡ Mon compte</button>
+<!-- DASHBOARD MODAL -->
+<div id="dashboard" class="dashboard hidden">
+
+<div class="dashboard-box">
+
+<h2>Dashboard</h2>
+
+<p>Email : <span id="dashEmail"></span></p>
+<p>Role : <span id="dashRole"></span></p>
+<p>Credits : <span id="dashCredits"></span></p>
+
+<h3>Historique recherches</h3>
+<div id="history"></div>
+
+<button onclick="logout()" class="logout-btn">
+Se déconnecter
+</button>
+
+<button onclick="closeDashboard()" class="close-btn">
+Fermer
+</button>
+
+</div>
 </div>
 
-<!-- Main centered form -->
+<!-- TOOL -->
 <div class="container">
-  <div class="form-container">
-    <input type="text" class="input-field" placeholder="Keyword">
-    <select class="dropdown">
-      <!-- chiffres de 1 à 100 -->
-      ${Array.from({length: 100}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('')}
-    </select>
-    <button class="start-btn">START</button>
-  </div>
+
+<div class="form-container">
+
+<input type="text" class="input-field" placeholder="Keyword Etsy">
+
+<select class="dropdown" id="limitSelect"></select>
+
+<button class="start-btn">START</button>
+
 </div>
 
-<!-- Results -->
+</div>
+
+<!-- RESULTS -->
 <div id="results"></div>
 
-<script src="index.js"></script>
+<!-- LOADER -->
+<div id="loader" class="loader hidden">
+<div class="spinner"></div>
+<p>Recherche en cours...</p>
+</div>
+
+<script>
+
+/* ===================================================== */
+/* DROPDOWN 1 → 100 */
+/* ===================================================== */
+
+const select = document.getElementById("limitSelect");
+
+for(let i=1;i<=100;i++){
+const option=document.createElement("option");
+option.value=i;
+option.textContent="Analyse "+i+" annonces";
+select.appendChild(option);
+}
+
+/* ===================================================== */
+/* LOGIN CHECK */
+/* ===================================================== */
+
+function getToken(){
+return localStorage.getItem("token");
+}
+
+/* ===================================================== */
+/* USER BUTTON */
+/* ===================================================== */
+
+document.getElementById("userBtn").onclick=async()=>{
+
+const token=getToken();
+
+if(!token){
+window.location.href="/login.html";
+return;
+}
+
+const res=await fetch("/me",{
+headers:{
+Authorization:"Bearer "+token
+}
+});
+
+if(!res.ok){
+alert("Session expirée");
+localStorage.removeItem("token");
+window.location.href="/login.html";
+return;
+}
+
+const data=await res.json();
+
+document.getElementById("dashEmail").innerText=data.email;
+document.getElementById("dashRole").innerText=data.role;
+document.getElementById("dashCredits").innerText=data.credits;
+
+const history=document.getElementById("history");
+history.innerHTML="";
+
+data.searchHistory.forEach(h=>{
+const div=document.createElement("div");
+div.innerText=h.query+" - "+new Date(h.date).toLocaleString();
+history.appendChild(div);
+});
+
+document.getElementById("dashboard").classList.remove("hidden");
+
+};
+
+/* ===================================================== */
+/* CLOSE DASHBOARD */
+/* ===================================================== */
+
+function closeDashboard(){
+document.getElementById("dashboard").classList.add("hidden");
+}
+
+/* ===================================================== */
+/* LOGOUT */
+/* ===================================================== */
+
+function logout(){
+localStorage.removeItem("token");
+window.location.href="/login.html";
+}
+
+/* ===================================================== */
+/* SEARCH */
+/* ===================================================== */
+
+const startBtn=document.querySelector(".start-btn");
+const loader=document.getElementById("loader");
+const results=document.getElementById("results");
+
+startBtn.onclick=async()=>{
+
+const token=getToken();
+
+if(!token){
+alert("Connecte toi !");
+window.location.href="/login.html";
+return;
+}
+
+const keyword=document.querySelector(".input-field").value;
+const limit=document.getElementById("limitSelect").value;
+
+if(!keyword){
+alert("Keyword obligatoire");
+return;
+}
+
+loader.classList.remove("hidden");
+startBtn.disabled=true;
+
+results.innerHTML="";
+
+const res=await fetch("/search-etsy",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+
+body:JSON.stringify({
+keyword,
+limit
+})
+
+});
+
+const data=await res.json();
+
+if(data.results){
+
+data.results.forEach(item=>{
+
+const card=document.createElement("div");
+card.className="result-card";
+
+card.innerHTML=`
+
+<img src="${item.image}">
+<h3>${item.title}</h3>
+<p>${item.price}</p>
+<a href="${item.link}" target="_blank">
+Voir annonce
+</a>
+
+`;
+
+results.appendChild(card);
+
+});
+
+}else{
+
+results.innerHTML="<p>Aucun résultat</p>";
+
+}
+
+loader.classList.add("hidden");
+startBtn.disabled=false;
+
+};
+
+</script>
+
 </body>
 </html>
