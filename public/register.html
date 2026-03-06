@@ -4,55 +4,57 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Créer un compte</title>
-<link rel="stylesheet" href="/style.css">
 
 <style>
 
 body{
+margin:0;
+background:black;
+color:white;
+font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-background:black;
 }
 
-.auth-card{
+.container{
 background:#111;
 padding:40px;
-border-radius:30px;
+border-radius:25px;
 width:350px;
-text-align:center;
 box-shadow:0 0 60px rgba(255,255,255,0.1);
+text-align:center;
 }
 
-.auth-card h2{
+h2{
 color:yellow;
 margin-bottom:20px;
 }
 
-.auth-card input{
+input{
 width:100%;
 padding:12px;
 margin:10px 0;
-border-radius:12px;
+border-radius:10px;
 border:none;
 outline:none;
 background:#222;
 color:white;
 }
 
-.auth-card button{
+button{
 width:100%;
 padding:12px;
 border:none;
-border-radius:12px;
+border-radius:10px;
 background:yellow;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
 }
 
-.auth-card button:hover{
+button:hover{
 transform:scale(1.05);
 }
 
@@ -63,8 +65,8 @@ font-size:14px;
 
 .switch a{
 color:#00aaff;
-text-decoration:none;
 cursor:pointer;
+text-decoration:none;
 }
 
 </style>
@@ -72,7 +74,7 @@ cursor:pointer;
 </head>
 <body>
 
-<div class="auth-card">
+<div class="container">
 
 <h2>Créer un compte</h2>
 
@@ -112,7 +114,7 @@ alert("Compte créé ✅");
 window.location.href = "/payment.html";
 
 }else{
-alert(data.message || "Erreur inscription");
+alert(data.message || "Erreur");
 }
 
 }
