@@ -1,62 +1,38 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard</title>
+<!-- ================= PREMIUM BUY BUTTON ================= -->
 
-<link rel="stylesheet" href="/style.css">
-</head>
-<body>
+<div style="display:flex;justify-content:center;margin:50px 0;">
 
-<h1 style="text-align:center;">My Dashboard</h1>
+<button class="buy-button" onclick="goToPayment()">
 
-<h2 style="text-align:center;">Mes recherches sauvegardées</h2>
+<div class="buy-content">
 
-<div id="savedResults"></div>
+<span class="money-icon">💵</span>
+
+<div class="text-content">
+<div class="buy-title">Acheter</div>
+<div class="buy-subtitle">0,50€ par recherche</div>
+</div>
+
+</div>
+
+</button>
+
+</div>
 
 <script>
+
+function goToPayment(){
 
 const token = localStorage.getItem("token");
 
 if(!token){
+alert("Connecte-toi d'abord !");
 window.location="/login";
+return;
 }
 
-async function loadDashboard(){
-
-const res = await fetch("/dashboard",{
-headers:{
-Authorization:"Bearer "+token
-}
-});
-
-const data = await res.json();
-
-const container = document.getElementById("savedResults");
-
-container.innerHTML = "";
-
-data.products.forEach(product => {
-
-const card = document.createElement("div");
-card.className = "result-card";
-
-card.innerHTML = `
-<img src="${product.image}" width="200">
-<br>
-<a href="${product.link}" target="_blank">Voir annonce</a>
-`;
-
-container.appendChild(card);
-
-});
+window.location="/payment";
 
 }
-
-loadDashboard();
 
 </script>
-
-</body>
-</html>
