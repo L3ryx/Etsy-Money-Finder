@@ -13,12 +13,28 @@
 
 /* ================= GLOBAL ================= */
 
-body{
+*{
+  box-sizing:border-box;
+}
+
+html, body{
   margin:0;
+  padding:0;
+  min-height:100%;
+  width:100%;
+
   background:black;
   font-family:Arial;
   color:white;
-  overflow:hidden;
+
+  overflow-x:hidden;     /* ✅ bloque horizontal */
+  overflow-y:auto;       /* ✅ ACTIVE LE SCROLL */
+  -webkit-overflow-scrolling:touch;
+}
+
+/* 🔥 IMPORTANT → ne bloque pas le scroll */
+body{
+  position:relative;
 }
 
 /* ================= MATRIX ================= */
@@ -30,6 +46,7 @@ body{
   width:100%;
   height:100%;
   z-index:-1;
+  pointer-events:none; /* ✅ ne bloque pas le swipe */
 }
 
 /* ================= TITLE ================= */
@@ -48,6 +65,7 @@ body{
   flex-direction:column;
   align-items:center;
   margin-top:40px;
+  padding-bottom:120px; /* ✅ PERMET LE SCROLL */
 }
 
 /* ================= SEARCH ================= */
@@ -56,6 +74,8 @@ body{
   display:flex;
   gap:10px;
   align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
 }
 
 input, select{
@@ -104,7 +124,7 @@ input, select{
 
 #results{
   margin-top:20px;
-  width:80%;
+  width:90%;
   text-align:center;
 }
 
@@ -113,6 +133,11 @@ input, select{
   padding:15px;
   border-radius:10px;
   margin:10px 0;
+}
+
+.result-card img{
+  max-width:100%;
+  border-radius:8px;
 }
 
 .result-card a{
@@ -169,7 +194,7 @@ const loader = document.getElementById("loader");
 
 async function searchEtsy(){
 
-  showLoader(); // 🔥 affiche loader
+  showLoader();
 
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
@@ -182,13 +207,13 @@ async function searchEtsy(){
 
   const data = await response.json();
 
-  hideLoader(); // ✅ cache loader quand terminé
+  hideLoader();
 
   displayResults(data.results);
 }
 
 /* ============================================= */
-/* LOADER CONTROL */
+/* LOADER */
 /* ============================================= */
 
 function showLoader(){
@@ -219,7 +244,8 @@ function displayResults(results){
     card.className = "result-card";
 
     card.innerHTML = `
-      <img src="${item.image}" width="150"><br>
+      <img src="${item.image}">
+      <br><br>
       🔗 <a href="${item.link}" target="_blank">
         Open Listing
       </a>
@@ -231,14 +257,18 @@ function displayResults(results){
 }
 
 /* ============================================= */
-/* MATRIX BACKGROUND */
+/* MATRIX */
 /* ============================================= */
 
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+resizeCanvas();
 
 const letters = "010101ETSYMONEYFINDER";
 const fontSize = 16;
@@ -246,7 +276,7 @@ const fontSize = 16;
 let columns = canvas.width / fontSize;
 let drops = [];
 
-for(let i = 0; i < columns; i++){
+for(let i=0;i<columns;i++){
   drops[i] = 1;
 }
 
@@ -258,12 +288,13 @@ function drawMatrix(){
   ctx.fillStyle = "#00ff00";
   ctx.font = fontSize + "px monospace";
 
-  for(let i = 0; i < drops.length; i++){
+  for(let i=0;i<drops.length;i++){
 
     const text = letters[Math.floor(Math.random()*letters.length)];
+
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
+    if(drops[i]*fontSize > canvas.height && Math.random()>0.975){
       drops[i] = 0;
     }
 
@@ -271,22 +302,10 @@ function drawMatrix(){
   }
 }
 
-setInterval(drawMatrix, 50);
-
-/* RESIZE FIX */
+setInterval(drawMatrix,50);
 
 window.addEventListener("resize", () => {
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  columns = canvas.width / fontSize;
-  drops = [];
-
-  for(let i = 0; i < columns; i++){
-    drops[i] = 1;
-  }
-
+  resizeCanvas();
 });
 
 </script>
