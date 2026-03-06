@@ -14,22 +14,18 @@
 </head>
 <body>
 
-<!-- ================= USER BUTTON ================= -->
-<div class="user-btn" id="userButton" onclick="goDashboard()">
-👤 Connexion
+<!-- ===================================================== -->
+<!-- USER BUTTON -->
+<!-- ===================================================== -->
+
+<div class="user-btn" onclick="goDashboard()">
+👤 Mon Compte
 </div>
 
-<!-- ================= BACKGROUND ================= -->
-<img src="/background.png" class="gif-background">
+<!-- ===================================================== -->
+<!-- MAIN -->
+<!-- ===================================================== -->
 
-<!-- ================= SMOKE ================= -->
-<div class="smoke-container">
-<div class="smoke"></div>
-<div class="smoke"></div>
-<div class="smoke"></div>
-</div>
-
-<!-- ================= MAIN ================= -->
 <div class="container">
 
 <div id="credits">Credits: -</div>
@@ -48,18 +44,20 @@
 
 </div>
 
-<!-- ================= RESULTS ================= -->
+<!-- ===================================================== -->
+<!-- RESULTS -->
+<!-- ===================================================== -->
+
 <div id="results"></div>
 
-<!-- ================= LOADER ================= -->
+<!-- ===================================================== -->
+<!-- LOADER -->
+<!-- ===================================================== -->
+
 <div id="loader" class="loader hidden">
 <div class="spinner"></div>
-<p>Recherche en cours...</p>
+<p>Recherche...</p>
 </div>
-
-<!-- ===================================================== -->
-<!-- ================= SCRIPT ============================ -->
-<!-- ===================================================== -->
 
 <script>
 
@@ -70,59 +68,36 @@
 const token = localStorage.getItem("token");
 
 if(!token){
-document.getElementById("credits").innerText = "Non connecté";
-}
-
-/* ===================================================== */
-/* USER BUTTON */
-/* ===================================================== */
-
-const userBtn = document.getElementById("userButton");
-
-if(token){
-
-fetch("/me",{
-headers:{
-Authorization:"Bearer " + token
-}
-})
-.then(res => res.json())
-.then(data => {
-
-if(data.email){
-userBtn.innerText = "👤 " + data.email;
-document.getElementById("credits").innerText =
-"Credits: " + data.credits;
-}
-
-})
-.catch(()=>{});
-
-}
-
-function goDashboard(){
-
-if(token){
-window.location.href="/dashboard.html";
-}else{
+alert("🔒 Connecte-toi !");
 window.location.href="/login.html";
 }
 
+/* ===================================================== */
+/* USER INFO */
+/* ===================================================== */
+
+fetch("/me",{
+headers:{
+Authorization:"Bearer "+token
 }
+})
+.then(res=>res.json())
+.then(data=>{
+document.getElementById("credits").innerText =
+"Credits: "+data.credits;
+});
 
 /* ===================================================== */
-/* DROPDOWN 1 → 100 */
+/* LIMIT 1 → 100 */
 /* ===================================================== */
 
 const dropdown = document.getElementById("limitDropdown");
 
 for(let i=1;i<=100;i++){
-
-const option = document.createElement("option");
-option.value = i;
-option.textContent = `Analyse ${i} annonces`;
-dropdown.appendChild(option);
-
+const opt = document.createElement("option");
+opt.value = i;
+opt.textContent = "Analyse "+i+" annonces";
+dropdown.appendChild(opt);
 }
 
 /* ===================================================== */
@@ -137,11 +112,9 @@ socketId = data.socketId;
 });
 
 socket.on("log",(data)=>{
-
 const logs = document.getElementById("logs");
-logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
+logs.innerHTML += `<div>${data.time} - ${data.message}</div>`;
 logs.scrollTop = logs.scrollHeight;
-
 });
 
 /* ===================================================== */
@@ -149,14 +122,6 @@ logs.scrollTop = logs.scrollHeight;
 /* ===================================================== */
 
 document.querySelector(".start-btn").addEventListener("click", async()=>{
-
-const token = localStorage.getItem("token");
-
-if(!token){
-alert("🔒 Tu dois être connecté !");
-window.location.href="/login.html";
-return;
-}
 
 const keyword = document.querySelector(".input-field").value;
 const limit = dropdown.value;
@@ -166,13 +131,20 @@ alert("Entre un keyword !");
 return;
 }
 
+/* 🔥 TOKEN RECHECK */
+const token = localStorage.getItem("token");
+if(!token){
+alert("Tu n'es pas connecté !");
+return;
+}
+
 document.getElementById("loader").classList.remove("hidden");
 
 const res = await fetch("/search-etsy",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-Authorization:"Bearer " + token
+Authorization:"Bearer "+token
 },
 body:JSON.stringify({
 keyword,
@@ -204,12 +176,20 @@ resultsContainer.appendChild(card);
 });
 
 }else{
-resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+resultsContainer.innerHTML = "<p>Aucun résultat.</p>";
 }
 
 document.getElementById("loader").classList.add("hidden");
 
 });
+
+/* ===================================================== */
+/* DASHBOARD */
+/* ===================================================== */
+
+function goDashboard(){
+window.location.href="/dashboard.html";
+}
 
 </script>
 
