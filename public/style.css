@@ -33,16 +33,15 @@ font-size:60px;
 background:linear-gradient(90deg,#00e676,#ffffff);
 -webkit-background-clip:text;
 -webkit-text-fill-color:transparent;
-margin-bottom:10px;
 }
 
 .subtitle{
 opacity:0.6;
-font-size:18px;
+margin-top:10px;
 }
 
 /* ===================================================== */
-/* ================= AUTH BOX PREMIUM ================== */
+/* ================= AUTH BOX ========================== */
 /* ===================================================== */
 
 #authBox{
@@ -62,8 +61,6 @@ z-index:9999;
 position:relative;
 width:100%;
 }
-
-/* ================= FORMS ANIMATION ================= */
 
 .form{
 display:none;
@@ -86,8 +83,6 @@ transform:translateX(0);
 }
 }
 
-/* ================= INPUT ================= */
-
 .form input{
 width:100%;
 padding:12px;
@@ -95,10 +90,7 @@ margin:10px 0;
 border-radius:12px;
 border:none;
 outline:none;
-font-size:14px;
 }
-
-/* ================= BUTTON ================= */
 
 .form button{
 width:100%;
@@ -115,8 +107,6 @@ transition:0.3s;
 transform:scale(1.05);
 }
 
-/* ================= SWITCH TEXT ================= */
-
 .switch-text{
 margin-top:15px;
 font-size:14px;
@@ -129,77 +119,57 @@ font-weight:bold;
 }
 
 /* ===================================================== */
-/* ================= RESULTS =========================== */
+/* ================= LOCKED DASHBOARD ================== */
 /* ===================================================== */
 
-#results{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:20px;
-padding:40px;
-}
-
-.result-card{
-background:#111;
-padding:20px;
-border-radius:20px;
-width:220px;
-text-align:center;
-transition:0.3s;
-}
-
-.result-card:hover{
-transform:translateY(-10px);
-box-shadow:0 10px 30px rgba(255,255,255,0.1);
-}
-
-.result-card img{
-width:100%;
-border-radius:15px;
-}
-
-.result-card a{
-display:inline-block;
-margin-top:10px;
-color:yellow;
-text-decoration:none;
-font-weight:bold;
-}
-
-/* ===================================================== */
-/* ================= LOADER ============================ */
-/* ===================================================== */
-
-.loader{
+#lockOverlay{
 position:fixed;
 top:0;
 left:0;
 width:100%;
-height:100%;
-background:rgba(0,0,0,0.8);
+height:100vh;
+background:rgba(0,0,0,0.9);
 display:flex;
+flex-direction:column;
 justify-content:center;
 align-items:center;
-flex-direction:column;
-z-index:9998;
+text-align:center;
+z-index:9999;
 }
 
-.loader.hidden{
-display:none;
+.lock{
+font-size:90px;
+margin-bottom:20px;
 }
 
-.spinner{
-width:60px;
-height:60px;
-border:6px solid #fff;
-border-top:6px solid yellow;
-border-radius:50%;
-animation:spin 1s linear infinite;
+.arrow{
+font-size:60px;
+color:red;
+animation:bounce 1s infinite;
 }
 
-@keyframes spin{
-to{
-transform:rotate(360deg);
+.flames{
+font-size:40px;
+margin:10px 0;
 }
+
+.unlock-btn{
+background:yellow;
+padding:15px 40px;
+border:none;
+border-radius:15px;
+font-size:18px;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+.unlock-btn:hover{
+transform:scale(1.1);
+}
+
+@keyframes bounce{
+0%{transform:translateY(0);}
+50%{transform:translateY(20px);}
+100%{transform:translateY(0);}
 }
