@@ -19,12 +19,11 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const User = require("./models/User");
 
 /* ===================================================== */
 /* DATABASE */
 /* ===================================================== */
-
-const User = require("./models/User");
 
 mongoose.connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
@@ -45,7 +44,7 @@ const upload = multer({
 });
 
 /* ===================================================== */
-/* AUTH */
+/* AUTH MIDDLEWARE */
 /* ===================================================== */
 
 function auth(req,res,next){
@@ -84,6 +83,7 @@ const user = await User.create({
 email,
 password:hashed,
 credits:0,
+searchesUsed:0,
 role:"user",
 paid:false,
 purchaseHistory:[],
@@ -221,7 +221,7 @@ res.json({received:true});
 });
 
 /* ===================================================== */
-/* ================= SOCKET SYSTEM ===================== */
+/* SOCKET SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket,message){
@@ -236,10 +236,26 @@ socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* ================= SEARCH (UNCHANGED ARCH) =========== */
+/* 🔥 SEARCH SECURE + CREDIT DEDUCTION */
 /* ===================================================== */
 
-app.post("/search-etsy", async(req,res)=>{
+app.post("/search-etsy", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
+if(user.role !== "unlimited" && user.credits <= 0){
+return res.status(403).json({message:"No credits"});
+}
+
+if(user.role !== "unlimited"){
+user.credits -= 1;
+user.searchesUsed += 1;
+await user.save();
+}
 
 const {keyword,limit} = req.body;
 
@@ -272,15 +288,30 @@ link:links[i]?links[i][0]:url
 
 }
 
-res.json({results});
+res.json({
+results,
+creditsLeft:user.credits
+});
 
 });
 
 /* ===================================================== */
-/* ================= IMAGE ANALYSIS (UNCHANGED) ======== */
+/* 🔥 IMAGE ANALYSIS SECURE */
 /* ===================================================== */
 
-app.post("/analyze-images", upload.array("images"), async(req,res)=>{
+app.post("/analyze-images", auth, upload.array("images"), async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(user.role !== "unlimited" && user.credits <= 0){
+return res.status(403).json({message:"No credits"});
+}
+
+if(user.role !== "unlimited"){
+user.credits -= 1;
+user.searchesUsed += 1;
+await user.save();
+}
 
 const socketId = req.body.socketId;
 const socket = io.sockets.sockets.get(socketId);
@@ -356,5 +387,5 @@ res.json({results});
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT,()=>{
-console.log("🚀 Server Running");
+console.log("🚀 Server Running on port",PORT);
 });
