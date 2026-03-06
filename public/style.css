@@ -31,13 +31,14 @@ pointer-events:none;
 .container{
 position:relative;
 z-index:1;
-height:100vh;
+min-height:100vh;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
 gap:35px;
 text-align:center;
+padding:40px 0;
 }
 
 /* ================= TITLE ================= */
@@ -102,15 +103,22 @@ opacity:0.6;
 cursor:not-allowed;
 }
 
-/* ================= RESULTS GRID ================= */
+/* ================= RESULTS GRID 2 BY 2 ================= */
 
 #results{
-margin:60px auto;
 width:90%;
+margin:40px auto;
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:25px;
+grid-template-columns:repeat(2, 1fr); /* 🔥 2 par ligne */
+gap:30px;
 justify-items:center;
+}
+
+/* Responsive mobile */
+@media(max-width:800px){
+#results{
+grid-template-columns:1fr; /* 🔥 1 colonne sur mobile */
+}
 }
 
 /* ================= RESULT CARD ================= */
@@ -118,9 +126,10 @@ justify-items:center;
 .result-card{
 background:white;
 color:black;
-width:220px;
+width:100%;
+max-width:300px;
 border-radius:20px;
-padding:12px;
+padding:15px;
 text-align:center;
 box-shadow:0 5px 20px rgba(0,0,0,0.15);
 transition:0.3s ease;
@@ -135,7 +144,7 @@ transform:translateY(-5px);
 
 .result-card img{
 width:100%;
-height:180px;
+height:200px;
 object-fit:cover;
 border-radius:14px;
 display:block;
@@ -199,10 +208,6 @@ font-size:30px;
 .input-field,
 .dropdown{
 width:220px;
-}
-
-.result-card{
-width:100%;
 }
 
 }
