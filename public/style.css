@@ -107,7 +107,11 @@ transform:scale(0.98);
 @media(max-width:600px){
 
 .title{
-font-size:32px;
+font-family: 'Croissant One', cursive !important;
+font-size:52px;
+font-weight:400;
+letter-spacing:2px;
+color:white;
 }
 
 .input-field,
