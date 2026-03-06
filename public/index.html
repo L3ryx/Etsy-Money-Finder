@@ -10,8 +10,43 @@
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="style.css">
+
+<style>
+
+/* ================= BUY BUTTON ================= */
+
+.top-buy{
+position:fixed;
+top:20px;
+left:20px;
+z-index:9999;
+}
+
+.buy-btn{
+background:yellow;
+color:black;
+padding:10px 20px;
+border-radius:8px;
+font-weight:bold;
+text-decoration:none;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+transition:0.2s;
+}
+
+.buy-btn:hover{
+transform:scale(1.1);
+background:#ffe600;
+}
+
+</style>
+
 </head>
 <body>
+
+<!-- ================= BUY BUTTON ================= -->
+<div class="top-buy">
+<a href="/register" class="buy-btn">BUY</a>
+</div>
 
 <!-- ================= BACKGROUND ================= -->
 <img src="/background.gif" class="gif-background">
@@ -44,7 +79,7 @@
 </div>
 </div>
 
-<!-- ================= RESULTS (IMPORTANT : HORS CONTAINER) ================= -->
+<!-- ================= RESULTS ================= -->
 <div id="results"></div>
 
 <!-- ================= LOADER ================= -->
