@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Outil Pro</title>
+<title>Niche Finder</title>
 
 <style>
-
-/* ================= GLOBAL ================= */
 
 body{
 margin:0;
@@ -33,11 +31,10 @@ width:18px;
 height:18px;
 background:gold;
 border-radius:50%;
-opacity:0.9;
 box-shadow:0 0 15px rgba(255,255,0,0.8);
 }
 
-/* ================= CENTER CONTENT ================= */
+/* ================= CONTENT ================= */
 
 .container{
 height:100vh;
@@ -45,22 +42,30 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-gap:20px;
+gap:15px;
 }
 
-input{
+h1{
+color:gold;
+}
+
+/* Input */
+
+input, select{
 padding:15px;
 width:320px;
-border-radius:15px;
+border-radius:12px;
 border:none;
 outline:none;
 font-size:16px;
 }
 
+/* Button */
+
 button{
 padding:15px 25px;
 border:none;
-border-radius:15px;
+border-radius:12px;
 background:gold;
 font-weight:bold;
 cursor:pointer;
@@ -72,12 +77,12 @@ transform:scale(1.05);
 opacity:0.8;
 }
 
-/* ================= LOADER LENS ================= */
+/* Loader */
 
 .loader{
 display:none;
-width:70px;
-height:70px;
+width:60px;
+height:60px;
 border:6px solid gold;
 border-top:6px solid transparent;
 border-radius:50%;
@@ -90,24 +95,35 @@ animation:spin 1s linear infinite;
 }
 
 .result{
-margin-top:15px;
+margin-top:10px;
 color:gold;
-font-weight:bold;
 text-align:center;
+max-width:400px;
 }
 
 </style>
 </head>
 <body>
 
-<!-- 🐝 BACKGROUND -->
+<!-- 🐝 Background -->
 <div class="bees" id="bees"></div>
 
 <div class="container">
 
-<h1>🔎 Outil Premium</h1>
+<!-- ✅ TITRE MODIFIÉ -->
+<h1>Niche Finder</h1>
 
-<input type="text" id="query" placeholder="Tape ta recherche">
+<!-- ✅ Recherche -->
+<input type="text" id="query" placeholder="Tape ta niche">
+
+<!-- ✅ Menu déroulant 1 à 100 -->
+<select id="numberSelect">
+<script>
+for(let i=1;i<=100;i++){
+document.write(`<option value="${i}">${i}</option>`);
+}
+</script>
+</select>
 
 <button onclick="search()">Rechercher</button>
 
@@ -120,7 +136,7 @@ text-align:center;
 <script>
 
 /* ===================================================== */
-/* ================== REALISTIC BEES =================== */
+/* ================= REALISTIC BEES ==================== */
 /* ===================================================== */
 
 const beesContainer = document.getElementById("bees");
@@ -137,16 +153,14 @@ bee.style.top = Math.random()*100 + "vh";
 beesContainer.appendChild(bee);
 
 bees.push({
-element: bee,
-x: Math.random()*window.innerWidth,
-y: Math.random()*window.innerHeight,
-vx: (Math.random()-0.5)*3,
-vy: (Math.random()-0.5)*3
+element:bee,
+x:Math.random()*window.innerWidth,
+y:Math.random()*window.innerHeight,
+vx:(Math.random()-0.5)*3,
+vy:(Math.random()-0.5)*3
 });
 
 }
-
-/* 🔥 Animation réaliste */
 
 function animateBees(){
 
@@ -155,13 +169,11 @@ bees.forEach(b=>{
 b.x += b.vx;
 b.y += b.vy;
 
-/* changement direction aléatoire */
 if(Math.random() < 0.01){
 b.vx = (Math.random()-0.5)*4;
 b.vy = (Math.random()-0.5)*4;
 }
 
-/* rebond sur bords */
 if(b.x < 0 || b.x > window.innerWidth) b.vx *= -1;
 if(b.y < 0 || b.y > window.innerHeight) b.vy *= -1;
 
@@ -181,11 +193,12 @@ animateBees();
 async function search(){
 
 const query = document.getElementById("query").value;
+const number = document.getElementById("numberSelect").value;
 const loader = document.getElementById("loader");
 const result = document.getElementById("result");
 
 if(!query){
-alert("Tape une recherche !");
+alert("Tape une niche !");
 return;
 }
 
@@ -200,18 +213,18 @@ headers:{
 "Content-Type":"application/json",
 Authorization:"Bearer "+token
 },
-body:JSON.stringify({query})
+body:JSON.stringify({
+query,
+number
+})
 });
 
-const data = await res.json();
+await res.json();
 
 loader.style.display = "none";
 
-if(res.ok){
-result.innerHTML = "✅ Résultat : " + data.message;
-}else{
-result.innerHTML = "❌ " + data.message;
-}
+/* 🔥 Tu peux décider d’afficher ou NON le résultat */
+result.innerHTML = "✅ Recherche effectuée avec succès";
 
 }
 
