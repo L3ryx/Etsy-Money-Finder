@@ -1,16 +1,20 @@
 require("dotenv").config();
 
 const express = require("express");
+const multer = require("multer");
+const axios = require("axios");
 const http = require("http");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const io = new Server(server);
 
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const User = require("./models/User");
 
 /* ===================================================== */
@@ -31,6 +35,8 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
 
+const upload = multer({ storage: multer.memoryStorage() });
+
 function auth(req,res,next){
 
 const token = req.headers.authorization?.split(" ")[1];
@@ -40,8 +46,7 @@ return res.status(401).json({message:"No token"});
 }
 
 try{
-const decoded = jwt.verify(token,process.env.JWT_SECRET);
-req.user = decoded;
+req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
 }catch(err){
 return res.status(401).json({message:"Invalid token"});
@@ -69,8 +74,8 @@ email,
 password:hashed,
 credits:0,
 searchesUsed:0,
-paid:false,
 role:"user",
+paid:false,
 purchaseHistory:[],
 searchHistory:[]
 });
@@ -113,20 +118,16 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ================= DASHBOARD DATA ==================== */
+/* ================= DASHBOARD ========================= */
 /* ===================================================== */
 
 app.get("/me", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
-if(!user){
-return res.status(404).json({message:"User not found"});
-}
-
 res.json({
 email:user.email,
-role:user.role, // 🔥 IMPORTANT
+role:user.role,
 credits:user.credits,
 searchesUsed:user.searchesUsed,
 purchaseHistory:user.purchaseHistory || [],
@@ -135,26 +136,14 @@ searchHistory:user.searchHistory || []
 });
 
 /* ===================================================== */
-/* ============== STRIPE CHECKOUT ====================== */
+/* ================= STRIPE CHECKOUT =================== */
 /* ===================================================== */
 
-app.post("/create-checkout-session", async(req,res)=>{
+app.post("/create-checkout-session", auth, async(req,res)=>{
 
-try{
+const user = await User.findById(req.user.userId);
 
-const token = req.headers.authorization?.split(" ")[1];
-if(!token){
-return res.status(401).json({message:"No token"});
-}
-
-const decoded = jwt.verify(token,process.env.JWT_SECRET);
-const user = await User.findById(decoded.userId);
-
-if(!user){
-return res.status(404).json({message:"User not found"});
-}
-
-const {amount, plan, searches} = req.body;
+const {amount,plan,searches} = req.body;
 
 const session = await stripe.checkout.sessions.create({
 
@@ -163,8 +152,8 @@ mode:"payment",
 customer:user.stripeCustomerId,
 
 metadata:{
-plan:plan,
-searches:searches
+plan,
+searches
 },
 
 line_items:[
@@ -187,20 +176,15 @@ cancel_url:"http://localhost:10000/payment.html"
 
 res.json({url:session.url});
 
-}catch(err){
-console.log(err);
-res.status(500).json({message:"Stripe error"});
-}
-
 });
 
 /* ===================================================== */
-/* ================= STRIPE WEBHOOK ==================== */
+/* ================= WEBHOOK =========================== */
 /* ===================================================== */
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
 app.post("/webhook", express.raw({type:"application/json"}), async(req,res)=>{
+
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 let event;
 
@@ -211,7 +195,7 @@ req.headers["stripe-signature"],
 endpointSecret
 );
 }catch(err){
-return res.status(400).send(`Webhook Error: ${err.message}`);
+return res.status(400).send("Webhook error");
 }
 
 if(event.type === "checkout.session.completed"){
@@ -226,27 +210,21 @@ if(user){
 
 const searches = parseInt(session.metadata.searches) || 0;
 
-/* 🔥 Upgrade user to unlimited if needed */
 if(session.metadata.plan === "Unlimited"){
 user.role = "unlimited";
-} else {
+}else{
 user.credits = searches;
 }
 
 user.paid = true;
-user.searchesUsed = 0;
-
-user.purchaseHistory = user.purchaseHistory || [];
 
 user.purchaseHistory.push({
-plan: session.metadata.plan,
-searches: searches,
-date: new Date()
+plan:session.metadata.plan,
+searches,
+date:new Date()
 });
 
 await user.save();
-
-console.log("✅ Payment processed");
 }
 
 }
@@ -255,63 +233,120 @@ res.json({received:true});
 });
 
 /* ===================================================== */
-/* ================= SEARCH ROUTE ====================== */
+/* ================= SEARCH SYSTEM ===================== */
 /* ===================================================== */
 
 app.post("/search", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
-if(!user){
-return res.status(404).json({message:"User not found"});
-}
-
-/* 🔥 Unlimited access */
 if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
 }
 
-/* 🔥 Déduction seulement si pas unlimited */
 if(user.role !== "unlimited"){
 user.credits -= 1;
 user.searchesUsed += 1;
 }
 
-/* 🔥 Save history */
-user.searchHistory = user.searchHistory || [];
-
 user.searchHistory.push({
-query:req.body.query || "Unknown",
-result:"RESULTAT ICI",
+query:req.body.query,
 date:new Date()
 });
 
 await user.save();
 
 res.json({
-message:"Search success",
-creditsLeft:user.credits,
-role:user.role
+message:"Search executed",
+creditsLeft:user.credits
 });
+
 });
 
 /* ===================================================== */
-/* ================= ACCESS CHECK ====================== */
+/* ================= ETSY SCRAPER ====================== */
 /* ===================================================== */
 
-app.get("/check-access", auth, async(req,res)=>{
+app.post("/search-etsy", async(req,res)=>{
 
-const user = await User.findById(req.user.userId);
+const {keyword,limit} = req.body;
 
-if(!user){
-return res.json({allowed:false});
+const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+const scraperResponse = await axios.get("https://api.scraperapi.com/",{
+params:{
+api_key:process.env.SCRAPAPI_KEY,
+url,
+render:true
+}
+});
+
+const html = scraperResponse.data;
+
+const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+
+const images = [...html.matchAll(imageRegex)];
+
+const results = images.slice(0,limit || 10).map(img=>({
+image:img[0]
+}));
+
+res.json({results});
+
+});
+
+/* ===================================================== */
+/* ================= IMAGE ANALYSIS ===================== */
+/* ===================================================== */
+
+app.post("/analyze-images", upload.array("images"), async(req,res)=>{
+
+const results = [];
+
+for(const file of req.files){
+
+const base64 = file.buffer.toString("base64");
+
+const uploadRes = await axios.post(
+"https://api.imgbb.com/1/upload",
+new URLSearchParams({
+key:process.env.IMGBB_KEY,
+image:base64
+})
+);
+
+const imageUrl = uploadRes.data.data.url;
+
+const vision = await axios.post(
+"https://api.openai.com/v1/chat/completions",
+{
+model:"gpt-4o-mini",
+messages:[
+{
+role:"user",
+content:[
+{type:"text",text:"Return similarity score 0-100"},
+{type:"image_url",image_url:{url:imageUrl}}
+]
+}
+]
+},
+{
+headers:{
+Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
+}
+}
+);
+
+results.push({
+image:file.originalname,
+analysis:vision.data.choices[0].message.content
+});
+
 }
 
-if(user.role === "unlimited"){
-return res.json({allowed:true});
-}
+res.json({results});
 
-return res.json({allowed:false});
 });
 
 /* ===================================================== */
@@ -321,5 +356,5 @@ return res.json({allowed:false});
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT,()=>{
-console.log("🚀 Server running on port",PORT);
+console.log("🚀 Server Running");
 });
