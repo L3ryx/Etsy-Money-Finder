@@ -6,7 +6,7 @@ html, body{
   margin:0;
   padding:0;
   width:100%;
-  height:100%;
+  min-height:100vh;
   overflow-x:hidden;
   overflow-y:auto;
   background:black;
@@ -15,7 +15,7 @@ html, body{
 }
 
 /* ===================================================== */
-/* MATRIX (ANTI CARRÉ NOIR) */
+/* MATRIX FIX 100% (PLUS DE CARRÉ NOIR) */
 /* ===================================================== */
 
 #matrix{
@@ -26,15 +26,15 @@ html, body{
   height:100vh;
   z-index:-1;
   pointer-events:none;
-  display:block;
   background:black;
+  display:block;
 }
 
 canvas{
   background:transparent;
 }
 
-/* Animation légère sur la matrix */
+/* Animation légère */
 @keyframes matrixGlow{
   0%{ filter:brightness(1); }
   50%{ filter:brightness(1.3); }
@@ -42,7 +42,7 @@ canvas{
 }
 
 #matrix{
-  animation:matrixGlow 6s infinite;
+  animation:matrixGlow 5s infinite;
 }
 
 /* ===================================================== */
@@ -51,14 +51,14 @@ canvas{
 
 .title{
   text-align:center;
-  font-size:60px;
-  margin-top:50px;
-  letter-spacing:6px;
+  font-size:55px;
+  margin-top:60px;
+  letter-spacing:5px;
   text-shadow:0 0 15px #00ff66;
   position:relative;
 }
 
-/* Glitch effect */
+/* Glitch */
 .title::before,
 .title::after{
   content:"Etsy Money Finder";
@@ -82,16 +82,15 @@ canvas{
 
 @keyframes glitch1{
   0%{ transform:translate(0); }
-  20%{ transform:translate(-4px,2px); }
-  40%{ transform:translate(4px,-2px); }
-  60%{ transform:translate(-3px,1px); }
+  25%{ transform:translate(-3px,2px); }
+  50%{ transform:translate(3px,-2px); }
   100%{ transform:translate(0); }
 }
 
 @keyframes glitch2{
   0%{ transform:translate(0); }
-  20%{ transform:translate(3px,-2px); }
-  50%{ transform:translate(-3px,2px); }
+  25%{ transform:translate(3px,-2px); }
+  75%{ transform:translate(-3px,2px); }
   100%{ transform:translate(0); }
 }
 
@@ -145,7 +144,7 @@ canvas{
 }
 
 /* ===================================================== */
-/* START BUTTON (FIRE EFFECT) */
+/* START BUTTON (FIRE) */
 /* ===================================================== */
 
 .start-btn{
@@ -162,19 +161,13 @@ canvas{
   box-shadow:0 0 50px #00ff66;
 }
 
-/* 🔥 Fire border */
+/* Fire border */
 .start-btn::before{
   content:"";
   position:absolute;
   inset:-6px;
   border-radius:70px;
-  background:linear-gradient(
-    45deg,
-    red,
-    orange,
-    yellow,
-    red
-  );
+  background:linear-gradient(45deg,red,orange,yellow,red);
   z-index:-1;
   filter:blur(15px);
   animation:fireRotate 1.5s infinite linear;
@@ -191,32 +184,28 @@ canvas{
 }
 
 /* ===================================================== */
-/* LOADER */
-/* ===================================================== */
-
-.loader-container{
-  display:none;
-}
-
-.loader{
-  font-size:90px;
-  animation:spin 1s linear infinite;
-}
-
-@keyframes spin{
-  from{ transform:rotate(0deg); }
-  to{ transform:rotate(360deg); }
-}
-
-/* ===================================================== */
-/* RESULTS */
+/* RESULTS GRID 2 BY 2 */
 /* ===================================================== */
 
 #results{
   width:95%;
   max-width:1400px;
-  text-align:center;
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:30px;
+  justify-items:center;
 }
+
+/* 🔥 Mobile = 1 colonne */
+@media(max-width:768px){
+  #results{
+    grid-template-columns:repeat(1,1fr);
+  }
+}
+
+/* ===================================================== */
+/* RESULT CARD */
+/* ===================================================== */
 
 .result-card{
   backdrop-filter: blur(20px);
@@ -224,8 +213,10 @@ canvas{
   border:1px solid rgba(0,255,102,0.4);
   border-radius:30px;
   padding:30px;
-  margin:30px auto;
+  width:100%;
+  max-width:350px;
   transition:0.3s;
+  text-align:center;
 }
 
 .result-card:hover{
@@ -234,7 +225,7 @@ canvas{
 }
 
 .result-card img{
-  width:230px;
+  width:100%;
   border-radius:20px;
   margin-bottom:20px;
 }
@@ -243,7 +234,7 @@ canvas{
   color:#00ff66;
   text-decoration:none;
   font-weight:bold;
-  font-size:20px;
+  font-size:18px;
 }
 
 .result-card a:hover{
@@ -265,25 +256,4 @@ canvas{
 
 ::-webkit-scrollbar-track{
   background:black;
-}
-
-/* ===================================================== */
-/* MOBILE */
-/* ===================================================== */
-
-@media(max-width:768px){
-
-  .title{
-    font-size:35px;
-  }
-
-  .start-btn{
-    padding:18px 50px;
-    font-size:18px;
-  }
-
-  .result-card img{
-    width:160px;
-  }
-
 }
