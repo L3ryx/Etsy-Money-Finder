@@ -27,6 +27,45 @@ const upload = multer({ storage: multer.memoryStorage() });
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ===================================================== */
+/* ================= STRIPE WEBHOOK RAW ================= */
+/* ===================================================== */
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.log("❌ Webhook signature failed");
+      return res.status(400).send(`Webhook Error`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const userId = session.metadata.userId;
+
+      await User.findByIdAndUpdate(userId, {
+        $inc: { tokens: 1 }
+      });
+
+      console.log("✅ 1 token added after payment");
+    }
+
+    res.json({ received: true });
+  }
+);
+
+/* ===================================================== */
 /* ================= MODELS ============================ */
 /* ===================================================== */
 
@@ -52,7 +91,6 @@ mongoose
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.raw({ type: "application/json" }));
 app.use(express.static("public"));
 
 /* ===================================================== */
@@ -68,8 +106,8 @@ function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
   }
 }
 
@@ -81,8 +119,7 @@ app.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
   const exists = await User.findOne({ email });
-  if (exists)
-    return res.status(400).json({ message: "User already exists" });
+  if (exists) return res.status(400).json({ message: "User exists" });
 
   const hashed = await bcrypt.hash(password, 10);
 
@@ -103,10 +140,12 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
+
   if (!user)
     return res.status(400).json({ message: "Invalid credentials" });
 
   const match = await bcrypt.compare(password, user.password);
+
   if (!match)
     return res.status(400).json({ message: "Invalid credentials" });
 
@@ -120,10 +159,58 @@ app.post("/login", async (req, res) => {
 });
 
 /* ===================================================== */
+/* ============== CREATE PAYMENT (0.50€) =============== */
+/* ===================================================== */
+
+app.post("/create-payment", authMiddleware, async (req, res) => {
+
+  try {
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: "Image Search"
+            },
+            unit_amount: 50
+          },
+          quantity: 1
+        }
+      ],
+
+      metadata: {
+        userId: req.user.userId
+      },
+
+      success_url: "https://tonsite.com/success",
+      cancel_url: "https://tonsite.com/cancel"
+    });
+
+    res.json({ url: session.url });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Stripe error" });
+  }
+});
+
+/* ===================================================== */
 /* ============== TOKEN DEDUCTION ====================== */
 /* ===================================================== */
 
 async function consumeToken(userId) {
+
+  const user = await User.findById(userId);
+
+  if (!user || user.tokens <= 0) {
+    throw new Error("No tokens left");
+  }
+
   await User.findByIdAndUpdate(userId, {
     $inc: { tokens: -1 }
   });
@@ -133,10 +220,14 @@ async function consumeToken(userId) {
 /* ============== ETSY SCRAPER ========================= */
 /* ===================================================== */
 
-app.post("/search-etsy", async (req, res) => {
+app.post("/search-etsy", authMiddleware, async (req, res) => {
+
   const { keyword, limit } = req.body;
 
   try {
+
+    await consumeToken(req.user.userId);
+
     const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
     const response = await axios.get("https://api.scraperapi.com/", {
@@ -151,9 +242,11 @@ app.post("/search-etsy", async (req, res) => {
     const results = [];
 
     $("a").each((i, el) => {
+
       if (results.length >= limit) return;
 
       const href = $(el).attr("href");
+
       if (!href || !href.includes("/listing/")) return;
 
       let image =
@@ -170,11 +263,19 @@ app.post("/search-etsy", async (req, res) => {
           ? href
           : "https://www.etsy.com" + href
       });
+
     });
 
     res.json({ results });
 
   } catch (err) {
+
+    if (err.message === "No tokens left") {
+      return res.status(403).json({
+        message: "No tokens left, please buy more."
+      });
+    }
+
     res.status(500).json({ error: "Scraping failed" });
   }
 });
@@ -184,6 +285,7 @@ app.post("/search-etsy", async (req, res) => {
 /* ===================================================== */
 
 app.post("/save-product", authMiddleware, async (req, res) => {
+
   const { image, link } = req.body;
 
   const product = await SavedProduct.create({
@@ -200,6 +302,7 @@ app.post("/save-product", authMiddleware, async (req, res) => {
 /* ===================================================== */
 
 app.get("/dashboard", authMiddleware, async (req, res) => {
+
   const products = await SavedProduct.find({
     userId: req.user.userId
   });
@@ -210,86 +313,7 @@ app.get("/dashboard", authMiddleware, async (req, res) => {
     tokens: user.tokens,
     products
   });
-});
 
-/* ===================================================== */
-/* ============== STRIPE CHECKOUT ====================== */
-/* ===================================================== */
-
-app.post("/create-checkout-session", authMiddleware, async (req, res) => {
-
-  const { pack } = req.body;
-
-  let priceId;
-
-  if (pack === "15") priceId = "PRICE_ID_15";
-  if (pack === "30") priceId = "PRICE_ID_30";
-  if (pack === "50") priceId = "PRICE_ID_50";
-
-  if (!priceId)
-    return res.status(400).json({ message: "Invalid pack" });
-
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1
-      }
-    ],
-    metadata: {
-      userId: req.user.userId,
-      pack
-    },
-    success_url: "https://tonsite.com/success",
-    cancel_url: "https://tonsite.com/cancel"
-  });
-
-  res.json({ url: session.url });
-});
-
-/* ===================================================== */
-/* ============== STRIPE WEBHOOK ======================= */
-/* ===================================================== */
-
-app.post("/webhook", async (req, res) => {
-
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return res.status(400).send("Webhook error");
-  }
-
-  if (event.type === "checkout.session.completed") {
-
-    const session = event.data.object;
-
-    const userId = session.metadata.userId;
-    const pack = session.metadata.pack;
-
-    let tokens = 0;
-
-    if (pack === "15") tokens = 15;
-    if (pack === "30") tokens = 30;
-    if (pack === "50") tokens = 50;
-
-    await User.findByIdAndUpdate(userId, {
-      $inc: { tokens }
-    });
-
-    console.log("✅ Tokens added");
-  }
-
-  res.json({ received: true });
 });
 
 /* ===================================================== */
