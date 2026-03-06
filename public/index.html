@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Niche Finder</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
@@ -12,25 +11,50 @@
 </head>
 <body>
 
-<!-- ================= BUY BUTTON ================= -->
-<div class="top-buy">
-<a href="/register" class="buy-btn">BUY</a>
+<!-- ================= BUY BUTTON TOP LEFT ================= -->
+
+<div style="position:fixed;top:20px;left:20px;z-index:9999;">
+<button onclick="window.location='/dashboard'"
+style="
+background:yellow;
+padding:12px 25px;
+border:none;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
+box-shadow:0 5px 15px rgba(0,0,0,0.3);
+">
+💵 BUY
+</button>
 </div>
 
 <!-- ================= BACKGROUND ================= -->
+
 <img src="/background.gif" class="gif-background">
 
-<!-- ================= SMOKE ================= -->
 <div class="smoke-container">
-  <div class="smoke"></div>
-  <div class="smoke"></div>
-  <div class="smoke"></div>
+<div class="smoke"></div>
+<div class="smoke"></div>
+<div class="smoke"></div>
 </div>
 
 <!-- ================= MAIN CONTENT ================= -->
+
 <div class="container">
 
 <h1 class="title">Niche Finder</h1>
+
+<!-- 🔥 TEXTE AJOUTÉ -->
+<p style="
+font-size:24px;
+margin-top:15px;
+font-weight:bold;
+background:linear-gradient(90deg,#00e676,#ffffff);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+">
+Les niches n'ont plus de secrets !
+</p>
 
 <div class="form-container">
 
@@ -49,84 +73,49 @@
 </div>
 
 <!-- ================= RESULTS ================= -->
+
 <div id="results"></div>
 
 <!-- ================= LOADER ================= -->
+
 <div id="loader" class="loader hidden">
 <div class="spinner"></div>
 <p>Recherche en cours...</p>
 </div>
 
-<!-- ===================================================== -->
-<!-- ================= SCRIPT ============================ -->
-<!-- ===================================================== -->
+<!-- ================= SCRIPT ================= -->
 
 <script>
-
-const token = localStorage.getItem("token");
 
 const startBtn = document.querySelector(".start-btn");
 const resultsContainer = document.getElementById("results");
 const loader = document.getElementById("loader");
 
-/* ===================================================== */
-/* ========== BLOQUER START SI PAS LOGIN =============== */
-/* ===================================================== */
-
-if(!token){
-startBtn.disabled = true;
-startBtn.innerText = "Login Required";
-}
-
-/* ===================================================== */
-/* ================= START CLICK ======================= */
-/* ===================================================== */
-
 startBtn.addEventListener("click", async () => {
-
-if(!token){
-alert("Connecte-toi d'abord !");
-return;
-}
 
 const keyword = document.querySelector(".input-field").value;
 const limit = document.querySelector(".dropdown").value;
 
 if(!keyword){
-alert("Entre un keyword");
+alert("⚠️ Entre un keyword !");
+return;
+}
+
+const token = localStorage.getItem("token");
+
+if(!token){
+alert("Connecte-toi d'abord !");
+window.location="/login";
 return;
 }
 
 loader.classList.remove("hidden");
 startBtn.disabled = true;
-startBtn.innerText = "Chargement...";
+startBtn.innerText = "Loading...";
 
 try {
 
-/* ===================================================== */
-/* 🔥 PRELEVEMENT AUTOMATIQUE AVANT RECHERCHE */
-/* ===================================================== */
-
-const charge = await fetch("/charge-search",{
-method:"POST",
-headers:{
-Authorization:"Bearer "+token
-}
-});
-
-if(!charge.ok){
-alert("Paiement refusé ❌");
-loader.classList.add("hidden");
-startBtn.disabled = false;
-startBtn.innerText = "START";
-return;
-}
-
-/* ===================================================== */
-/* 🔎 RECHERCHE ETSY */
-/* ===================================================== */
-
-const response = await fetch("/search-etsy",{
+const response = await fetch("/search-etsy", {
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -160,12 +149,11 @@ resultsContainer.appendChild(card);
 });
 
 }else{
-
-resultsContainer.innerHTML = "<p>Aucun résultat trouvé</p>";
-
+resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
-} catch(error){
+}catch(error){
+console.log(error);
 alert("Erreur serveur ❌");
 }
 
