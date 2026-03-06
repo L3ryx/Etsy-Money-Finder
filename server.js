@@ -27,45 +27,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ===================================================== */
-/* ================= STRIPE WEBHOOK RAW ================= */
-/* ===================================================== */
-
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
-
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.log("❌ Webhook signature failed");
-      return res.status(400).send(`Webhook Error`);
-    }
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-
-      const userId = session.metadata.userId;
-
-      await User.findByIdAndUpdate(userId, {
-        $inc: { tokens: 1 }
-      });
-
-      console.log("✅ 1 token added after payment");
-    }
-
-    res.json({ received: true });
-  }
-);
-
-/* ===================================================== */
 /* ================= MODELS ============================ */
 /* ===================================================== */
 
@@ -91,7 +52,28 @@ mongoose
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ⚡ Important : static public
 app.use(express.static("public"));
+
+/* ===================================================== */
+/* ================= ROUTES HTML ======================= */
+/* ===================================================== */
+
+// 🔥 Page principale
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
+
+// 🔥 Page register
+app.get("/register", (req, res) => {
+  res.sendFile(__dirname + "/public/register.html");
+});
+
+// 🔥 Page dashboard
+app.get("/dashboard", (req, res) => {
+  res.sendFile(__dirname + "/public/dashboard.html");
+});
 
 /* ===================================================== */
 /* ================= AUTH MIDDLEWARE =================== */
@@ -119,7 +101,8 @@ app.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
   const exists = await User.findOne({ email });
-  if (exists) return res.status(400).json({ message: "User exists" });
+  if (exists)
+    return res.status(400).json({ message: "User exists" });
 
   const hashed = await bcrypt.hash(password, 10);
 
@@ -140,12 +123,10 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-
   if (!user)
     return res.status(400).json({ message: "Invalid credentials" });
 
   const match = await bcrypt.compare(password, user.password);
-
   if (!match)
     return res.status(400).json({ message: "Invalid credentials" });
 
@@ -187,8 +168,8 @@ app.post("/create-payment", authMiddleware, async (req, res) => {
         userId: req.user.userId
       },
 
-      success_url: "https://tonsite.com/success",
-      cancel_url: "https://tonsite.com/cancel"
+      success_url: "https://tonsite.com/dashboard",
+      cancel_url: "https://tonsite.com/dashboard"
     });
 
     res.json({ url: session.url });
@@ -198,6 +179,46 @@ app.post("/create-payment", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Stripe error" });
   }
 });
+
+/* ===================================================== */
+/* ============== STRIPE WEBHOOK ======================= */
+/* ===================================================== */
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+
+    const sig = req.headers["stripe-signature"];
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.log("Webhook error");
+      return res.status(400).send("Webhook error");
+    }
+
+    if (event.type === "checkout.session.completed") {
+
+      const session = event.data.object;
+      const userId = session.metadata.userId;
+
+      await User.findByIdAndUpdate(userId, {
+        $inc: { tokens: 1 }
+      });
+
+      console.log("✅ Token ajouté après paiement");
+    }
+
+    res.json({ received: true });
+  }
+);
 
 /* ===================================================== */
 /* ============== TOKEN DEDUCTION ====================== */
@@ -298,10 +319,10 @@ app.post("/save-product", authMiddleware, async (req, res) => {
 });
 
 /* ===================================================== */
-/* ============== DASHBOARD ============================ */
+/* ============== DASHBOARD DATA ======================= */
 /* ===================================================== */
 
-app.get("/dashboard", authMiddleware, async (req, res) => {
+app.get("/api/dashboard", authMiddleware, async (req, res) => {
 
   const products = await SavedProduct.find({
     userId: req.user.userId
