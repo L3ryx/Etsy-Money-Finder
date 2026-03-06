@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<!-- 🔴 POPUP OBLIGATOIRE -->
+<!-- 🔴 POPUP OBLIGATOIRE PRO (IMPOSSIBLE À FERMER) -->
 
 <div id="authPopup" style="
 position:fixed;
@@ -19,53 +19,41 @@ top:0;
 left:0;
 width:100%;
 height:100%;
+background:rgba(0,0,0,0.95);
+backdrop-filter:blur(20px);
 display:flex;
 justify-content:center;
 align-items:center;
 z-index:9999;
+">
+
+<div id="authBox" style="
 background:#111;
-">
-
-<div style="
-background:#1e1e1e;
 padding:50px;
-border-radius:25px;
-width:400px;
+border-radius:30px;
+width:420px;
 text-align:center;
-box-shadow:0 20px 60px rgba(0,0,0,0.6);
+box-shadow:0 30px 80px rgba(0,0,0,0.8);
+color:white;
 ">
 
-<h1 style="
-color:white;
-font-size:30px;
-margin-bottom:20px;
-">
+<h1 style="font-size:28px;margin-bottom:10px;">
 Bienvenue dans ma niche
 </h1>
 
-<p style="color:#ccc;margin-bottom:25px;">
-Crée un compte pour accéder à l'outil
+<p id="popupSubtitle" style="color:#aaa;margin-bottom:25px;">
+Crée un compte pour continuer
 </p>
 
+<!-- 🔵 SIGNUP -->
+
+<div id="signupStep">
+
 <input type="email" id="email" placeholder="Email"
-style="
-width:100%;
-padding:12px;
-margin:8px 0;
-border-radius:10px;
-border:none;
-outline:none;
-">
+style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
 
 <input type="password" id="password" placeholder="Mot de passe"
-style="
-width:100%;
-padding:12px;
-margin:8px 0;
-border-radius:10px;
-border:none;
-outline:none;
-">
+style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
 
 <button onclick="registerUser()"
 style="
@@ -73,19 +61,60 @@ width:100%;
 padding:14px;
 margin-top:15px;
 background:yellow;
-color:black;
 border:none;
-border-radius:12px;
+border-radius:15px;
 font-weight:bold;
 cursor:pointer;
 ">
-Créer mon compte
+Créer compte
 </button>
 
+<p style="margin-top:15px;color:#ccc;">
+Déjà un compte ?
+<span onclick="switchToLogin()" style="color:yellow;cursor:pointer;">
+Se connecter
+</span>
+</p>
+
+</div>
+
+<!-- 🔵 LOGIN -->
+
+<div id="loginStep" style="display:none;">
+
+<input type="email" id="loginEmail" placeholder="Email"
+style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
+
+<input type="password" id="loginPassword" placeholder="Mot de passe"
+style="width:100%;padding:14px;margin:8px 0;border-radius:12px;border:none;">
+
+<button onclick="loginUser()"
+style="
+width:100%;
+padding:14px;
+margin-top:15px;
+background:yellow;
+border:none;
+border-radius:15px;
+font-weight:bold;
+cursor:pointer;
+">
+Connexion
+</button>
+
+<p style="margin-top:15px;color:#ccc;">
+Pas encore de compte ?
+<span onclick="switchToSignup()" style="color:yellow;cursor:pointer;">
+Créer un compte
+</span>
+</p>
+
+</div>
+
 </div>
 </div>
 
-<!-- 🔥 BOUTON USER EN HAUT -->
+<!-- ================= USER BUTTON ================= -->
 
 <div style="position:fixed;top:20px;right:20px;z-index:999;">
 <button onclick="openPopup()"
@@ -161,13 +190,27 @@ Les niches n'ont plus de secrets !
 
 <script>
 
-/* 🔥 OUVRIR POPUP */
+/* 🔥 OPEN POPUP */
 
 function openPopup(){
 document.getElementById("authPopup").style.display="flex";
 }
 
-/* 🔥 INSCRIPTION */
+/* 🔥 SWITCH */
+
+function switchToLogin(){
+document.getElementById("signupStep").style.display="none";
+document.getElementById("loginStep").style.display="block";
+document.getElementById("popupSubtitle").innerText="Connecte-toi pour continuer";
+}
+
+function switchToSignup(){
+document.getElementById("signupStep").style.display="block";
+document.getElementById("loginStep").style.display="none";
+document.getElementById("popupSubtitle").innerText="Crée un compte pour continuer";
+}
+
+/* 🔥 REGISTER */
 
 async function registerUser(){
 
@@ -185,19 +228,43 @@ body:JSON.stringify({email,password})
 const data = await res.json();
 
 if(res.ok){
-
 alert("Compte créé ✅");
-
-// 🔥 Redirection paiement obligatoire
 window.location="/payment";
-
 }else{
 alert(data.message);
 }
 
 }
 
-/* ================= SEARCH ================= */
+/* 🔥 LOGIN */
+
+async function loginUser(){
+
+const email = document.getElementById("loginEmail").value;
+const password = document.getElementById("loginPassword").value;
+
+const res = await fetch("/login",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({email,password})
+});
+
+const data = await res.json();
+
+if(res.ok){
+
+localStorage.setItem("token",data.token);
+document.getElementById("authPopup").style.display="none";
+
+}else{
+alert("Login failed");
+}
+
+}
+
+/* 🔥 SEARCH */
 
 const startBtn = document.querySelector(".start-btn");
 const resultsContainer = document.getElementById("results");
@@ -217,7 +284,7 @@ return;
 }
 
 loader.classList.remove("hidden");
-startBtn.innerText = "Loading...";
+startBtn.innerText="Loading...";
 
 const res = await fetch("/search-etsy",{
 method:"POST",
@@ -235,7 +302,6 @@ resultsContainer.innerHTML="";
 if(data.results){
 
 data.results.forEach(item=>{
-
 resultsContainer.innerHTML += `
 <div class="result-card">
 <img src="${item.image}" width="200">
@@ -243,11 +309,10 @@ resultsContainer.innerHTML += `
 <a href="${item.link}" target="_blank">Voir annonce</a>
 </div>
 `;
-
 });
 
 }else{
-alert(data.message || "Erreur");
+alert(data.message);
 }
 
 loader.classList.add("hidden");
