@@ -1,195 +1,200 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Tool</title>
+<title>Niche Tool</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 
-<script src="/socket.io/socket.io.js"></script>
-
 </head>
+
 <body>
 
-<!-- ===================================================== -->
-<!-- USER BUTTON -->
-<!-- ===================================================== -->
+<!-- BACKGROUND IMAGE -->
+<img src="/background.png" class="background-image">
 
-<div class="user-btn" onclick="goDashboard()">
-👤 Mon Compte
+
+<!-- USER BUTTON -->
+<div class="top-bar">
+
+<button id="userBtn" class="user-btn">
+Espace utilisateur
+</button>
+
 </div>
 
-<!-- ===================================================== -->
-<!-- MAIN -->
-<!-- ===================================================== -->
 
+<!-- MAIN TOOL -->
 <div class="container">
-
-<div id="credits">Credits: -</div>
 
 <div class="form-container">
 
-<input type="text" class="input-field" placeholder="Keyword">
+<input
+type="text"
+class="input-field"
+placeholder="Keyword Etsy"
+>
 
-<select class="dropdown" id="limitDropdown"></select>
+<select class="dropdown" id="limitSelect"></select>
 
-<button class="start-btn">START</button>
+<button class="start-btn">
+START
+</button>
 
 </div>
 
-<div class="logs" id="logs"></div>
-
 </div>
 
-<!-- ===================================================== -->
+
 <!-- RESULTS -->
-<!-- ===================================================== -->
-
 <div id="results"></div>
 
-<!-- ===================================================== -->
-<!-- LOADER -->
-<!-- ===================================================== -->
 
+<!-- LOADER -->
 <div id="loader" class="loader hidden">
+
 <div class="spinner"></div>
-<p>Recherche...</p>
+<p>Recherche en cours...</p>
+
 </div>
+
+
 
 <script>
 
-/* ===================================================== */
-/* TOKEN CHECK */
-/* ===================================================== */
+/* ================= LIMIT DROPDOWN ================= */
+
+const select = document.getElementById("limitSelect");
+
+for(let i=1;i<=100;i++){
+
+const option = document.createElement("option");
+
+option.value = i;
+option.textContent = "Analyse " + i + " annonces";
+
+select.appendChild(option);
+
+}
+
+
+/* ================= LOGIN BUTTON ================= */
+
+document.getElementById("userBtn").onclick = ()=>{
 
 const token = localStorage.getItem("token");
 
-if(!token){
-alert("🔒 Connecte-toi !");
+if(token){
+window.location.href="/dashboard.html";
+}else{
 window.location.href="/login.html";
 }
 
-/* ===================================================== */
-/* USER INFO */
-/* ===================================================== */
+};
 
-fetch("/me",{
-headers:{
-Authorization:"Bearer "+token
-}
-})
-.then(res=>res.json())
-.then(data=>{
-document.getElementById("credits").innerText =
-"Credits: "+data.credits;
-});
 
-/* ===================================================== */
-/* LIMIT 1 → 100 */
-/* ===================================================== */
+/* ================= SEARCH ================= */
 
-const dropdown = document.getElementById("limitDropdown");
+const startBtn = document.querySelector(".start-btn");
+const results = document.getElementById("results");
+const loader = document.getElementById("loader");
 
-for(let i=1;i<=100;i++){
-const opt = document.createElement("option");
-opt.value = i;
-opt.textContent = "Analyse "+i+" annonces";
-dropdown.appendChild(opt);
-}
-
-/* ===================================================== */
-/* SOCKET LOGS */
-/* ===================================================== */
-
-const socket = io();
-let socketId = null;
-
-socket.on("connected",(data)=>{
-socketId = data.socketId;
-});
-
-socket.on("log",(data)=>{
-const logs = document.getElementById("logs");
-logs.innerHTML += `<div>${data.time} - ${data.message}</div>`;
-logs.scrollTop = logs.scrollHeight;
-});
-
-/* ===================================================== */
-/* SEARCH */
-/* ===================================================== */
-
-document.querySelector(".start-btn").addEventListener("click", async()=>{
+startBtn.addEventListener("click", async ()=>{
 
 const keyword = document.querySelector(".input-field").value;
-const limit = dropdown.value;
+const limit = document.querySelector(".dropdown").value;
+
+const token = localStorage.getItem("token");
+
+if(!token){
+
+alert("🔒 Connecte-toi pour lancer une recherche");
+
+window.location.href="/login.html";
+
+return;
+
+}
 
 if(!keyword){
-alert("Entre un keyword !");
+
+alert("Entre un keyword");
+
 return;
+
 }
 
-/* 🔥 TOKEN RECHECK */
-const token = localStorage.getItem("token");
-if(!token){
-alert("Tu n'es pas connecté !");
-return;
-}
 
-document.getElementById("loader").classList.remove("hidden");
+loader.classList.remove("hidden");
+startBtn.disabled = true;
+
+results.innerHTML = "";
+
+try{
 
 const res = await fetch("/search-etsy",{
+
 method:"POST",
+
 headers:{
 "Content-Type":"application/json",
-Authorization:"Bearer "+token
+"Authorization":"Bearer "+token
 },
+
 body:JSON.stringify({
 keyword,
-limit,
-socketId
+limit
 })
+
 });
+
 
 const data = await res.json();
 
-const resultsContainer = document.getElementById("results");
-resultsContainer.innerHTML = "";
 
-if(data.results && data.results.length > 0){
+if(data.results){
 
 data.results.forEach(item=>{
 
 const card = document.createElement("div");
-card.className = "result-card";
+
+card.className="result-card";
 
 card.innerHTML = `
+
 <img src="${item.image}">
-<br>
-<a href="${item.link}" target="_blank">Voir annonce</a>
+
+<a href="${item.link}" target="_blank">
+Voir annonce
+</a>
+
 `;
 
-resultsContainer.appendChild(card);
+results.appendChild(card);
 
 });
 
 }else{
-resultsContainer.innerHTML = "<p>Aucun résultat.</p>";
+
+results.innerHTML="<p>Aucun résultat</p>";
+
 }
 
-document.getElementById("loader").classList.add("hidden");
+}catch(err){
+
+alert("Erreur serveur");
+
+}
+
+
+loader.classList.add("hidden");
+startBtn.disabled=false;
 
 });
-
-/* ===================================================== */
-/* DASHBOARD */
-/* ===================================================== */
-
-function goDashboard(){
-window.location.href="/dashboard.html";
-}
 
 </script>
 
