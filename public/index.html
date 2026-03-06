@@ -1,137 +1,69 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Niche Finder</title>
+
+<title>Accueil</title>
+
 <link rel="stylesheet" href="/style.css">
+
+<style>
+
+/* section accueil */
+
+.home{
+text-align:center;
+}
+
+.home h1{
+font-size:40px;
+color:yellow;
+margin-bottom:20px;
+}
+
+.home p{
+color:#ccc;
+margin-bottom:30px;
+}
+
+.buttons{
+display:flex;
+flex-direction:column;
+gap:15px;
+}
+
+.buttons a{
+text-decoration:none;
+}
+
+</style>
+
 </head>
+
 <body>
 
-<!-- ================= TOOL BACKGROUND ================= -->
+<div class="box home">
 
-<div class="container">
-<h1 class="title">Niche Finder</h1>
-<p class="subtitle">Les niches n'ont plus de secrets !</p>
-</div>
+<h1>Bienvenue</h1>
 
-<!-- ================= AUTH BOX ================= -->
+<p>Connecte-toi ou crée ton compte pour accéder au site.</p>
 
-<div id="authBox">
+<div class="buttons">
 
-<div class="form-container">
+<a href="/register.html">
+<button>Créer un compte</button>
+</a>
 
-<!-- REGISTER -->
-
-<div class="form active" id="registerForm">
-
-<h2>Créer un compte</h2>
-
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Mot de passe">
-
-<button onclick="register()">
-Créer un compte
-</button>
-
-<p class="switch-text">
-Déjà inscrit ?
-<span onclick="switchForm()" class="switch-link">
-Sign in
-</span>
-</p>
-
-</div>
-
-<!-- LOGIN -->
-
-<div class="form" id="loginForm">
-
-<h2>Connexion</h2>
-
-<input type="email" id="loginEmail" placeholder="Email">
-<input type="password" id="loginPassword" placeholder="Mot de passe">
-
-<button onclick="login()">
-Login
-</button>
-
-<p class="switch-text">
-Pas encore de compte ?
-<span onclick="switchForm()" class="switch-link">
-Créer un compte
-</span>
-</p>
+<a href="/login.html">
+<button>Se connecter</button>
+</a>
 
 </div>
 
 </div>
-</div>
-
-<script>
-
-/* ================= REGISTER ================= */
-
-async function register(){
-
-const email = document.getElementById("email").value;
-const password = document.getElementById("password").value;
-
-const res = await fetch("/register",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({email,password})
-});
-
-if(res.ok){
-alert("Compte créé ✅");
-window.location="/dashboard.html";
-}else{
-alert("Erreur inscription");
-}
-
-}
-
-/* ================= LOGIN ================= */
-
-async function login(){
-
-const email = document.getElementById("loginEmail").value;
-const password = document.getElementById("loginPassword").value;
-
-const res = await fetch("/login",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({email,password})
-});
-
-const data = await res.json();
-
-if(res.ok){
-
-localStorage.setItem("token",data.token);
-window.location="/dashboard.html";
-
-}else{
-alert("Login échoué");
-}
-
-}
-
-/* ================= SWITCH ================= */
-
-function switchForm(){
-
-document.getElementById("registerForm").classList.toggle("active");
-document.getElementById("loginForm").classList.toggle("active");
-
-}
-
-</script>
 
 </body>
+
 </html>
