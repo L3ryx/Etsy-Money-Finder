@@ -5,12 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inscription</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
+
 <style>
 
-body{
+/* ===================================================== */
+/* ================= GLOBAL THEME ====================== */
+/* ===================================================== */
+
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Croissant One', cursive;
+}
+
+body{
 background:black;
-font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
@@ -18,40 +29,56 @@ height:100vh;
 color:white;
 }
 
-/* 🔥 ANCIEN DESIGN BOX */
+/* ===================================================== */
+/* ================= BOX (MÊME STYLE LOGIN) ============ */
+/* ===================================================== */
 
 .box{
 background:#111;
-padding:50px;
-border-radius:30px;
-width:400px;
+padding:40px;
+border-radius:25px;
+width:350px;
 text-align:center;
-box-shadow:0 0 80px rgba(255,255,255,0.1);
+box-shadow:0 0 40px rgba(0,255,102,0.3);
 }
 
+/* ===================================================== */
+/* ================= TITRE ============================= */
+/* ===================================================== */
+
 .box h2{
-color:yellow;
 margin-bottom:25px;
+color:#00ff66;
 }
+
+/* ===================================================== */
+/* ================= INPUT ============================= */
+/* ===================================================== */
 
 .box input{
 width:100%;
-padding:15px;
+padding:12px;
 margin:10px 0;
-border-radius:15px;
 border:none;
+border-radius:15px;
 outline:none;
+font-size:14px;
 background:#222;
 color:white;
-font-size:14px;
 }
+
+/* ===================================================== */
+/* ================= BUTTON ============================ */
+/* ===================================================== */
 
 .box button{
 width:100%;
-padding:15px;
+padding:12px;
+margin-top:15px;
 border:none;
-border-radius:15px;
-background:yellow; /* 🔥 BOUTON JAUNE */
+border-radius:20px;
+background:#00ff66;
+color:black;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
@@ -59,9 +86,12 @@ transition:0.3s;
 
 .box button:hover{
 transform:scale(1.05);
+box-shadow:0 0 20px #00ff66;
 }
 
-/* 🔥 SWITCH LOGIN */
+/* ===================================================== */
+/* ================= SWITCH LOGIN ====================== */
+/* ===================================================== */
 
 .switch{
 margin-top:15px;
@@ -69,18 +99,23 @@ font-size:14px;
 }
 
 .switch a{
-color:#00aaff;
+color:#00ff66;
 text-decoration:none;
 cursor:pointer;
 }
 
+.switch a:hover{
+text-decoration:underline;
+}
+
 </style>
+
 </head>
 <body>
 
 <div class="box">
 
-<h2>Créer un compte</h2>
+<h2>Créer un compte ✨</h2>
 
 <input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Mot de passe">
@@ -88,17 +123,27 @@ cursor:pointer;
 <button onclick="register()">Créer un compte</button>
 
 <div class="switch">
-Déjà inscrit ? <a href="/login.html">Se connecter</a>
+Déjà inscrit ?
+<a href="/login.html">Se connecter</a>
 </div>
 
 </div>
 
 <script>
 
+/* ===================================================== */
+/* REGISTER FUNCTION */
+/* ===================================================== */
+
 async function register(){
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
+
+if(!email || !password){
+alert("Remplis tous les champs !");
+return;
+}
 
 const res = await fetch("/register",{
 method:"POST",
@@ -114,7 +159,7 @@ if(res.ok){
 alert("Compte créé ✅");
 window.location.href="/payment.html";
 }else{
-alert(data.message);
+alert(data.message || "Erreur inscription");
 }
 
 }
