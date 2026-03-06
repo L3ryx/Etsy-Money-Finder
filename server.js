@@ -11,11 +11,11 @@ const app = express();
 const server = http.createServer(app);
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-/* ================= MODELS ================= */
-
 const User = require("./models/User");
 
-/* ================= DATABASE ================= */
+/* ===================================================== */
+/* ================= DATABASE ========================== */
+/* ===================================================== */
 
 mongoose.connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
@@ -23,7 +23,9 @@ mongoose.connect(
 .then(()=>console.log("✅ Mongo Connected"))
 .catch(err=>console.log("❌ Mongo Error",err));
 
-/* ================= MIDDLEWARE ================= */
+/* ===================================================== */
+/* ================= MIDDLEWARE ======================== */
+/* ===================================================== */
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -52,7 +54,7 @@ return res.status(401).json({message:"Invalid token"});
 }
 
 /* ===================================================== */
-/* ================= ADMIN MIDDLEWARE =================== */
+/* ================= ADMIN MIDDLEWARE ================== */
 /* ===================================================== */
 
 function adminAuth(req,res,next){
@@ -94,7 +96,7 @@ const {email,password} = req.body;
 
 const exists = await User.findOne({email});
 if(exists){
-return res.status(400).json({message:"User already exists"});
+return res.status(400).json({message:"User exists"});
 }
 
 const hashed = await bcrypt.hash(password,10);
@@ -102,13 +104,14 @@ const hashed = await bcrypt.hash(password,10);
 const user = await User.create({
 email,
 password:hashed,
-freeUnlimited:false,
-paid:false,
 credits:0,
+searchesUsed:0,
+paid:false,
+freeUnlimited:false,
 role:"user"
 });
 
-/* 🔥 CREATE STRIPE CUSTOMER */
+/* 🔥 Create Stripe Customer */
 
 const customer = await stripe.customers.create({
 email
@@ -118,7 +121,6 @@ user.stripeCustomerId = customer.id;
 await user.save();
 
 res.json({message:"User created"});
-
 });
 
 /* ===================================================== */
@@ -150,41 +152,46 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ============== STRIPE CHECKOUT SESSION ============== */
+/* ============ STRIPE CHECKOUT (PLANS) ================ */
 /* ===================================================== */
 
-app.post("/create-checkout-session", async (req,res)=>{
+app.post("/create-checkout-session", async(req,res)=>{
 
 try{
 
 const token = req.headers.authorization?.split(" ")[1];
-
 if(!token){
 return res.status(401).json({message:"No token"});
 }
 
-const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+const decoded = jwt.verify(token,process.env.JWT_SECRET);
 const user = await User.findById(decoded.userId);
 
 if(!user){
 return res.status(404).json({message:"User not found"});
 }
 
+const {amount, plan, searches} = req.body;
+
 const session = await stripe.checkout.sessions.create({
 
 payment_method_types:["card"],
 mode:"payment",
-customer: user.stripeCustomerId,
+customer:user.stripeCustomerId,
+
+metadata:{
+plan:plan,
+searches:searches
+},
 
 line_items:[
 {
 price_data:{
 currency:"eur",
 product_data:{
-name:"Premium Access"
+name:`Plan ${plan}`
 },
-unit_amount:1000 // 10€
+unit_amount:amount
 },
 quantity:1
 }
@@ -198,33 +205,90 @@ cancel_url:"http://localhost:10000/payment.html"
 res.json({url:session.url});
 
 }catch(err){
-console.log("Stripe Error :",err);
+console.log("Stripe error",err);
 res.status(500).json({message:"Stripe error"});
 }
 
 });
 
 /* ===================================================== */
-/* ================= ADMIN ACTIVATE FREE =============== */
+/* ================= STRIPE WEBHOOK ==================== */
 /* ===================================================== */
 
-app.post("/admin/activate-free", adminAuth, async(req,res)=>{
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-const {userId} = req.body;
+app.post("/webhook", express.raw({type:"application/json"}), async(req,res)=>{
 
-const user = await User.findById(userId);
+let event;
+
+try{
+event = stripe.webhooks.constructEvent(
+req.body,
+req.headers["stripe-signature"],
+endpointSecret
+);
+}catch(err){
+console.log("Webhook error",err.message);
+return res.status(400).send(`Webhook Error: ${err.message}`);
+}
+
+/* 🔥 PAYMENT SUCCESS */
+
+if(event.type === "checkout.session.completed"){
+
+const session = event.data.object;
+
+const user = await User.findOne({
+stripeCustomerId: session.customer
+});
+
+if(user){
+
+const searches = parseInt(session.metadata.searches) || 0;
+
+user.paid = true;
+user.credits = searches;
+user.searchesUsed = 0;
+
+await user.save();
+
+console.log("✅ Credits added for",user.email);
+}
+
+}
+
+res.json({received:true});
+});
+
+/* ===================================================== */
+/* ================= SEARCH ROUTE ====================== */
+/* ===================================================== */
+
+app.post("/search", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
 
 if(!user){
 return res.status(404).json({message:"User not found"});
 }
 
-user.freeUnlimited = true;
-user.paid = true;
-user.credits = 999999;
+if(user.credits <= 0){
+return res.status(403).json({message:"No credits"});
+}
+
+/* 🔥 Déduction crédit */
+
+user.credits -= 1;
+user.searchesUsed += 1;
 
 await user.save();
 
-res.json({message:"Free unlimited activated"});
+/* 👉 Ici tu mets ton moteur de recherche / IA */
+
+res.json({
+message:"Search success",
+creditsLeft:user.credits
+});
 
 });
 
