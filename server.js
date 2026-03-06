@@ -157,4 +157,146 @@ app.post("/create-checkout-session", auth, async (req, res) => {
 /* WEBHOOK */
 /* ===================================================== */
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  const endpointSecret = process.env.STRIPE
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      req.headers["stripe-signature"],
+      endpointSecret
+    );
+  } catch (err) {
+    return res.status(400).send("Webhook error");
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const user = await User.findOne({ stripeCustomerId: session.customer });
+    if (user) {
+      const searches = parseInt(session.metadata.searches) || 0;
+      if (session.metadata.plan === "Unlimited") user.role = "unlimited";
+      else user.credits += searches;
+
+      user.paid = true;
+      user.purchaseHistory.push({ plan: session.metadata.plan, searches, date: new Date() });
+      await user.save();
+    }
+  }
+
+  res.json({ received: true });
+});
+
+/* ===================================================== */
+/* SOCKET SYSTEM */
+/* ===================================================== */
+function sendLog(socket, message) {
+  console.log(message);
+  if (socket) socket.emit("log", { message, time: new Date().toISOString() });
+}
+
+io.on("connection", (socket) => {
+  socket.emit("connected", { socketId: socket.id });
+});
+
+/* ===================================================== */
+/* 🔥 ETSY SCRAPER PRO - 10X PLUS FIABLE */
+/* ===================================================== */
+app.post("/search-etsy", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+    if (user.role !== "unlimited" && user.credits <= 0)
+      return res.status(403).json({ message: "No credits" });
+
+    const { keyword, limit } = req.body;
+    if (!keyword) return res.status(400).json({ message: "Keyword required" });
+
+    const maxResults = Math.min(parseInt(limit) || 10, 200);
+    let allResults = [];
+    let offset = 0;
+    const batchSize = 50;
+
+    while (allResults.length < maxResults) {
+      const response = await axios.get("https://www.etsy.com/api/v3/ajax/search", {
+        params: { keyword, limit: batchSize, offset },
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      }).catch(() => null);
+
+      if (!response || !response.data?.results) break;
+      const listings = response.data.results;
+      if (!listings.length) break;
+
+      listings.forEach((product) => {
+        if (!product) return;
+        allResults.push({
+          title: product.title || "No title",
+          price: product.price?.amount ? (product.price.amount / 100).toFixed(2) + " €" : "N/A",
+          image: product.images?.[0]?.url || "",
+          link: product.url || "",
+        });
+      });
+
+      offset += batchSize;
+      if (offset > 500) break;
+    }
+
+    allResults = allResults.slice(0, maxResults);
+
+    if (user.role !== "unlimited") {
+      user.credits -= 1;
+      user.searchesUsed += 1;
+    }
+    user.searchHistory.push({ query: keyword, date: new Date() });
+    await user.save();
+
+    res.json({ results: allResults, creditsLeft: user.credits });
+  } catch (err) {
+    console.log("Etsy Pro Error:", err.message);
+    res.status(500).json({ message: "Scraping failed" });
+  }
+});
+
+/* ===================================================== */
+/* IMAGE ANALYSIS */
+/* ===================================================== */
+app.post("/analyze-images", auth, upload.array("images"), async (req, res) => {
+  const results = [];
+
+  for (const file of req.files) {
+    const base64 = file.buffer.toString("base64");
+    try {
+      const uploadRes = await axios.post(
+        "https://api.imgbb.com/1/upload",
+        new URLSearchParams({ key: process.env.IMGBB_KEY, image: base64 })
+      );
+
+      const imageUrl = uploadRes.data.data.url;
+
+      const vision = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: [{ type: "text", text: "Return similarity score 0-100" }, { type: "image_url", image_url: { url: imageUrl } }] }],
+        },
+        { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
+      );
+
+      const text = vision.data.choices[0].message.content;
+      const match = text.match(/\d+/);
+      const similarity = match ? parseInt(match[0]) : 0;
+
+      results.push({ image: file.originalname, matches: [{ url: "AI_ANALYSIS", similarity }] });
+    } catch (err) {
+      console.log("Image pipeline error");
+    }
+  }
+
+  res.json({ results });
+});
+
+/* ===================================================== */
+/* SERVER START */
+/* ===================================================== */
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => console.log("🚀 Server Running on port", PORT));
