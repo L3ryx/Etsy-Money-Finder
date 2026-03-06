@@ -4,32 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Niche Finder</title>
 
-<!-- 🔥 POLICE -->
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="style.css">
-
 <script src="/socket.io/socket.io.js"></script>
+
+<style>
+
+/* ================= FOND IMAGE ================= */
+
+body{
+background:url("/background.png") no-repeat center center fixed;
+background-size:cover;
+}
+
+/* Option si tu veux un overlay sombre */
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+z-index:-1;
+}
+
+</style>
 
 </head>
 <body>
 
-<!-- ================= BACKGROUND ================= -->
-<img src="/background.gif" class="gif-background">
-
-<!-- ================= SMOKE ================= -->
+<!-- ================= SMOKE (tu peux garder si tu veux) ================= -->
 <div class="smoke-container">
   <div class="smoke"></div>
   <div class="smoke"></div>
   <div class="smoke"></div>
 </div>
 
-<!-- ================= MAIN FORM ================= -->
 <div class="container">
-
-<h1 class="title">Niche Finder 🚀</h1>
 
 <div id="credits">Credits: -</div>
 
@@ -37,34 +50,23 @@
 
 <input type="text" class="input-field" placeholder="Keyword">
 
-<select class="dropdown">
-<option value="5">Analyse 5 annonces</option>
-<option value="10">Analyse 10 annonces</option>
-<option value="20">Analyse 20 annonces</option>
-<option value="50">Analyse 50 annonces</option>
+<select class="dropdown" id="limitDropdown">
 </select>
 
 <button class="start-btn">START</button>
 
 </div>
 
-<!-- ================= LOGS ================= -->
 <div class="logs" id="logs"></div>
 
 </div>
 
-<!-- ================= RESULTS ================= -->
 <div id="results"></div>
 
-<!-- ================= LOADER ================= -->
 <div id="loader" class="loader hidden">
 <div class="spinner"></div>
 <p>Recherche en cours...</p>
 </div>
-
-<!-- ===================================================== -->
-<!-- ================= SCRIPT ============================ -->
-<!-- ===================================================== -->
 
 <script>
 
@@ -75,12 +77,24 @@
 const token = localStorage.getItem("token");
 
 if(!token){
-alert("Tu dois te connecter !");
 window.location.href="/login.html";
 }
 
 /* ===================================================== */
-/* SOCKET CONNECTION */
+/* DROPDOWN 1 → 100 */
+/* ===================================================== */
+
+const dropdown = document.getElementById("limitDropdown");
+
+for(let i = 1; i <= 100; i++){
+const option = document.createElement("option");
+option.value = i;
+option.textContent = `Analyse ${i} annonces`;
+dropdown.appendChild(option);
+}
+
+/* ===================================================== */
+/* SOCKET */
 /* ===================================================== */
 
 const socket = io();
@@ -97,7 +111,7 @@ logs.scrollTop = logs.scrollHeight;
 });
 
 /* ===================================================== */
-/* LOAD USER INFO (CREDITS) */
+/* LOAD USER INFO */
 /* ===================================================== */
 
 async function loadUser(){
@@ -119,32 +133,22 @@ document.getElementById("credits").innerText =
 loadUser();
 
 /* ===================================================== */
-/* SEARCH FUNCTION */
+/* SEARCH */
 /* ===================================================== */
 
-const startBtn = document.querySelector(".start-btn");
-const resultsContainer = document.getElementById("results");
-const loader = document.getElementById("loader");
-
-startBtn.addEventListener("click", async () => {
+document.querySelector(".start-btn").addEventListener("click", async()=>{
 
 const keyword = document.querySelector(".input-field").value;
-const limit = document.querySelector(".dropdown").value;
+const limit = dropdown.value;
 
 if(!keyword){
-alert("⚠️ Entre un keyword !");
+alert("Entre un keyword !");
 return;
 }
 
-loader.classList.remove("hidden");
-startBtn.disabled = true;
-startBtn.innerText = "Loading...";
+document.getElementById("loader").classList.remove("hidden");
 
-resultsContainer.innerHTML = "";
-
-try {
-
-const response = await fetch("/search-etsy", {
+const res = await fetch("/search-etsy",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -152,15 +156,19 @@ Authorization:"Bearer " + token
 },
 body:JSON.stringify({
 keyword,
-limit
+limit,
+socketId
 })
 });
 
-const data = await response.json();
+const data = await res.json();
 
-if(data.results && data.results.length > 0){
+const resultsContainer = document.getElementById("results");
+resultsContainer.innerHTML = "";
 
-data.results.forEach(item => {
+if(data.results){
+
+data.results.forEach(item=>{
 
 const card = document.createElement("div");
 card.className = "result-card";
@@ -175,20 +183,9 @@ resultsContainer.appendChild(card);
 
 });
 
-} else {
-
-resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
-
 }
 
-} catch(error){
-console.error(error);
-alert("Erreur serveur ❌");
-}
-
-loader.classList.add("hidden");
-startBtn.disabled = false;
-startBtn.innerText = "START";
+document.getElementById("loader").classList.add("hidden");
 
 });
 
