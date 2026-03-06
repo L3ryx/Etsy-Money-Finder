@@ -32,11 +32,10 @@ const SavedProduct = require("./models/SavedProduct");
 /* ================= DATABASE ========================== */
 /* ===================================================== */
 
-mongoose
-.connect(
+mongoose.connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
 )
-.then(()=>console.log("✅ MongoDB Connected"))
+.then(()=>console.log("✅ Mongo Connected"))
 .catch(err=>console.log("❌ Mongo Error",err));
 
 /* ===================================================== */
@@ -60,51 +59,47 @@ return res.status(401).json({message:"No token"});
 }
 
 try{
-req.user = jwt.verify(token,process.env.JWT_SECRET);
+const decoded = jwt.verify(token,process.env.JWT_SECRET);
+req.user = decoded;
 next();
-}catch{
+}catch(err){
 return res.status(401).json({message:"Invalid token"});
 }
 
 }
 
 /* ===================================================== */
-/* ================= HTML ROUTES ======================= */
-/* ===================================================== */
-
-app.get("/",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/register",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/login",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/dashboard",(req,res)=>res.sendFile(__dirname+"/public/dashboard.html"));
-app.get("/payment",(req,res)=>res.sendFile(__dirname+"/public/payment.html"));
-
-/* ===================================================== */
 /* ================= REGISTER ========================== */
 /* ===================================================== */
 
-app.post("/register",async(req,res)=>{
+app.post("/register", async(req,res)=>{
 
 const {email,password} = req.body;
 
 const exists = await User.findOne({email});
+
 if(exists){
 return res.status(400).json({message:"User exists"});
 }
 
 const hashed = await bcrypt.hash(password,10);
 
+const user = await User.create({
+email,
+password:hashed,
+paid:false
+});
+
+/* 🔥 CREATE STRIPE CUSTOMER */
+
 const customer = await stripe.customers.create({
 email
 });
 
-const user = await User.create({
-email,
-password:hashed,
-tokens:0,
-stripeCustomerId:customer.id
-});
+user.stripeCustomerId = customer.id;
+await user.save();
 
-res.json({message:"User created",userId:user._id});
+res.json({message:"User created"});
 
 });
 
@@ -112,16 +107,18 @@ res.json({message:"User created",userId:user._id});
 /* ================= LOGIN ============================= */
 /* ===================================================== */
 
-app.post("/login",async(req,res)=>{
+app.post("/login", async(req,res)=>{
 
 const {email,password} = req.body;
 
 const user = await User.findOne({email});
+
 if(!user){
 return res.status(400).json({message:"Invalid"});
 }
 
 const match = await bcrypt.compare(password,user.password);
+
 if(!match){
 return res.status(400).json({message:"Invalid"});
 }
@@ -137,69 +134,17 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ================= ATTACH CARD ======================= */
+/* ========== AUTO CHARGE 0.50€ ======================== */
 /* ===================================================== */
 
-app.post("/attach-card",auth,async(req,res)=>{
+async function chargeUser(user){
 
-const {paymentMethodId} = req.body;
-
-const user = await User.findById(req.user.userId);
-
-await stripe.paymentMethods.attach(paymentMethodId,{
-customer:user.stripeCustomerId
-});
-
-await stripe.customers.update(user.stripeCustomerId,{
-invoice_settings:{
-default_payment_method:paymentMethodId
+if(!user.stripeCustomerId || !user.defaultPaymentMethod){
+throw new Error("No card");
 }
-});
-
-user.defaultPaymentMethod = paymentMethodId;
-await user.save();
-
-res.json({success:true});
-
-});
-
-/* ===================================================== */
-/* ================= SEARCH =========================== */
-/* ===================================================== */
-
-app.post("/search-etsy",auth,async(req,res)=>{
-
-const {keyword,limit} = req.body;
-
-const user = await User.findById(req.user.userId);
-
-/* 🔴 CARTE OBLIGATOIRE */
-
-if(!user.defaultPaymentMethod){
-return res.status(403).json({
-message:"Carte bancaire obligatoire"
-});
-}
-
-/* 🔥 ANTI FRAUDE SIMPLE (ANTI SPAM) */
-
-const now = Date.now();
-
-if(user.lastSearch && now - user.lastSearch < 4000){
-return res.status(429).json({
-message:"Attends quelques secondes avant de relancer"
-});
-}
-
-user.lastSearch = now;
-await user.save();
-
-/* 🔥 PRELEVEMENT AUTOMATIQUE 0.50€ */
-
-try{
 
 await stripe.paymentIntents.create({
-amount:50,
+amount:50, // 0.50€
 currency:"eur",
 customer:user.stripeCustomerId,
 payment_method:user.defaultPaymentMethod,
@@ -207,13 +152,23 @@ off_session:true,
 confirm:true
 });
 
-}catch(err){
-return res.status(400).json({
-message:"Paiement refusé"
-});
 }
 
-/* 🔥 SCRAPING */
+/* ===================================================== */
+/* ============== SEARCH + PRELEVEMENT ================== */
+/* ===================================================== */
+
+app.post("/search-etsy", auth, async(req,res)=>{
+
+const {keyword,limit} = req.body;
+
+try{
+
+const user = await User.findById(req.user.userId);
+
+/* 🔥 PRELEVEMENT AVANT RECHERCHE */
+
+await chargeUser(user);
 
 const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
@@ -226,6 +181,7 @@ render:true
 });
 
 const $ = cheerio.load(response.data);
+
 const results = [];
 
 $("a").each((i,el)=>{
@@ -240,36 +196,85 @@ $(el).find("img").first().attr("src") ||
 $(el).find("img").first().attr("data-src");
 
 if(!image) return;
-if(image.startsWith("//")) image="https:"+image;
+
+if(image.startsWith("//")){
+image = "https:" + image;
+}
 
 results.push({
 image,
-link:href.startsWith("http")?href:"https://www.etsy.com"+href
+link: href.startsWith("http")
+? href
+: "https://www.etsy.com"+href
 });
 
 });
 
 res.json({results});
 
+}catch(err){
+
+console.log("❌ Payment failed or card issue");
+
+return res.status(400).json({
+message:"Paiement échoué ou carte invalide"
+});
+
+}
+
 });
 
 /* ===================================================== */
-/* ================= DASHBOARD ========================= */
+/* ================= CHECK PAYMENT ===================== */
 /* ===================================================== */
 
-app.get("/dashboard",auth,async(req,res)=>{
+app.get("/check-payment", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
-const products = await SavedProduct.find({
-userId:user._id
+res.json({
+paid:user.paid
 });
 
-res.json({
-tokens:user.tokens,
-hasCard:!!user.defaultPaymentMethod,
-products
 });
+
+/* ===================================================== */
+/* ================= WEBHOOK =========================== */
+/* ===================================================== */
+
+app.post("/webhook",
+express.raw({type:"application/json"}),
+async(req,res)=>{
+
+const sig = req.headers["stripe-signature"];
+
+let event;
+
+try{
+
+event = stripe.webhooks.constructEvent(
+req.body,
+sig,
+process.env.STRIPE_WEBHOOK_SECRET
+);
+
+}catch(err){
+
+return res.status(400).send("Webhook Error");
+
+}
+
+/* 🔥 Paiement validé */
+
+if(event.type === "payment_intent.succeeded"){
+
+const payment = event.data.object;
+
+console.log("✅ Payment succeeded");
+
+}
+
+res.json({received:true});
 
 });
 
@@ -277,6 +282,8 @@ products
 /* ================= SERVER START ====================== */
 /* ===================================================== */
 
-server.listen(process.env.PORT || 10000,()=>{
-console.log("🚀 Server Running");
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT,()=>{
+console.log("🚀 Server running on port",PORT);
 });
