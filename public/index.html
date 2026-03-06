@@ -1,113 +1,245 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#000000">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultra Dog Animation</title>
 
-<title>Etsy Money Finder</title>
-
-<script src="/socket.io/socket.io.js"></script>
-
-<link rel="stylesheet" href="style.css">
-
-</head>
-<body>
-
-<!-- MATRIX -->
-<canvas id="matrix"></canvas>
-
-<h1 class="title">Etsy Money Finder</h1>
-
-<div class="main-center">
-
-<div class="search-box">
-
-<input type="text" id="keyword" placeholder="Keyword">
-
-<select id="limit">
-<option value="1">1</option>
-<option value="10">10</option>
-<option value="50">50</option>
-<option value="100">100</option>
-</select>
-
-<button onclick="searchEtsy()" class="start-btn">
-🚀 START
-</button>
-
-</div>
-
-<div class="loader-container" id="loader">
-<div class="loader">🔥</div>
-</div>
-
-<div id="results"></div>
-
-</div>
-
-<!-- ================= MATRIX SCRIPT ================= -->
-<script>
+<style>
 
 /* ===================================================== */
-/* MATRIX ULTRA FIX */
+/* GLOBAL */
 /* ===================================================== */
 
-const canvas = document.getElementById("matrix");
-const ctx = canvas.getContext("2d");
-
-function resizeMatrix(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+html, body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Arial, sans-serif;
 }
 
-resizeMatrix();
-window.addEventListener("resize", resizeMatrix);
+/* ===================================================== */
+/* SCENE */
+/* ===================================================== */
 
-const letters = "010101ETSYMONEYFINDER🔥🚀";
-const fontSize = 18;
-
-let columns = Math.floor(canvas.width / fontSize);
-let drops = [];
-
-for(let i=0;i<columns;i++){
-  drops[i] = Math.random() * canvas.height;
+.scene{
+  position:fixed;
+  width:100%;
+  height:100%;
+  top:0;
+  left:0;
+  z-index:-1;
 }
 
-function drawMatrix(){
+/* SKY */
 
-  ctx.fillStyle = "rgba(0,0,0,0.05)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+.sky{
+  position:absolute;
+  width:100%;
+  height:65%;
+  background:linear-gradient(to bottom,#4da6ff,#87ceeb);
+}
 
-  ctx.fillStyle = "#00ff66";
-  ctx.font = fontSize + "px monospace";
+/* SUN */
 
-  for(let i=0;i<drops.length;i++){
+.sun{
+  position:absolute;
+  top:40px;
+  right:80px;
+  width:130px;
+  height:130px;
+  background:yellow;
+  border-radius:50%;
+  box-shadow:0 0 120px yellow;
+  animation:sunPulse 3s infinite alternate;
+}
 
-    const text = letters[Math.floor(Math.random()*letters.length)];
+@keyframes sunPulse{
+  from{transform:scale(1);}
+  to{transform:scale(1.15);}
+}
 
-    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+/* GRASS */
 
-    if(drops[i]*fontSize > canvas.height && Math.random() > 0.95){
-      drops[i] = 0;
-    }
+.grass{
+  position:absolute;
+  bottom:0;
+  width:100%;
+  height:35%;
+  background:#2ecc71;
+}
 
-    drops[i]++;
+/* DOGHOUSE */
+
+.doghouse{
+  position:absolute;
+  bottom:28%;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:140px;
+}
+
+/* ===================================================== */
+/* DOG STYLE */
+/* ===================================================== */
+
+.dog{
+  position:absolute;
+  bottom:15%;
+  font-size:70px;
+  animation:dogMove 8s ease-in-out infinite;
+  filter:drop-shadow(0 20px 15px rgba(0,0,0,0.4));
+}
+
+/* ===================================================== */
+/* DOG MOVEMENT + JUMP */
+/* ===================================================== */
+
+@keyframes dogMove{
+
+  0%{
+    left:-20%;
+    transform:translateY(0) scale(1);
+  }
+
+  30%{
+    left:30%;
+    transform:translateY(0) scale(1);
+  }
+
+  40%{
+    transform:translateY(-120px) scale(1.1);
+  }
+
+  50%{
+    transform:translateY(0) scale(1);
+    left:45%;
+  }
+
+  60%{
+    opacity:0;
+    left:50%;
+  }
+
+  100%{
+    left:120%;
+    opacity:0;
   }
 }
 
-function animateMatrix(){
-  drawMatrix();
-  requestAnimationFrame(animateMatrix);
+/* ===================================================== */
+/* DUST EFFECT */
+/* ===================================================== */
+
+.dust{
+  position:absolute;
+  width:25px;
+  height:25px;
+  background:rgba(255,255,255,0.8);
+  border-radius:50%;
+  animation:dustAnim 1s linear infinite;
+  opacity:0;
 }
 
-animateMatrix();
+@keyframes dustAnim{
+
+  0%{
+    transform:scale(0);
+    opacity:0;
+  }
+
+  30%{
+    transform:scale(1);
+    opacity:1;
+  }
+
+  100%{
+    transform:translateY(-40px) scale(0);
+    opacity:0;
+  }
+
+}
+
+/* ===================================================== */
+/* CARTOON EFFECT */
+/* ===================================================== */
+
+.scene{
+  image-rendering:pixelated;
+}
+
+.doghouse,
+.dog{
+  text-shadow:
+  2px 2px 0 black,
+  -2px -2px 0 black,
+  2px -2px 0 black,
+  -2px 2px 0 black;
+}
+
+</style>
+</head>
+<body>
+
+<div class="scene">
+
+  <div class="sky">
+    <div class="sun"></div>
+  </div>
+
+  <div class="grass"></div>
+
+  <div class="doghouse">
+    🏠
+  </div>
+
+  <div class="dog" id="dog">
+    🐕
+  </div>
+
+</div>
+
+<script>
+
+/* ===================================================== */
+/* DUST GENERATION */
+/* ===================================================== */
+
+const dog = document.getElementById("dog");
+
+function createDust(){
+
+  const dust = document.createElement("div");
+  dust.classList.add("dust");
+
+  document.body.appendChild(dust);
+
+  const rect = dog.getBoundingClientRect();
+
+  dust.style.left = rect.left + "px";
+  dust.style.top = rect.bottom + "px";
+
+  setTimeout(()=>dust.remove(),1000);
+}
+
+/* ===================================================== */
+/* DETECT JUMP EVENT */
+/* ===================================================== */
+
+setInterval(()=>{
+
+  const style = getComputedStyle(dog);
+  const opacity = style.opacity;
+
+  if(opacity === "1"){
+    createDust();
+  }
+
+},1500);
 
 </script>
-
-<!-- ================= SEARCH SCRIPT ================= -->
-<script src="script.js"></script>
 
 </body>
 </html>
