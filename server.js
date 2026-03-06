@@ -8,11 +8,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
-const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const User = require("./models/User");
@@ -80,7 +78,7 @@ purchaseHistory:[],
 searchHistory:[]
 });
 
-/* 🔥 Stripe customer */
+/* Stripe customer */
 
 const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
@@ -125,14 +123,19 @@ app.get("/me", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
 res.json({
 email:user.email,
 role:user.role,
 credits:user.credits,
 searchesUsed:user.searchesUsed,
-purchaseHistory:user.purchaseHistory || [],
-searchHistory:user.searchHistory || []
+purchaseHistory:user.purchaseHistory,
+searchHistory:user.searchHistory
 });
+
 });
 
 /* ===================================================== */
@@ -213,7 +216,7 @@ const searches = parseInt(session.metadata.searches) || 0;
 if(session.metadata.plan === "Unlimited"){
 user.role = "unlimited";
 }else{
-user.credits = searches;
+user.credits += searches;
 }
 
 user.paid = true;
@@ -240,24 +243,51 @@ app.post("/search", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
 if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
 }
 
+/* Déduction crédit */
 if(user.role !== "unlimited"){
 user.credits -= 1;
 user.searchesUsed += 1;
 }
 
+/* 🔥 Exemple vraie recherche simple */
+const keyword = req.body.query;
+
+let results = [];
+
+if(keyword){
+
+results = [
+{
+title:`Best result for ${keyword}`,
+score:Math.floor(Math.random()*100)
+},
+{
+title:`Alternative for ${keyword}`,
+score:Math.floor(Math.random()*100)
+}
+];
+
+}
+
+/* Sauvegarde historique */
 user.searchHistory.push({
-query:req.body.query,
+query:keyword,
 date:new Date()
 });
 
 await user.save();
 
+/* ✅ ON RENVOIE DES RESULTATS */
 res.json({
-message:"Search executed",
+results,
 creditsLeft:user.credits
 });
 
@@ -301,7 +331,7 @@ res.json({results});
 
 app.post("/analyze-images", upload.array("images"), async(req,res)=>{
 
-const results = [];
+let results = [];
 
 for(const file of req.files){
 
@@ -356,5 +386,5 @@ res.json({results});
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT,()=>{
-console.log("🚀 Server Running");
+console.log("🚀 Server Running on port",PORT);
 });
