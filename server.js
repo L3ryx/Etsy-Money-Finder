@@ -5,6 +5,7 @@ const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
+const cheerio = require("cheerio");
 
 const app = express();
 const server = http.createServer(app);
@@ -39,7 +40,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH (IMAGE + LINK STABLE EXTRACTION) */
+/* 🔎 ETSY SEARCH — CHEERIO DOM PARSER VERSION */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -77,31 +78,58 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ===================================================== */
-    /* ✅ STABLE EXTRACTION */
+    /* ✅ PARSE HTML WITH CHEERIO */
     /* ===================================================== */
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-    const images = [...html.matchAll(imageRegex)].map(m => m[0]);
-    const links = [...html.matchAll(linkRegex)].map(m => m[0]);
+    const $ = cheerio.load(html);
 
     const results = [];
 
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+    /* ===================================================== */
+    /* FIND LISTING CARDS */
+    /* ===================================================== */
+
+    $("a").each((index, element) => {
+
+      if (results.length >= maxItems) return;
+
+      const href = $(element).attr("href");
+      if (!href) return;
+
+      /* ✅ Only Etsy listing links */
+      if (!href.includes("/listing/")) return;
+
+      const fullLink = href.startsWith("http")
+        ? href
+        : "https://www.etsy.com" + href;
+
+      /* ✅ Find image inside same anchor */
+      const img = $(element).find("img").first();
+
+      let imageSrc = img.attr("src") || img.attr("data-src");
+
+      if (!imageSrc) return;
+
+      /* ===================================================== */
+      /* ✅ OPTIONAL: CLEAN IMAGE URL */
+      /* ===================================================== */
+
+      if (imageSrc.startsWith("//")) {
+        imageSrc = "https:" + imageSrc;
+      }
 
       results.push({
-        image: images[i],
-        link: links[i] || etsyUrl
+        image: imageSrc,
+        link: fullLink
       });
 
-    }
+    });
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.message);
+    console.error("Scraper Error:", err.message);
 
     res.status(500).json({
       error: "Scraping failed"
