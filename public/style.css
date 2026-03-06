@@ -1,136 +1,166 @@
-/* ================= RESET ================= */
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+*{
+box-sizing:border-box;
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-  width: 100%;
-
-  overflow-x: hidden;
-  overflow-y: auto !important;  /* 🔥 FORCE LE SCROLL */
-
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+html,body{
+margin:0;
+padding:0;
+height:100%;
+font-family:Arial;
+background:black;
+color:white;
+overflow:hidden;
 }
 
-/* ================= BODY ================= */
+/* ================= STARS ================= */
 
-body {
-  background: black;
-  font-family: Arial, sans-serif;
-  color: white;
-  position: relative;
+.stars{
+position:fixed;
+width:100%;
+height:100%;
+background-image:
+radial-gradient(white 1px, transparent 1px),
+radial-gradient(white 1px, transparent 1px);
+background-size:60px 60px;
+animation:moveStars 60s linear infinite;
+z-index:-3;
 }
 
-/* ================= MATRIX ================= */
-
-#matrix {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -10;
-  pointer-events: none; /* 🔥 IMPORTANT -> ne bloque pas le scroll */
+@keyframes moveStars{
+from{transform:translateY(0)}
+to{transform:translateY(-1000px)}
 }
 
-/* ================= MAIN ================= */
+/* ================= TITLE ================= */
 
-.title {
-  text-align: center;
-  font-size: 28px;
-  margin-top: 30px;
+.title{
+position:absolute;
+top:30px;
+width:100%;
+text-align:center;
+font-size:38px;
+font-weight:bold;
+color:white;
 }
 
-.main-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 120px; /* 🔥 permet du vrai scroll */
+/* ================= CENTER ================= */
+
+.main-center{
+position:absolute;
+top:110px;
+width:100%;
+display:flex;
+justify-content:center;
 }
 
 /* ================= SEARCH ================= */
 
-.search-box {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+.search-box{
+display:flex;
+gap:10px;
 }
 
-input,
-select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
-  outline: none;
+input,select{
+padding:8px;
+border-radius:8px;
+border:none;
 }
 
-/* ================= BUTTON ================= */
+/* ================= START BUTTON ================= */
 
-.start-btn {
-  background: #00ff66;
-  border: none;
-  padding: 6px 18px;
-  border-radius: 20px;
-  font-weight: bold;
-  cursor: pointer;
+.start-btn{
+background:#00ff66;
+border:none;
+padding:8px 20px;
+border-radius:20px;
+font-weight:bold;
+cursor:pointer;
+transition:0.2s;
 }
 
-/* ================= LOADER ================= */
-
-.loader-container {
-  display: none;
-  margin-top: 20px;
+.start-btn:hover{
+transform:scale(1.1);
 }
 
-.loader {
-  font-size: 40px;
-  animation: spin 1s linear infinite;
+/* ================= SCENE ================= */
+
+.scene{
+position:absolute;
+bottom:140px;
+width:100%;
+display:flex;
+justify-content:center;
+align-items:center;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* ================= DOG HOUSE ================= */
+
+.dog-house{
+font-size:120px;
+position:absolute;
 }
 
-/* ================= RESULTS ================= */
+/* ================= DOG ================= */
 
-#results {
-  margin-top: 20px;
-  width: 90%;
-  text-align: center;
+.dog{
+font-size:60px;
+position:absolute;
+bottom:-10px;
+animation:dogWalk 6s infinite alternate linear;
 }
 
-.result-card {
-  background: #111;
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 15px;
+@keyframes dogWalk{
+
+0%{
+transform:translateX(-120px);
 }
 
-.result-card img {
-  max-width: 100%;
-  border-radius: 8px;
+100%{
+transform:translateX(120px);
 }
 
-.result-card a {
-  color: #00ffcc;
-  text-decoration: none;
-  font-weight: bold;
 }
 
-/* ================= MOBILE FIX ================= */
+/* ================= MONEY ================= */
 
-@media (max-width: 600px) {
+.money{
+position:absolute;
+font-size:40px;
+color:#00ff00;
+animation:flyMoney 5s linear infinite;
+}
 
-  .title {
-    font-size: 22px;
-  }
+.m1{left:-40px; animation-delay:0s;}
+.m2{left:0px; animation-delay:1s;}
+.m3{left:40px; animation-delay:2s;}
+.m4{left:80px; animation-delay:3s;}
+.m5{left:-80px; animation-delay:4s;}
 
+@keyframes flyMoney{
+
+0%{
+transform:translateY(0) rotate(0deg);
+opacity:1;
+}
+
+100%{
+transform:translateY(-600px) rotate(360deg);
+opacity:0;
+}
+
+}
+
+/* ================= GRASS ================= */
+
+.grass{
+position:fixed;
+bottom:0;
+width:100%;
+height:140px;
+background:linear-gradient(
+to top,
+#0a7d00,
+#18b300
+);
+z-index:-1;
 }
