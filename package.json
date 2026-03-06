@@ -1,37 +1,37 @@
 {
   "name": "etsy-niche-finder",
-  "version": "1.0.0",
-  "description": "Etsy scraping tool with stripe payments and image analysis",
+  "version": "2.0.0",
+  "description": "AI Etsy to AliExpress comparison engine with cache and smart filtering",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [
-    "etsy",
-    "scraper",
-    "stripe",
-    "openai",
-    "image-analysis",
-    "saas"
-  ],
-  "author": "YourName",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^1.7.0",
-    "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.0",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.2.0",
-    "multer": "^1.4.5-lts.1",
-    "stripe": "^14.21.0",
-    "socket.io": "^4.7.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
-  },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "multer": "^1.4.5-lts.1",
+    "stripe": "^14.0.0",
+    "socket.io": "^4.7.0",
+    "image-hash": "^3.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "etsy",
+    "aliexpress",
+    "ai",
+    "scraper",
+    "mongodb"
+  ],
+  "author": "YourName",
+  "license": "MIT"
 }
