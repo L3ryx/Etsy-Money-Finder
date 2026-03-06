@@ -8,9 +8,7 @@ padding:0;
 box-sizing:border-box;
 }
 
-html, body{
-width:100%;
-height:100%;
+body{
 font-family:Arial, Helvetica, sans-serif;
 background:black;
 color:white;
@@ -70,9 +68,7 @@ font-size:30px;
 margin-bottom:20px;
 }
 
-/* ===================================================== */
-/* ================= CREDIT COUNTER ===================== */
-/* ===================================================== */
+/* ================= CREDIT COUNTER ================= */
 
 #creditCounter{
 font-size:40px;
@@ -150,7 +146,7 @@ font-weight:bold;
 }
 
 /* ===================================================== */
-/* ================= TRANSACTIONS ====================== */
+/* ================= TRANSACTIONS ======================= */
 /* ===================================================== */
 
 .transaction{
@@ -170,7 +166,7 @@ box-shadow:0 0 20px rgba(255,255,255,0.05);
 display:flex;
 justify-content:center;
 align-items:center;
-min-height:100vh;
+height:100vh;
 }
 
 .payment-card{
@@ -182,7 +178,7 @@ box-shadow:0 0 100px rgba(255,255,255,0.1);
 text-align:center;
 }
 
-/* IMAGE PAYMENT */
+/* 🔥 IMAGE PAYMENT */
 
 .payment-image{
 width:100%;
@@ -197,7 +193,7 @@ transition:0.3s;
 transform:scale(1.03);
 }
 
-/* PRICE */
+/* ================= PRICE ================= */
 
 .payment-price{
 margin-top:25px;
@@ -213,10 +209,28 @@ margin-bottom:30px;
 }
 
 /* ===================================================== */
+/* ================= OVERLAY LOCK ======================= */
+/* ===================================================== */
+
+.overlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100vh;
+background:rgba(0,0,0,0.6);
+backdrop-filter:blur(8px);
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+/* ===================================================== */
 /* ================= RESPONSIVE ======================== */
 /* ===================================================== */
 
-@media(max-width:768px){
+@media(max-width:600px){
 
 .search-box{
 width:90%;
@@ -228,10 +242,6 @@ width:90%;
 
 .payment-image{
 height:250px;
-}
-
-header{
-padding:15px 20px;
 }
 
 }
