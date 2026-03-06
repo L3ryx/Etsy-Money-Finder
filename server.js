@@ -20,6 +20,7 @@ const io = new Server(server);
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const User = require("./models/User");
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
@@ -41,14 +42,17 @@ mongoose.connect(
 /* ===================================================== */
 
 function auth(req,res,next){
+
 const token = req.headers.authorization?.split(" ")[1];
 if(!token) return res.status(401).json({message:"No token"});
+
 try{
 req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
 }catch(err){
 return res.status(401).json({message:"Invalid token"});
 }
+
 }
 
 /* ===================================================== */
@@ -74,6 +78,8 @@ searchesUsed:0,
 purchaseHistory:[],
 searchHistory:[]
 });
+
+/* Stripe customer */
 
 const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
@@ -209,19 +215,12 @@ res.json({received:true});
 /* SOCKET */
 /* ===================================================== */
 
-function sendLog(socket,message){
-console.log(message);
-if(socket){
-socket.emit("log",{message,time:new Date().toISOString()});
-}
-}
-
 io.on("connection",(socket)=>{
 socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* SECURE ETSY SEARCH */
+/* 🔥 SECURE ETSY SEARCH (ROBUST VERSION) */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -257,11 +256,11 @@ render:true
 /* 🔥 EXTRACTION STABLE */
 /* ===================================================== */
 
-const imgRegex = new RegExp('"image_url":"(https:\\/\\/i\\.etsystatic\\.com[^"]+)"',"g");
-const linkRegex = new RegExp('"url":"(https:\\/\\/www\\.etsy\\.com\\/listing\\/\\d+)"',"g");
+const imageRegex = /https:\/\/i\.etsystatic\.com\/[^\s"]+/g;
+const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
-const images = [...html.matchAll(imgRegex)].map(m=>m[1].replace(/\\/g,""));
-const links  = [...html.matchAll(linkRegex)].map(m=>m[1].replace(/\\/g,""));
+const images = [...html.matchAll(imageRegex)].map(m=>m[0]);
+const links = [...html.matchAll(linkRegex)].map(m=>m[0]);
 
 const results = [];
 
@@ -272,7 +271,9 @@ link:links[i] || etsyUrl
 });
 }
 
-/* 🔥 Crédit */
+/* ===================================================== */
+/* 🔥 CREDIT SYSTEM */
+/* ===================================================== */
 
 if(user.role !== "unlimited"){
 user.credits -= 1;
