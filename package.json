@@ -1,25 +1,27 @@
 {
   "name": "etsy-money-finder",
   "version": "1.0.0",
-  "description": "Etsy product finder with Stripe payments and MongoDB",
+  "description": "SaaS Etsy Scraper with Stripe Payment",
   "main": "server.js",
-  "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0",
+    "express-rate-limit": "^7.1.0",
+    "http": "0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "stripe": "^14.0.0"
   },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {
-    "axios": "^1.7.0",
-    "bcryptjs": "^2.4.3",
-    "cheerio": "^1.0.0-rc.12",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.5.1",
-    "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.7.5",
-    "stripe": "^14.25.0"
-  }
+  "author": "YourName",
+  "license": "MIT"
 }
