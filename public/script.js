@@ -1,38 +1,43 @@
+/* ===================================================== */
+/* SOCKET */
+/* ===================================================== */
+
 const socket = io();
 const loader = document.getElementById("loader");
+
+/* ===================================================== */
+/* MATRIX BACKGROUND */
+/* ===================================================== */
 
 const canvas = document.getElementById("matrix");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let fontSize = 16;
-let letters = "010101ETSYMONEYFINDER";
-
-let columns = canvas.width / fontSize;
-let drops = [];
-
-for(let i=0;i<columns;i++){
-  drops[i] = 1;
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 
-let speed = 50;
-let matrixInterval = setInterval(drawMatrix, speed);
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
-/* ===================================================== */
-/* MATRIX SPEED CONTROL */
-/* ===================================================== */
+const letters = "010101ETSYMONEYFINDER";
+const fontSize = 16;
+
+let columns = Math.floor(canvas.width / fontSize);
+let drops = [];
+
+for(let i = 0; i < columns; i++){
+  drops[i] = Math.random() * canvas.height;
+}
+
+let matrixSpeed = 40;
+let matrixInterval = setInterval(drawMatrix, matrixSpeed);
 
 function setMatrixSpeed(newSpeed){
   clearInterval(matrixInterval);
-  speed = newSpeed;
-  matrixInterval = setInterval(drawMatrix, speed);
+  matrixSpeed = newSpeed;
+  matrixInterval = setInterval(drawMatrix, matrixSpeed);
 }
-
-/* ===================================================== */
-/* DRAW MATRIX */
-/* ===================================================== */
 
 function drawMatrix(){
 
@@ -40,14 +45,14 @@ function drawMatrix(){
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.fillStyle = "#00ff66";
-  ctx.font = fontSize+"px monospace";
+  ctx.font = fontSize + "px monospace";
 
   for(let i=0;i<drops.length;i++){
 
-    let text = letters[Math.floor(Math.random()*letters.length)];
+    const text = letters[Math.floor(Math.random()*letters.length)];
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-    if(drops[i]*fontSize > canvas.height && Math.random()>0.98){
+    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
       drops[i] = 0;
     }
 
@@ -56,25 +61,7 @@ function drawMatrix(){
 }
 
 /* ===================================================== */
-/* RESIZE */
-/* ===================================================== */
-
-window.addEventListener("resize", () => {
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  columns = canvas.width / fontSize;
-  drops = [];
-
-  for(let i=0;i<columns;i++){
-    drops[i] = 1;
-  }
-
-});
-
-/* ===================================================== */
-/* SEARCH */
+/* SEARCH SYSTEM */
 /* ===================================================== */
 
 async function searchEtsy(){
@@ -84,29 +71,29 @@ async function searchEtsy(){
 
   loader.style.display = "block";
 
-  /* 🔥 Matrix accélère */
+  /* 🔥 Matrix accélère pendant scraping */
   setMatrixSpeed(5);
 
-  const res = await fetch("/search-etsy",{
+  const response = await fetch("/search-etsy",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({ keyword, limit })
   });
 
-  const data = await res.json();
+  const data = await response.json();
 
   loader.style.display = "none";
 
-  /* 🔥 Matrix ralentit */
+  /* 🔥 Matrix ralentit quand terminé */
   setMatrixSpeed(60);
 
   displayResults(data.results);
 
-  explosion();
+  explosionEffect();
 }
 
 /* ===================================================== */
-/* RESULTS */
+/* RESULTS DISPLAY */
 /* ===================================================== */
 
 function displayResults(results){
@@ -125,7 +112,7 @@ function displayResults(results){
     card.className = "result-card";
 
     card.innerHTML = `
-      <img src="${item.image}">
+      <img src="${item.image}" />
       <br>
       🔗 <a href="${item.link}" target="_blank">
         Open Listing
@@ -135,16 +122,16 @@ function displayResults(results){
     container.appendChild(card);
 
   });
-
 }
 
 /* ===================================================== */
-/* EXPLOSION EFFECT */
+/* EXPLOSION EFFECT WHEN RESULTS ARRIVE */
 /* ===================================================== */
 
-function explosion(){
+function explosionEffect(){
 
   const boom = document.createElement("div");
+
   boom.innerHTML = "💥";
   boom.style.position = "fixed";
   boom.style.top = "50%";
@@ -153,16 +140,28 @@ function explosion(){
   boom.style.transform = "translate(-50%,-50%)";
   boom.style.transition = "1s";
   boom.style.opacity = "1";
+  boom.style.zIndex = "9999";
 
   document.body.appendChild(boom);
 
-  setTimeout(()=>{
+  setTimeout(() => {
     boom.style.transform = "translate(-50%,-50%) scale(3)";
     boom.style.opacity = "0";
   },100);
 
-  setTimeout(()=>{
+  setTimeout(() => {
     boom.remove();
   },1200);
 
 }
+
+/* ===================================================== */
+/* LIVE PROGRESS FROM SERVER */
+/* ===================================================== */
+
+socket.on("progress", (data) => {
+
+  // Optionnel : tu peux relier ça à une vraie progress bar plus tard
+  console.log("Progress:", data.percent);
+
+});
