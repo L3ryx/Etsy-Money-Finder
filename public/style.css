@@ -24,60 +24,22 @@ html, body{
   position:fixed;
   top:0;
   left:0;
-  width:100vw;
-  height:100vh;
+  width:100%;
+  height:100%;
   z-index:-1;
   background:black;
   pointer-events:none;
-  display:block;
 }
 
 /* ===================================================== */
-/* TITLE + GLITCH */
+/* TITLE */
 /* ===================================================== */
 
 .title{
   text-align:center;
   font-size:55px;
   margin-top:50px;
-  letter-spacing:5px;
-  position:relative;
   text-shadow:0 0 15px #00ff66;
-}
-
-.title::before,
-.title::after{
-  content:"Etsy Money Finder";
-  position:absolute;
-  left:0;
-  top:0;
-  width:100%;
-}
-
-.title::before{
-  color:red;
-  animation:glitch1 2s infinite;
-  clip-path:inset(0 0 60% 0);
-}
-
-.title::after{
-  color:cyan;
-  animation:glitch2 2s infinite;
-  clip-path:inset(40% 0 0 0);
-}
-
-@keyframes glitch1{
-  0%{transform:translate(0);}
-  25%{transform:translate(-3px,2px);}
-  50%{transform:translate(3px,-2px);}
-  100%{transform:translate(0);}
-}
-
-@keyframes glitch2{
-  0%{transform:translate(0);}
-  25%{transform:translate(3px,-2px);}
-  75%{transform:translate(-3px,2px);}
-  100%{transform:translate(0);}
 }
 
 /* ===================================================== */
@@ -115,7 +77,6 @@ input, select{
   color:#00ff66;
   text-align:center;
   font-size:16px;
-  outline:none;
 }
 
 /* ===================================================== */
@@ -123,7 +84,6 @@ input, select{
 /* ===================================================== */
 
 .start-btn{
-  position:relative;
   background:#00ff66;
   color:black;
   border:none;
@@ -140,7 +100,7 @@ input, select{
   transform:scale(1.15);
 }
 
-/* Fire autour du bouton */
+/* Fire autour bouton */
 .start-btn::before{
   content:"";
   position:absolute;
@@ -163,7 +123,6 @@ input, select{
 
 .loader-container{
   display:none;
-  margin-top:20px;
 }
 
 .loader{
@@ -189,10 +148,24 @@ input, select{
   justify-items:center;
 }
 
-/* Mobile → 1 colonne */
+/* Mobile */
 @media(max-width:600px){
   #results{
-    grid-template-columns:1fr !important;
+    grid-template-columns:1fr;
+  }
+
+  .title{
+    font-size:30px;
+  }
+
+  input, select{
+    width:220px;
+  }
+
+  .start-btn{
+    width:220px;
+    padding:15px;
+    font-size:16px;
   }
 }
 
@@ -201,7 +174,6 @@ input, select{
 /* ===================================================== */
 
 .result-card{
-  backdrop-filter:blur(20px);
   background:rgba(0,255,102,0.05);
   border:1px solid rgba(0,255,102,0.4);
   border-radius:30px;
@@ -220,64 +192,10 @@ input, select{
 .result-card img{
   width:100%;
   border-radius:20px;
-  margin-bottom:20px;
 }
 
 .result-card a{
   color:#00ff66;
   text-decoration:none;
   font-weight:bold;
-}
-
-/* ===================================================== */
-/* FIRE EFFECT AUTOUR IMAGES */
-/* ===================================================== */
-
-.image-fire{
-  position:relative;
-  display:inline-block;
-  border-radius:25px;
-}
-
-.image-fire::before{
-  content:"";
-  position:absolute;
-  inset:-15px;
-  background:radial-gradient(circle,
-    rgba(255,0,0,0.9),
-    rgba(255,80,0,0.7),
-    rgba(255,150,0,0.4),
-    transparent 70%
-  );
-  filter:blur(25px);
-  z-index:-1;
-  animation:fireGlow 1.8s infinite alternate;
-}
-
-@keyframes fireGlow{
-  from{
-    transform:scale(1);
-    opacity:0.6;
-  }
-  to{
-    transform:scale(1.25);
-    opacity:1;
-  }
-}
-
-/* ===================================================== */
-/* SCROLLBAR */
-/* ===================================================== */
-
-::-webkit-scrollbar{
-  width:10px;
-}
-
-::-webkit-scrollbar-thumb{
-  background:#00ff66;
-  border-radius:20px;
-}
-
-::-webkit-scrollbar-track{
-  background:black;
 }
