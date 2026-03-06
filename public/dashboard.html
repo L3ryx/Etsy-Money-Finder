@@ -1,38 +1,96 @@
-<!-- ================= PREMIUM BUY BUTTON ================= -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
 
-<div style="display:flex;justify-content:center;margin:50px 0;">
-
-<button class="buy-button" onclick="goToPayment()">
-
-<div class="buy-content">
-
-<span class="money-icon">💵</span>
-
-<div class="text-content">
-<div class="buy-title">Acheter</div>
-<div class="buy-subtitle">0,50€ par recherche</div>
-</div>
-
-</div>
-
+<!-- 🔥 BOUTON BUY EN HAUT À GAUCHE -->
+<div style="position:fixed;top:20px;left:20px;z-index:9999;">
+<button onclick="window.location='/payment'"
+style="
+background:yellow;
+padding:12px 25px;
+border:none;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
+">
+💵 BUY
 </button>
+</div>
 
+<h1 style="text-align:center;margin-top:120px;">Dashboard</h1>
+
+<h2 style="text-align:center;">Mes recherches sauvegardées</h2>
+
+<div id="savedResults"
+style="display:flex;flex-wrap:wrap;justify-content:center;gap:20px;margin-top:40px;">
 </div>
 
 <script>
 
-function goToPayment(){
-
 const token = localStorage.getItem("token");
 
 if(!token){
-alert("Connecte-toi d'abord !");
 window.location="/login";
-return;
 }
 
-window.location="/payment";
+/* 🔥 CHARGER LES DONNÉES */
+
+async function loadDashboard(){
+
+try{
+
+const res = await fetch("/dashboard",{
+headers:{
+Authorization:"Bearer "+token
+}
+});
+
+console.log("Dashboard status:",res.status);
+
+const data = await res.json();
+
+console.log("Dashboard data:",data);
+
+const container = document.getElementById("savedResults");
+container.innerHTML = "";
+
+if(data.products && data.products.length > 0){
+
+data.products.forEach(product => {
+
+const card = document.createElement("div");
+card.className="result-card";
+
+card.innerHTML = `
+<img src="${product.image}" width="200">
+<br>
+<a href="${product.link}" target="_blank">Voir annonce</a>
+`;
+
+container.appendChild(card);
+
+});
+
+}else{
+
+container.innerHTML = "<p>Aucun résultat sauvegardé</p>";
 
 }
+
+}catch(err){
+console.log("Dashboard error",err);
+}
+
+}
+
+loadDashboard();
 
 </script>
+
+</body>
+</html>
