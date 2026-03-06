@@ -1,194 +1,224 @@
-<script>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
 
-const socket = io();
-const loader = document.getElementById("loader");
-const canvas = document.getElementById("matrix");
-const ctx = canvas.getContext("2d");
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-let matrixSpeed = 50;
+<title>Etsy Money Finder</title>
 
-/* ================================================= */
-/* MATRIX SETUP */
-/* ================================================= */
+<script src="/socket.io/socket.io.js"></script>
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+<style>
 
-const letters = "010101ETSYMONEYFINDER";
-const fontSize = 16;
+/* ===================================================== */
+/* GLOBAL */
+/* ===================================================== */
 
-let columns = canvas.width / fontSize;
-let drops = [];
-
-for(let i = 0; i < columns; i++){
-  drops[i] = 1;
+html, body{
+  margin:0;
+  padding:0;
+  width:100%;
+  min-height:100%;
+  background:black;
+  font-family:'Courier New', monospace;
+  color:#00ff66;
+  overflow-x:hidden;
 }
 
-let matrixInterval = setInterval(drawMatrix, matrixSpeed);
+/* ===================================================== */
+/* MATRIX */
+/* ===================================================== */
 
-/* ================================================= */
-/* MATRIX SPEED CONTROL */
-/* ================================================= */
-
-function setMatrixSpeed(speed){
-
-  matrixSpeed = speed;
-  clearInterval(matrixInterval);
-  matrixInterval = setInterval(drawMatrix, matrixSpeed);
-
+#matrix{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100vw;
+  height:100vh;
+  z-index:-1;
+  pointer-events:none;
+  background:black;
+  display:block;
 }
 
-/* ================================================= */
-/* DRAW MATRIX */
-/* ================================================= */
+/* ===================================================== */
+/* TITLE */
+/* ===================================================== */
 
-function drawMatrix(){
-
-  ctx.fillStyle = "rgba(0,0,0,0.08)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle = "#00ff66";
-  ctx.font = fontSize + "px monospace";
-
-  for(let i = 0; i < drops.length; i++){
-
-    const text = letters[Math.floor(Math.random()*letters.length)];
-    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
-
-    if(drops[i]*fontSize > canvas.height && Math.random() > 0.98){
-      drops[i] = 0;
-    }
-
-    drops[i]++;
-  }
+.title{
+  text-align:center;
+  font-size:42px;
+  margin-top:40px;
+  letter-spacing:4px;
+  text-shadow:0 0 20px #00ff66;
 }
 
-/* ================================================= */
-/* RESIZE FIX */
-/* ================================================= */
+/* ===================================================== */
+/* CENTER */
+/* ===================================================== */
 
-window.addEventListener("resize", () => {
-
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  columns = canvas.width / fontSize;
-  drops = [];
-
-  for(let i = 0; i < columns; i++){
-    drops[i] = 1;
-  }
-
-});
-
-/* ================================================= */
-/* SEARCH FUNCTION */
-/* ================================================= */
-
-async function searchEtsy(){
-
-  const keyword = document.getElementById("keyword").value;
-  const limit = document.getElementById("limit").value;
-
-  showLoader();
-
-  /* 🔥 MATRIX ACCELERATES */
-  setMatrixSpeed(10);
-
-  const response = await fetch("/search-etsy", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ keyword, limit })
-  });
-
-  const data = await response.json();
-
-  /* ✅ RESULTS ARRIVED */
-  hideLoader();
-
-  /* 🔥 MATRIX SLOWS DOWN */
-  setMatrixSpeed(60);
-
-  displayResults(data.results);
-
-  /* 💥 EXPLOSION EFFECT */
-  explosionEffect();
-
+.main-center{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:25px;
+  margin-top:40px;
+  padding-bottom:80px;
 }
 
-/* ================================================= */
+/* ===================================================== */
+/* SEARCH */
+/* ===================================================== */
+
+.search-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:15px;
+}
+
+#keyword, #limit{
+  width:250px;
+  padding:12px;
+  border-radius:10px;
+  border:2px solid #00ff66;
+  background:black;
+  color:#00ff66;
+  text-align:center;
+  outline:none;
+}
+
+/* ===================================================== */
+/* START BUTTON */
+/* ===================================================== */
+
+.start-btn{
+  background:#00ff66;
+  color:black;
+  border:none;
+  padding:18px 50px;
+  border-radius:40px;
+  font-size:20px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 0 20px #00ff66;
+}
+
+.start-btn:hover{
+  transform:scale(1.2);
+  box-shadow:0 0 50px #00ff66;
+}
+
+/* ===================================================== */
 /* LOADER */
-/* ================================================= */
+/* ===================================================== */
 
-function showLoader(){
-  loader.style.display = "block";
+.loader-container{
+  display:none;
 }
 
-function hideLoader(){
-  loader.style.display = "none";
+.loader{
+  font-size:70px;
+  animation:spin 1s linear infinite;
 }
 
-/* ================================================= */
-/* RESULTS DISPLAY */
-/* ================================================= */
-
-function displayResults(results){
-
-  const container = document.getElementById("results");
-  container.innerHTML = "";
-
-  if(!results || results.length === 0){
-    container.innerHTML = "<h2>No results found</h2>";
-    return;
-  }
-
-  results.forEach(item => {
-
-    const card = document.createElement("div");
-    card.className = "result-card";
-
-    card.innerHTML = `
-      <img src="${item.image}">
-      <br>
-      🔗 <a href="${item.link}" target="_blank">
-        Open Listing
-      </a>
-    `;
-
-    container.appendChild(card);
-
-  });
-
+@keyframes spin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
 }
 
-/* ================================================= */
-/* 💥 EXPLOSION EFFECT */
-/* ================================================= */
+/* ===================================================== */
+/* RESULTS */
+/* ===================================================== */
 
-function explosionEffect(){
-
-  const explosion = document.createElement("div");
-
-  explosion.style.position = "fixed";
-  explosion.style.top = "50%";
-  explosion.style.left = "50%";
-  explosion.style.transform = "translate(-50%,-50%)";
-  explosion.style.fontSize = "120px";
-  explosion.style.opacity = "1";
-  explosion.style.transition = "all 1s ease";
-  explosion.innerHTML = "💥";
-
-  document.body.appendChild(explosion);
-
-  setTimeout(() => {
-    explosion.style.transform = "translate(-50%,-50%) scale(3)";
-    explosion.style.opacity = "0";
-  }, 100);
-
-  setTimeout(() => {
-    explosion.remove();
-  }, 1200);
-
+#results{
+  width:90%;
+  max-width:1200px;
+  text-align:center;
 }
 
-</script>
+.result-card{
+  background:#111;
+  border:1px solid #00ff66;
+  border-radius:15px;
+  padding:15px;
+  margin:15px auto;
+  transition:0.3s;
+}
+
+.result-card:hover{
+  transform:scale(1.05);
+  box-shadow:0 0 30px #00ff66;
+}
+
+.result-card img{
+  width:180px;
+  border-radius:10px;
+}
+
+.result-card a{
+  color:#00ff66;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+/* ===================================================== */
+/* SCROLLBAR */
+/* ===================================================== */
+
+::-webkit-scrollbar{
+  width:8px;
+}
+
+::-webkit-scrollbar-thumb{
+  background:#00ff66;
+  border-radius:10px;
+}
+
+::-webkit-scrollbar-track{
+  background:black;
+}
+
+</style>
+
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<h1 class="title">Etsy Money Finder</h1>
+
+<div class="main-center">
+
+<div class="search-box">
+
+<input type="text" id="keyword" placeholder="Keyword">
+
+<select id="limit">
+<option value="1">1</option>
+<option value="10">10</option>
+<option value="50">50</option>
+<option value="100">100</option>
+<option value="300">300</option>
+</select>
+
+<button class="start-btn" onclick="searchEtsy()">
+🚀 START
+</button>
+
+</div>
+
+<div class="loader-container" id="loader">
+<div class="loader">🔥</div>
+</div>
+
+<div id="results"></div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
