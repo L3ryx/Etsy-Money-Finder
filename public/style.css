@@ -1,64 +1,160 @@
+<style>
+
+/* ===================================================== */
+/* =================== GLOBAL ========================== */
+/* ===================================================== */
+
+*{
+box-sizing:border-box;
+}
+
 body{
 margin:0;
-background:black;
-font-family:Arial;
+font-family:Arial, Helvetica, sans-serif;
+overflow:hidden;
+
+/* 🔥 IMAGE DE FOND */
+background:url("/images/background.jpg") no-repeat center center fixed;
+background-size:cover;
+color:white;
+}
+
+/* 🔥 OVERLAY NOIR PREMIUM */
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.65);
+z-index:-1;
+}
+
+/* ===================================================== */
+/* =================== BEES ============================ */
+/* ===================================================== */
+
+.bees{
+position:fixed;
+width:100%;
+height:100%;
+z-index:-1;
+overflow:hidden;
+}
+
+.bee{
+position:absolute;
+width:18px;
+height:18px;
+background:gold;
+border-radius:50%;
+box-shadow:0 0 15px rgba(255,255,0,0.8);
+}
+
+/* ===================================================== */
+/* =================== CONTAINER ======================= */
+/* ===================================================== */
+
+.container{
+height:100vh;
 display:flex;
+flex-direction:column;
 justify-content:center;
 align-items:center;
-height:100vh;
-color:white;
-}
-
-/* BOX DESIGN */
-
-.box{
-background:#111;
-padding:50px;
-border-radius:30px;
-width:400px;
+gap:18px;
 text-align:center;
-box-shadow:0 0 80px rgba(255,255,255,0.1);
 }
 
-.box h2{
-color:yellow;
-margin-bottom:25px;
+h1{
+color:gold;
+font-size:38px;
+letter-spacing:2px;
 }
 
-.box input{
-width:100%;
+/* ===================================================== */
+/* ================= INPUT + SELECT ==================== */
+/* ===================================================== */
+
+input, select{
 padding:15px;
-margin:10px 0;
-border-radius:15px;
+width:320px;
+border-radius:12px;
 border:none;
 outline:none;
-background:#222;
+font-size:15px;
+background:rgba(255,255,255,0.1);
 color:white;
-font-size:14px;
+backdrop-filter:blur(5px);
 }
 
-.box button{
-width:100%;
-padding:15px;
+select option{
+color:black;
+}
+
+/* ===================================================== */
+/* ================= BUTTON ============================ */
+/* ===================================================== */
+
+button{
+padding:15px 25px;
 border:none;
-border-radius:15px;
-background:yellow;
+border-radius:12px;
+background:gold;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
 }
 
-.box button:hover{
+button:hover{
 transform:scale(1.05);
+opacity:0.8;
 }
 
-.switch{
-margin-top:15px;
-font-size:14px;
+/* ===================================================== */
+/* ================= LOADER (LOUPE) ==================== */
+/* ===================================================== */
+
+.loader{
+display:none;
+width:70px;
+height:70px;
+border:6px solid gold;
+border-top:6px solid transparent;
+border-radius:50%;
+animation:spin 1s linear infinite;
 }
 
-.switch a{
-color:#00aaff;
-text-decoration:none;
-cursor:pointer;
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
 }
+
+/* ===================================================== */
+/* ================= RESULT ============================ */
+/* ===================================================== */
+
+.result{
+margin-top:10px;
+color:gold;
+font-weight:bold;
+max-width:400px;
+}
+
+/* ===================================================== */
+/* ================= RESPONSIVE ======================== */
+/* ===================================================== */
+
+@media(max-width:600px){
+
+input, select{
+width:90%;
+}
+
+h1{
+font-size:26px;
+}
+
+}
+
+</style>
