@@ -4,7 +4,7 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family:Arial;
+font-family:Arial, sans-serif;
 }
 
 body{
@@ -19,12 +19,14 @@ color:white;
 position:relative;
 min-height:100vh;
 
-background-image:url("./background.jpg");
-background-size:cover;
-background-position:center;
-background-repeat:no-repeat;
+/* ✅ IMAGE FOND (fonctionne avec Express public) */
+background:url("background.jpg") center/cover no-repeat fixed;
 
-padding-bottom:150px;
+/* 🔥 Overlay sombre pour mieux voir le texte */
+background-color:rgba(0,0,0,0.5);
+background-blend-mode:darken;
+
+padding-bottom:180px;
 }
 
 /* ================= TITLE ================= */
@@ -35,6 +37,7 @@ font-size:42px;
 color:white;
 margin-top:30px;
 font-weight:bold;
+letter-spacing:2px;
 }
 
 /* ================= FORM ================= */
@@ -69,7 +72,7 @@ transition:0.3s;
 
 .start-btn:hover{
 transform:scale(1.1);
-box-shadow:0 0 15px #00ff66;
+box-shadow:0 0 20px #00ff66;
 }
 
 /* ================= RESULTS GRID (2 BY 2) ================= */
@@ -82,61 +85,77 @@ padding:40px;
 justify-items:center;
 }
 
-/* ================= RESULT CARD + FIRE ================= */
+/* Responsive */
+@media(max-width:768px){
+#results{
+grid-template-columns:1fr;
+}
+}
+
+/* ================= RESULT CARD ================= */
 
 .result-card{
 position:relative;
-background:black;
+background:rgba(0,0,0,0.8);
 padding:15px;
 border-radius:15px;
 text-align:center;
 overflow:hidden;
 transition:0.3s;
+width:100%;
+max-width:350px;
 }
 
 .result-card:hover{
 transform:translateY(-5px);
-box-shadow:0 0 20px #00ff66;
+box-shadow:0 0 25px #00ff66;
 }
 
-/* 🔥 FLAMMES */
+/* ================= FIRE ANIMATION ================= */
 
 .result-card::before,
 .result-card::after{
 content:"🔥";
 position:absolute;
-font-size:40px;
-animation:fireMove 2s infinite alternate;
+font-size:35px;
+animation:fireMove 1.8s infinite alternate ease-in-out;
 }
 
 .result-card::before{
-top:-10px;
-left:-10px;
+top:5px;
+left:5px;
 }
 
 .result-card::after{
-bottom:-10px;
-right:-10px;
+bottom:5px;
+right:5px;
 }
 
 @keyframes fireMove{
 from{transform:scale(1);}
-to{transform:scale(1.3);}
+to{transform:scale(1.4);}
 }
 
-/* IMAGE */
+/* ================= IMAGE ================= */
 
 .result-card img{
 width:100%;
 border-radius:10px;
 }
 
-/* LINK */
+/* ================= LINK ================= */
 
 .result-card a{
+display:inline-block;
+margin-top:10px;
 color:#00ff66;
 text-decoration:none;
 font-weight:bold;
+transition:0.2s;
+}
+
+.result-card a:hover{
+text-decoration:underline;
 }
 
 /* ================= GRASS ================= */
