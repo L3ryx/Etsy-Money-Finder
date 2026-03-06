@@ -38,7 +38,7 @@ height:100vh;
 background:#111;
 padding:50px;
 border-radius:30px;
-width:400px;
+width:420px;
 text-align:center;
 box-shadow:0 0 60px rgba(0,255,102,0.3);
 }
@@ -49,17 +49,21 @@ margin-bottom:25px;
 }
 
 /* ===================================================== */
-/* ===================== PLAN CARD ===================== */
+/* ===================== PLANS ========================= */
 /* ===================================================== */
 
 .plan{
 background:#1a1a1a;
-padding:15px;
+padding:20px;
 border-radius:20px;
 margin:15px 0;
 cursor:pointer;
 transition:0.3s;
 border:2px solid transparent;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:5px;
 }
 
 .plan:hover{
@@ -69,6 +73,22 @@ box-shadow:0 0 20px #00ff66;
 
 .plan.active{
 border:2px solid #00ff66;
+}
+
+.plan-title{
+font-size:18px;
+font-weight:bold;
+color:#00ff66;
+}
+
+.plan-price{
+font-size:22px;
+font-weight:bold;
+}
+
+.plan-desc{
+font-size:14px;
+opacity:0.8;
 }
 
 /* ===================================================== */
@@ -98,8 +118,6 @@ opacity:0.5;
 cursor:not-allowed;
 }
 
-/* ===================================================== */
-
 </style>
 
 </head>
@@ -109,16 +127,26 @@ cursor:not-allowed;
 
 <h2>Choisir un Plan 💳</h2>
 
+<!-- ===================================================== -->
+<!-- ===================== PLANS ========================= -->
+<!-- ===================================================== -->
+
 <div class="plan" data-plan="Basic" data-price="999" data-searches="15">
-Basic — 9,99€ — 15 recherches
+<div class="plan-title">Basic</div>
+<div class="plan-price">9,99€</div>
+<div class="plan-desc">15 recherches</div>
 </div>
 
 <div class="plan" data-plan="Pro" data-price="2499" data-searches="40">
-Pro — 24,99€ — 40 recherches
+<div class="plan-title">Pro</div>
+<div class="plan-price">24,99€</div>
+<div class="plan-desc">40 recherches</div>
 </div>
 
 <div class="plan" data-plan="Elite" data-price="7999" data-searches="130">
-Elite — 79,99€ — 130 recherches
+<div class="plan-title">Elite</div>
+<div class="plan-price">79,99€</div>
+<div class="plan-desc">130 recherches</div>
 </div>
 
 <button id="buyBtn">Acheter</button>
