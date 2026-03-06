@@ -13,8 +13,13 @@
 </head>
 <body>
 
-<!-- 🎬 GIF BACKGROUND -->
+<!-- 🎬 BACKGROUND GIF -->
 <img src="/background.gif" class="gif-background" alt="background">
+
+<!-- 🔥 SMOKE EFFECT -->
+<div class="smoke"></div>
+<div class="smoke"></div>
+<div class="smoke"></div>
 
 <!-- 🔥 CONTENU -->
 <div class="container">
@@ -47,7 +52,7 @@
 <p>Recherche en cours...</p>
 </div>
 
-<!-- 🚀 SCRIPT BACKEND + LOADER -->
+<!-- 🚀 SCRIPT BACKEND -->
 <script>
 
 const startBtn = document.querySelector(".start-btn");
@@ -64,7 +69,6 @@ alert("⚠️ Entre un keyword !");
 return;
 }
 
-/* 🔥 SHOW LOADER */
 loader.classList.remove("hidden");
 startBtn.disabled = true;
 startBtn.innerText = "Loading...";
@@ -112,7 +116,6 @@ console.error(error);
 alert("Erreur serveur ❌");
 }
 
-/* 🔥 HIDE LOADER */
 loader.classList.add("hidden");
 startBtn.disabled = false;
 startBtn.innerText = "START";
