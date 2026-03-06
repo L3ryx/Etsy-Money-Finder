@@ -79,21 +79,18 @@ return res.status(400).json({message:"User exists"});
 
 const hashed = await bcrypt.hash(password,10);
 
+const customer = await stripe.customers.create({email});
+
 const user = await User.create({
 email,
 password:hashed,
-credits:0,
-searchesUsed:0,
+credits:10,
 role:"user",
 paid:false,
+stripeCustomerId:customer.id,
 purchaseHistory:[],
 searchHistory:[]
 });
-
-const customer = await stripe.customers.create({email});
-user.stripeCustomerId = customer.id;
-
-await user.save();
 
 res.json({message:"User created"});
 });
@@ -236,7 +233,7 @@ socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* 🔥 SEARCH SECURE + CREDIT DEDUCTION */
+/* 🔥 SEARCH SECURED (SAME PIPELINE) */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -251,6 +248,7 @@ if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
 }
 
+/* 🔥 Déduction crédit */
 if(user.role !== "unlimited"){
 user.credits -= 1;
 user.searchesUsed += 1;
@@ -296,7 +294,7 @@ creditsLeft:user.credits
 });
 
 /* ===================================================== */
-/* 🔥 IMAGE ANALYSIS SECURE */
+/* 🔥 IMAGE ANALYSIS SECURED (SAME PIPELINE) */
 /* ===================================================== */
 
 app.post("/analyze-images", auth, upload.array("images"), async(req,res)=>{
