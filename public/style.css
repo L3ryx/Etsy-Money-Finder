@@ -1,86 +1,162 @@
-/* ================= BACKGROUND ART ================= */
+/* ================= RESET ================= */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+min-height:100vh;
+overflow:hidden;
+background:radial-gradient(circle at top,#0b1c3a,#020111 70%);
+color:white;
+}
+
+/* ================= SKY CONTAINER ================= */
 
 .sky{
 position:relative;
-min-height:100vh;
-background:linear-gradient(#020111,#0a0a2a);
+width:100%;
+height:100vh;
 overflow:hidden;
 }
 
 /* ================= STARS ================= */
 
-.sky::before{
-content:"";
+.star{
 position:absolute;
-width:200%;
-height:200%;
-background-image:
-radial-gradient(white 1px, transparent 1px),
-radial-gradient(white 1px, transparent 1px);
-background-size:50px 50px;
-opacity:0.4;
-animation:starsMove 60s linear infinite;
+background:white;
+border-radius:50%;
+opacity:.8;
+animation:twinkle 2s infinite alternate;
 }
 
-@keyframes starsMove{
-from{transform:translateY(0);}
-to{transform:translateY(-1000px);}
+@keyframes twinkle{
+0%{opacity:.2;}
+100%{opacity:1;}
 }
 
-/* ================= GRASS ================= */
+/* ================= SHOOTING STAR ================= */
 
-.grass{
+.shooting-star{
+position:absolute;
+top:20%;
+left:-100px;
+width:4px;
+height:4px;
+background:white;
+box-shadow:0 0 10px white;
+animation:shoot 6s linear infinite;
+}
+
+@keyframes shoot{
+0%{
+transform:translateX(0) translateY(0);
+opacity:1;
+}
+100%{
+transform:translateX(120vw) translateY(25vh);
+opacity:0;
+}
+}
+
+/* ================= GRASS GROUND ================= */
+
+.ground{
 position:absolute;
 bottom:0;
 width:100%;
-height:120px;
-background:linear-gradient(#0f8f00,#0a5f00);
+height:200px;
+background:linear-gradient(#6fd14c,#2e7c29);
 }
 
-/* ================= DOG HOUSE ================= */
+/* ================= DOGHOUSE ================= */
 
 .doghouse{
 position:absolute;
-bottom:120px;
+bottom:140px;
 left:50%;
 transform:translateX(-50%);
-font-size:120px;
-z-index:5;
+width:200px;
+height:150px;
+background:#a36a3b;
+border-radius:10px;
+box-shadow:0 10px 20px rgba(0,0,0,.4);
+}
+
+/* Roof */
+
+.roof{
+position:absolute;
+top:-40px;
+left:-15px;
+width:230px;
+height:60px;
+background:#d33b2b;
+border-radius:6px;
+transform:skewX(-10deg);
+}
+
+/* Door */
+
+.door{
+position:absolute;
+bottom:0;
+left:50%;
+transform:translateX(-50%);
+width:90px;
+height:100px;
+background:#053c26;
+border-radius:50px 50px 0 0;
 }
 
 /* ================= DOG ================= */
 
 .dog{
 position:absolute;
-bottom:110px;
-left:45%;
-font-size:70px;
-animation:dogWalk 4s infinite alternate ease-in-out;
+bottom:140px;
+left:60%;
+width:110px;
+height:80px;
+background:#b87333;
+border-radius:40px;
+animation:dogMove 4s infinite alternate ease-in-out;
 }
 
-@keyframes dogWalk{
-from{transform:translateX(-30px);}
-to{transform:translateX(30px);}
+.dog::before{
+content:"";
+position:absolute;
+width:60px;
+height:60px;
+background:#b87333;
+border-radius:50%;
+top:-30px;
+left:15px;
 }
 
-/* ================= MONEY ================= */
+@keyframes dogMove{
+from{transform:translateX(-20px);}
+to{transform:translateX(20px);}
+}
+
+/* ================= FALLING MONEY ================= */
 
 .money{
 position:absolute;
-bottom:180px;
-left:50%;
+top:-50px;
 font-size:30px;
-animation:moneyFly 5s infinite linear;
-opacity:0;
+animation:moneyFall 4s linear infinite;
 }
 
-@keyframes moneyFly{
+@keyframes moneyFall{
 0%{
-transform:translateY(0) rotate(0);
+transform:translateY(-50px) rotate(0deg);
 opacity:1;
 }
 100%{
-transform:translateY(-500px) rotate(360deg);
+transform:translateY(120vh) rotate(360deg);
 opacity:0;
 }
 }
