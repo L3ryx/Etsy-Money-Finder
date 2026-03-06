@@ -1,14 +1,15 @@
 require("dotenv").config();
 
 const express = require("express");
-const multer = require("multer");
 const axios = require("axios");
-const http = require("http");
+const multer = require("multer");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
+const http = require("http");
 const { Server } = require("socket.io");
+const cheerio = require("cheerio");
 
 const app = express();
 const server = http.createServer(app);
@@ -43,17 +44,23 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 function auth(req,res,next){
 
-const token = req.headers.authorization?.split(" ")[1];
+const header = req.headers.authorization;
 
-if(!token){
+if(!header){
 return res.status(401).json({message:"No token"});
 }
 
+const token = header.split(" ")[1];
+
 try{
+
 req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
-}catch(err){
+
+}catch{
+
 return res.status(401).json({message:"Invalid token"});
+
 }
 
 }
@@ -78,9 +85,9 @@ const user = await User.create({
 email,
 password:hashed,
 credits:0,
-searchesUsed:0,
 role:"user",
 paid:false,
+searchesUsed:0,
 purchaseHistory:[],
 searchHistory:[]
 });
@@ -106,13 +113,13 @@ const {email,password} = req.body;
 const user = await User.findOne({email});
 
 if(!user){
-return res.status(400).json({message:"Invalid"});
+return res.status(400).json({message:"Invalid login"});
 }
 
 const match = await bcrypt.compare(password,user.password);
 
 if(!match){
-return res.status(400).json({message:"Invalid"});
+return res.status(400).json({message:"Invalid login"});
 }
 
 const token = jwt.sign(
@@ -134,18 +141,20 @@ app.get("/me", auth, async(req,res)=>{
 const user = await User.findById(req.user.userId);
 
 res.json({
+
 email:user.email,
 credits:user.credits,
 role:user.role,
 searchesUsed:user.searchesUsed,
 purchaseHistory:user.purchaseHistory,
 searchHistory:user.searchHistory
+
 });
 
 });
 
 /* ===================================================== */
-/* STRIPE */
+/* STRIPE CHECKOUT */
 /* ===================================================== */
 
 app.post("/create-checkout-session", auth, async(req,res)=>{
@@ -168,7 +177,9 @@ searches
 line_items:[{
 price_data:{
 currency:"eur",
-product_data:{name:`Plan ${plan}`},
+product_data:{
+name:`Plan ${plan}`
+},
 unit_amount:amount
 },
 quantity:1
@@ -184,7 +195,7 @@ res.json({url:session.url});
 });
 
 /* ===================================================== */
-/* STRIPE WEBHOOK */
+/* WEBHOOK */
 /* ===================================================== */
 
 app.post("/webhook", express.raw({type:"application/json"}), async(req,res)=>{
@@ -203,7 +214,7 @@ endpointSecret
 
 }catch(err){
 
-return res.status(400).send("Webhook error");
+return res.status(400).send("Webhook Error");
 
 }
 
@@ -212,20 +223,18 @@ if(event.type === "checkout.session.completed"){
 const session = event.data.object;
 
 const user = await User.findOne({
-stripeCustomerId:session.customer
+stripeCustomerId: session.customer
 });
 
 if(user){
 
-const searches = parseInt(session.metadata.searches)||0;
+const searches = parseInt(session.metadata.searches) || 0;
 
-if(session.metadata.plan === "Unlimited"){
-user.role="unlimited";
+if(session.metadata.plan === "Elite"){
+user.role = "unlimited";
 }else{
 user.credits += searches;
 }
-
-user.paid = true;
 
 user.purchaseHistory.push({
 plan:session.metadata.plan,
@@ -244,15 +253,7 @@ res.json({received:true});
 });
 
 /* ===================================================== */
-/* SOCKET */
-/* ===================================================== */
-
-io.on("connection",(socket)=>{
-console.log("Socket connected:",socket.id);
-});
-
-/* ===================================================== */
-/* ETSY SCRAPER */
+/* ETSY SEARCH */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -260,6 +261,12 @@ app.post("/search-etsy", auth, async(req,res)=>{
 try{
 
 const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.status(401).json({message:"User not found"});
+}
+
+/* crédits */
 
 if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
@@ -269,39 +276,47 @@ const {keyword,limit} = req.body;
 
 const maxItems = Math.min(parseInt(limit)||10,100);
 
-const etsyUrl =
+const url =
 `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
 const response = await axios.get(
-"https://api.scraperapi.com/",
+"https://api.scraperapi.com",
 {
 params:{
 api_key:process.env.SCRAPAPI_KEY,
-url:etsyUrl,
-render:false
+url,
+render:true
 }
 }
 );
 
 const html = response.data;
 
-/* EXTRACTION IMAGE + LINK */
-
-const regex =
-/<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="(https:\/\/i\.etsystatic\.com[^"]+)"/g;
-
-const matches = [...html.matchAll(regex)];
+const $ = cheerio.load(html);
 
 const results = [];
 
-for(let i=0;i<matches.length && results.length<maxItems;i++){
+$("a[href*='/listing/']").each((i,el)=>{
+
+if(results.length >= maxItems) return false;
+
+const link = "https://www.etsy.com" + $(el).attr("href");
+
+const img = $(el).find("img").attr("src") ||
+$(el).find("img").attr("data-src");
+
+if(link && img && img.includes("etsy")){
 
 results.push({
-link:matches[i][1],
-image:matches[i][2]
+image:img,
+link
 });
 
 }
+
+});
+
+/* crédits */
 
 if(user.role !== "unlimited"){
 user.credits -= 1;
@@ -324,7 +339,9 @@ creditsLeft:user.credits
 
 console.log("Scraper error:",err.message);
 
-res.status(500).json({message:"Scraping failed"});
+res.status(500).json({
+message:"Scraping failed"
+});
 
 }
 
@@ -342,7 +359,7 @@ for(const file of req.files){
 
 try{
 
-const base64 = file.buffer.toString("base64");
+const base64=file.buffer.toString("base64");
 
 const uploadRes = await axios.post(
 "https://api.imgbb.com/1/upload",
@@ -377,16 +394,18 @@ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
 
 const text = vision.data.choices[0].message.content;
 
-const score = parseInt(text.match(/\d+/))||0;
+const match = text.match(/\d+/);
+
+const similarity = match ? parseInt(match[0]) : 0;
 
 results.push({
 image:file.originalname,
-score
+similarity
 });
 
 }catch(err){
 
-console.log("Image pipeline error");
+console.log("image pipeline error");
 
 }
 
@@ -394,6 +413,14 @@ console.log("Image pipeline error");
 
 res.json({results});
 
+});
+
+/* ===================================================== */
+/* SOCKET */
+/* ===================================================== */
+
+io.on("connection",(socket)=>{
+console.log("Socket connected:",socket.id);
 });
 
 /* ===================================================== */
