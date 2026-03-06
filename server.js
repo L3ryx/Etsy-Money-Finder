@@ -27,7 +27,6 @@ app.use(express.static("public"));
 /* ===================================================== */
 
 function sendLog(socket, message) {
-
   console.log(message);
 
   if (socket) {
@@ -39,7 +38,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
+/* 🔎 ETSY SEARCH (IMAGE + LINK ASSOCIATION FIXED) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -73,25 +72,29 @@ app.post("/search-etsy", async (req, res) => {
 
     const html = scraperResponse.data;
 
-    /* ================================================= */
-    /* EXTRACT IMAGE + LINKS FROM HTML */
-    /* ================================================= */
+    /* ===================================================== */
+    /* ✅ EXTRACT PRODUCT BLOCKS (IMAGE + LISTING MATCHED) */
+    /* ===================================================== */
 
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-    const images = [...html.matchAll(imageRegex)];
-    const links = [...html.matchAll(linkRegex)];
+    const productRegex =
+      /<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="(https:\/\/i\.etsystatic\.com[^"]+)"/g;
 
     const results = [];
 
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
+    let match;
+    let count = 0;
+
+    while ((match = productRegex.exec(html)) !== null && count < maxItems) {
+
+      const listingLink = match[1]; // ✅ annonce
+      const imageLink = match[2];   // ✅ image
 
       results.push({
-        image: images[i][0],
-        link: links[i] ? links[i][0] : etsyUrl
+        image: imageLink,
+        link: listingLink
       });
 
+      count++;
     }
 
     res.json({ results });
@@ -124,9 +127,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
     const base64 = file.buffer.toString("base64");
 
-    /* ================================================= */
+    /* ===================================================== */
     /* UPLOAD IMAGE TO IMGBB */
-    /* ================================================= */
+    /* ===================================================== */
 
     let imageUrl;
 
@@ -150,9 +153,9 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ================================================= */
+    /* ===================================================== */
     /* OPENAI VISION ANALYSIS */
-    /* ================================================= */
+    /* ===================================================== */
 
     try {
 
