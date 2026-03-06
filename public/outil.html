@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outil Pro</title>
+
+<style>
+
+body{
+margin:0;
+background:black;
+color:white;
+font-family:Arial, Helvetica, sans-serif;
+overflow:hidden;
+}
+
+/* ================= BACKGROUND BEES ================= */
+
+.bees{
+position:fixed;
+width:100%;
+height:100%;
+z-index:-1;
+}
+
+.bee{
+position:absolute;
+width:20px;
+height:20px;
+background:yellow;
+border-radius:50%;
+animation:fly 10s linear infinite;
+opacity:0.8;
+}
+
+.bee::after{
+content:"";
+position:absolute;
+width:6px;
+height:6px;
+background:black;
+border-radius:50%;
+top:7px;
+left:7px;
+}
+
+/* Animation abeille qui vole */
+
+@keyframes fly{
+0%{ transform:translate(0,0); }
+25%{ transform:translate(200px, -100px); }
+50%{ transform:translate(400px, 100px); }
+75%{ transform:translate(200px, 200px); }
+100%{ transform:translate(0,0); }
+}
+
+/* ================= CENTER BOX ================= */
+
+.container{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+gap:20px;
+}
+
+input{
+padding:15px;
+width:300px;
+border-radius:15px;
+border:none;
+outline:none;
+}
+
+button{
+padding:15px 25px;
+border:none;
+border-radius:15px;
+background:yellow;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* ================= LOADING LENS ================= */
+
+.loader{
+display:none;
+width:60px;
+height:60px;
+border:6px solid yellow;
+border-top:6px solid transparent;
+border-radius:50%;
+animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+.result{
+margin-top:20px;
+color:yellow;
+font-weight:bold;
+}
+
+</style>
+</head>
+<body>
+
+<!-- 🐝 BEES BACKGROUND -->
+<div class="bees" id="bees"></div>
+
+<div class="container">
+
+<h1>🔎 Mon Outil IA</h1>
+
+<input type="text" id="query" placeholder="Tape ta recherche">
+
+<button onclick="search()">Rechercher</button>
+
+<div class="loader" id="loader"></div>
+
+<div class="result" id="result"></div>
+
+</div>
+
+<script>
+
+/* ================= CREATE BEES ================= */
+
+const beesContainer = document.getElementById("bees");
+
+for(let i=0;i<15;i++){
+
+const bee = document.createElement("div");
+bee.classList.add("bee");
+
+bee.style.top = Math.random()*100 + "%";
+bee.style.left = Math.random()*100 + "%";
+bee.style.animationDuration = (5 + Math.random()*10) + "s";
+
+beesContainer.appendChild(bee);
+}
+
+/* ================= SEARCH FUNCTION ================= */
+
+async function search(){
+
+const query = document.getElementById("query").value;
+const loader = document.getElementById("loader");
+const result = document.getElementById("result");
+
+if(!query){
+alert("Tape une recherche !");
+return;
+}
+
+loader.style.display = "block";
+result.innerHTML = "";
+
+const token = localStorage.getItem("token");
+
+const res = await fetch("/search",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify({query})
+});
+
+const data = await res.json();
+
+loader.style.display = "none";
+
+if(res.ok){
+result.innerHTML = "✅ Résultat : " + data.message;
+}else{
+result.innerHTML = "❌ Erreur : " + data.message;
+}
+
+}
+
+</script>
+
+</body>
+</html>
