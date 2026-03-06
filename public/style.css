@@ -13,17 +13,20 @@ overflow-x:hidden;
 color:white;
 }
 
-/* ================= BACKGROUND IMAGE ================= */
+/* ================= BACKGROUND IMAGE (RENDER FRIENDLY) ================= */
 
 .sky{
 position:relative;
 min-height:100vh;
 
-/* ✅ IMAGE FOND (fonctionne avec Express public) */
-background:url("background.jpg") center/cover no-repeat fixed;
+/* ✅ IMPORTANT : chemin correct pour Express + Render */
+background-image:url("/background.jpg");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
 
-/* 🔥 Overlay sombre pour mieux voir le texte */
-background-color:rgba(0,0,0,0.5);
+/* 🔥 Assombrit l’image pour voir le texte */
+background-color:rgba(0,0,0,0.6);
 background-blend-mode:darken;
 
 padding-bottom:180px;
@@ -85,7 +88,7 @@ padding:40px;
 justify-items:center;
 }
 
-/* Responsive */
+/* Responsive mobile */
 @media(max-width:768px){
 #results{
 grid-template-columns:1fr;
@@ -96,7 +99,7 @@ grid-template-columns:1fr;
 
 .result-card{
 position:relative;
-background:rgba(0,0,0,0.8);
+background:rgba(0,0,0,0.85);
 padding:15px;
 border-radius:15px;
 text-align:center;
@@ -111,7 +114,7 @@ transform:translateY(-5px);
 box-shadow:0 0 25px #00ff66;
 }
 
-/* ================= FIRE ANIMATION ================= */
+/* ================= 🔥 FLAMMES ANIMEES ================= */
 
 .result-card::before,
 .result-card::after{
@@ -141,6 +144,7 @@ to{transform:scale(1.4);}
 .result-card img{
 width:100%;
 border-radius:10px;
+display:block;
 }
 
 /* ================= LINK ================= */
@@ -168,7 +172,7 @@ height:120px;
 background:linear-gradient(#0a5f00,#0f8f00);
 }
 
-/* ================= LOADER DOG ================= */
+/* ================= 🐕 LOADER DOG ================= */
 
 .loader-dog{
 position:fixed;
@@ -177,6 +181,7 @@ left:-100px;
 font-size:60px;
 animation:dogRun 3s linear forwards;
 z-index:9999;
+pointer-events:none;
 }
 
 @keyframes dogRun{
