@@ -31,10 +31,6 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
 
-/* ===================================================== */
-/* ================= AUTH MIDDLEWARE ==================== */
-/* ===================================================== */
-
 function auth(req,res,next){
 
 const token = req.headers.authorization?.split(" ")[1];
@@ -49,39 +45,6 @@ req.user = decoded;
 next();
 }catch(err){
 return res.status(401).json({message:"Invalid token"});
-}
-
-}
-
-/* ===================================================== */
-/* ================= ADMIN MIDDLEWARE ================== */
-/* ===================================================== */
-
-function adminAuth(req,res,next){
-
-const token = req.headers.authorization?.split(" ")[1];
-
-if(!token){
-return res.status(401).json({message:"No token"});
-}
-
-try{
-
-const decoded = jwt.verify(token,process.env.JWT_SECRET);
-
-User.findById(decoded.userId).then(user=>{
-
-if(!user || user.role !== "admin"){
-return res.status(403).json({message:"Not admin"});
-}
-
-req.user = decoded;
-next();
-
-});
-
-}catch(err){
-return res.status(403).json({message:"Forbidden"});
 }
 
 }
@@ -107,16 +70,12 @@ password:hashed,
 credits:0,
 searchesUsed:0,
 paid:false,
-freeUnlimited:false,
-role:"user"
+role:"user",
+purchaseHistory:[],
+searchHistory:[]
 });
 
-/* 🔥 Create Stripe Customer */
-
-const customer = await stripe.customers.create({
-email
-});
-
+const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
 await user.save();
 
@@ -152,7 +111,29 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ============ STRIPE CHECKOUT (PLANS) ================ */
+/* ================= DASHBOARD DATA ==================== */
+/* ===================================================== */
+
+app.get("/me", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
+res.json({
+email:user.email,
+credits:user.credits,
+searchesUsed:user.searchesUsed,
+purchaseHistory:user.purchaseHistory || [],
+searchHistory:user.searchHistory || []
+});
+
+});
+
+/* ===================================================== */
+/* ============== STRIPE CHECKOUT ====================== */
 /* ===================================================== */
 
 app.post("/create-checkout-session", async(req,res)=>{
@@ -205,7 +186,7 @@ cancel_url:"http://localhost:10000/payment.html"
 res.json({url:session.url});
 
 }catch(err){
-console.log("Stripe error",err);
+console.log(err);
 res.status(500).json({message:"Stripe error"});
 }
 
@@ -228,11 +209,8 @@ req.headers["stripe-signature"],
 endpointSecret
 );
 }catch(err){
-console.log("Webhook error",err.message);
 return res.status(400).send(`Webhook Error: ${err.message}`);
 }
-
-/* 🔥 PAYMENT SUCCESS */
 
 if(event.type === "checkout.session.completed"){
 
@@ -250,9 +228,17 @@ user.paid = true;
 user.credits = searches;
 user.searchesUsed = 0;
 
+user.purchaseHistory = user.purchaseHistory || [];
+
+user.purchaseHistory.push({
+plan: session.metadata.plan,
+searches: searches,
+date: new Date()
+});
+
 await user.save();
 
-console.log("✅ Credits added for",user.email);
+console.log("✅ Credits added");
 }
 
 }
@@ -281,9 +267,17 @@ return res.status(403).json({message:"No credits"});
 user.credits -= 1;
 user.searchesUsed += 1;
 
-await user.save();
+/* 🔥 Sauvegarde historique recherche */
 
-/* 👉 Ici tu mets ton moteur de recherche / IA */
+user.searchHistory = user.searchHistory || [];
+
+user.searchHistory.push({
+query:req.body.query || "Unknown",
+result:"RESULTAT ICI",
+date:new Date()
+});
+
+await user.save();
 
 res.json({
 message:"Search success",
