@@ -3,149 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Outil</title>
+<title>Niche Finder</title>
+
+<script src="/socket.io/socket.io.js"></script>
 
 <style>
 
-/* ================= GLOBAL ================= */
-
-*{
-box-sizing:border-box;
-}
+/* ===================================================== */
+/* GLOBAL */
+/* ===================================================== */
 
 body{
 margin:0;
 font-family:Arial, Helvetica, sans-serif;
-overflow:hidden;
-
-/* 🔥 Fond image */
-background:url("/images/background.jpg") no-repeat center center fixed;
-background-size:cover;
+background:#0f0f0f;
 color:white;
+display:flex;
+justify-content:center;
 }
 
-/* Overlay noir premium */
-body::before{
-content:"";
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.7);
-z-index:-1;
-}
-
-/* ================= CONTAINER ================= */
+/* ===================================================== */
+/* CONTAINER */
+/* ===================================================== */
 
 .container{
-height:100vh;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-gap:20px;
-text-align:center;
+width:900px;
+padding:40px;
 }
 
-input, select{
-padding:15px;
-width:320px;
+/* ===================================================== */
+/* HEADER */
+/* ===================================================== */
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+}
+
+.credits{
+background:gold;
+color:black;
+padding:8px 15px;
+border-radius:20px;
+font-weight:bold;
+}
+
+/* ===================================================== */
+/* SEARCH BOX */
+/* ===================================================== */
+
+input{
+width:70%;
+padding:14px;
 border-radius:12px;
 border:none;
 outline:none;
-font-size:15px;
-background:rgba(255,255,255,0.1);
+background:#222;
 color:white;
-backdrop-filter:blur(6px);
-}
-
-select option{
-color:black;
 }
 
 button{
-padding:15px 25px;
+padding:14px 20px;
 border:none;
 border-radius:12px;
-background:orange;
+background:gold;
 font-weight:bold;
 cursor:pointer;
 transition:0.3s;
 }
 
 button:hover{
-transform:scale(1.05);
+opacity:0.8;
 }
 
-/* ================= METEORITE LOADING ================= */
+/* ===================================================== */
+/* LOADER */
+/* ===================================================== */
 
-.loading-container{
-width:80%;
-max-width:500px;
-display:none;
-flex-direction:column;
-align-items:center;
-gap:15px;
-}
-
-/* Barre */
-
-.progress-bar{
-width:100%;
-height:10px;
-background:rgba(255,255,255,0.2);
-border-radius:20px;
+.loader{
+margin-top:20px;
+height:6px;
+background:#333;
+border-radius:10px;
 overflow:hidden;
+display:none;
 }
 
-.progress-fill{
+.loader-bar{
 height:100%;
 width:0%;
-background:linear-gradient(90deg, orange, red);
-transition:width 0.5s ease;
-position:relative;
+background:linear-gradient(90deg,orange,red);
+transition:width 0.4s;
 }
 
-/* Meteorite */
+/* ===================================================== */
+/* RESULTS */
+/* ===================================================== */
 
-.meteor{
-position:absolute;
-right:-40px;
-top:-10px;
-width:25px;
-height:25px;
-background:orange;
-border-radius:50%;
-box-shadow:0 0 20px orange;
-animation:fly 1.5s linear infinite;
+.results{
+margin-top:30px;
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:20px;
 }
 
-.meteor::after{
-content:"";
-position:absolute;
-width:60px;
-height:6px;
-background:linear-gradient(90deg, orange, transparent);
-right:20px;
-top:9px;
-border-radius:50%;
+.card{
+background:#1a1a1a;
+padding:15px;
+border-radius:15px;
 }
 
-/* Animation trajectoire */
-
-@keyframes fly{
-0%{transform:translateX(0) translateY(0);}
-50%{transform:translateX(-10px) translateY(5px);}
-100%{transform:translateX(0) translateY(0);}
+.card img{
+width:100%;
+border-radius:10px;
 }
 
-/* Result */
+.logs{
+margin-top:20px;
+background:#111;
+padding:15px;
+border-radius:15px;
+height:150px;
+overflow:auto;
+font-size:13px;
+}
 
-.result{
-margin-top:10px;
-color:orange;
-font-weight:bold;
+.log{
+color:lightgreen;
 }
 
 </style>
@@ -154,104 +140,168 @@ font-weight:bold;
 
 <div class="container">
 
-<h1>🔎 Niche Finder</h1>
+<!-- ================= HEADER ================= -->
 
-<input type="text" id="query" placeholder="Tape ta niche">
+<div class="header">
+<h2>Niche Finder 🚀</h2>
+<div class="credits" id="credits">Credits: -</div>
+</div>
 
-<select id="numberSelect">
-<script>
-for(let i=1;i<=100;i++){
-document.write(`<option value="${i}">${i}</option>`);
-}
-</script>
-</select>
+<!-- ================= SEARCH ================= -->
 
+<input type="text" id="keyword" placeholder="Mot clé...">
+<input type="number" id="limit" placeholder="Limit" value="10">
 <button onclick="search()">Rechercher</button>
 
-<!-- 🔥 LOADING METEOR -->
-<div class="loading-container" id="loading">
-
-<div style="position:relative;width:100%">
-<div class="progress-bar">
-<div class="progress-fill" id="progress"></div>
-</div>
-<div class="meteor"></div>
+<div class="loader" id="loader">
+<div class="loader-bar" id="loaderBar"></div>
 </div>
 
-<div id="stepText">Initialisation...</div>
+<!-- ================= RESULTS ================= -->
 
-</div>
+<div class="results" id="results"></div>
 
-<div class="result" id="result"></div>
+<!-- ================= LOGS ================= -->
+
+<div class="logs" id="logs"></div>
 
 </div>
 
 <script>
 
-/* ================= LOADING SYSTEM ================= */
-
-const loading = document.getElementById("loading");
-const progress = document.getElementById("progress");
-const stepText = document.getElementById("stepText");
-
-function updateProgress(percent, text){
-
-progress.style.width = percent + "%";
-stepText.innerText = text;
-
-}
-
-/* ================= SEARCH ================= */
-
-async function search(){
-
-const query = document.getElementById("query").value;
-const number = document.getElementById("numberSelect").value;
-const result = document.getElementById("result");
-
-if(!query){
-alert("Tape une niche !");
-return;
-}
-
-result.innerHTML = "";
-loading.style.display = "flex";
-
-/* 🔥 Étape 1 - Recherche */
-updateProgress(20,"🔍 Recherche des données...");
-
-await new Promise(r=>setTimeout(r,1000));
-
-/* 🔥 Étape 2 - Analyse */
-updateProgress(60,"🧠 Analyse des résultats...");
-
-await new Promise(r=>setTimeout(r,1500));
-
-/* 🔥 Étape 3 - Optimisation */
-updateProgress(90,"🚀 Finalisation...");
+/* ===================================================== */
+/* AUTH TOKEN */
+/* ===================================================== */
 
 const token = localStorage.getItem("token");
 
-await fetch("/search",{
+if(!token){
+alert("Connecte toi !");
+window.location.href="/login.html";
+}
+
+/* ===================================================== */
+/* SOCKET CONNECTION */
+/* ===================================================== */
+
+const socket = io();
+
+let socketId = null;
+
+socket.on("connected",(data)=>{
+socketId = data.socketId;
+});
+
+socket.on("log",(data)=>{
+const logs = document.getElementById("logs");
+logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
+logs.scrollTop = logs.scrollHeight;
+});
+
+/* ===================================================== */
+/* LOAD USER INFO */
+/* ===================================================== */
+
+async function loadUser(){
+
+const res = await fetch("/me",{
+headers:{
+Authorization:"Bearer " + token
+}
+});
+
+if(res.ok){
+const data = await res.json();
+document.getElementById("credits").innerText =
+"Credits: " + data.credits;
+}
+}
+
+loadUser();
+
+/* ===================================================== */
+/* SEARCH FUNCTION */
+/* ===================================================== */
+
+async function search(){
+
+const keyword = document.getElementById("keyword").value;
+const limit = document.getElementById("limit").value;
+
+if(!keyword) return alert("Keyword obligatoire");
+
+document.getElementById("loader").style.display="block";
+document.getElementById("loaderBar").style.width="20%";
+
+const res = await fetch("/search-etsy",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-Authorization:"Bearer "+token
+Authorization:"Bearer " + token
 },
-body:JSON.stringify({query,number})
+body:JSON.stringify({keyword,limit})
 });
 
-await new Promise(r=>setTimeout(r,800));
+const data = await res.json();
 
-updateProgress(100,"✅ Terminé !");
+document.getElementById("loaderBar").style.width="100%";
 
 setTimeout(()=>{
-loading.style.display="none";
-result.innerHTML="🔥 Recherche complétée avec succès";
-progress.style.width="0%";
-stepText.innerText="Initialisation...";
-},800);
+document.getElementById("loader").style.display="none";
+},500);
 
+displayResults(data.results);
+}
+
+/* ===================================================== */
+/* DISPLAY RESULTS */
+/* ===================================================== */
+
+function displayResults(results){
+
+const container = document.getElementById("results");
+container.innerHTML = "";
+
+results.forEach(item=>{
+
+const card = document.createElement("div");
+card.className = "card";
+
+card.innerHTML = `
+<img src="${item.image}">
+<a href="${item.link}" target="_blank">Voir Listing</a>
+`;
+
+container.appendChild(card);
+
+});
+}
+
+/* ===================================================== */
+/* IMAGE ANALYSIS (UPLOAD + SOCKET) */
+/* ===================================================== */
+
+async function analyzeImages(files){
+
+const formData = new FormData();
+
+for(let file of files){
+formData.append("images",file);
+}
+
+formData.append("socketId",socketId);
+
+const res = await fetch("/analyze-images",{
+method:"POST",
+headers:{
+Authorization:"Bearer " + token
+},
+body:formData
+});
+
+const data = await res.json();
+
+console.log(data);
 }
 
 </script>
