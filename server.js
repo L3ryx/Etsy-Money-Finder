@@ -1,7 +1,3 @@
-/* ===================================================== */
-/* ===================== IMPORTS ======================= */
-/* ===================================================== */
-
 require("dotenv").config();
 
 const express = require("express");
@@ -13,24 +9,19 @@ const jwt = require("jsonwebtoken");
 const cheerio = require("cheerio");
 const Stripe = require("stripe");
 
-/* ===================================================== */
-/* ================= CONFIG ============================ */
-/* ===================================================== */
+/* ================= CONFIG ================= */
 
 const app = express();
 const server = http.createServer(app);
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-/* ===================================================== */
-/* ================= MODELS ============================ */
-/* ===================================================== */
+/* ================= MODELS ================= */
 
 const User = require("./models/User");
 const SavedProduct = require("./models/SavedProduct");
+const Transaction = require("./models/Transaction");
 
-/* ===================================================== */
-/* ================= DATABASE ========================== */
-/* ===================================================== */
+/* ================= DATABASE ================= */
 
 mongoose.connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
@@ -38,17 +29,13 @@ mongoose.connect(
 .then(()=>console.log("✅ Mongo Connected"))
 .catch(err=>console.log("❌ Mongo Error",err));
 
-/* ===================================================== */
-/* ================= MIDDLEWARE ======================== */
-/* ===================================================== */
+/* ================= MIDDLEWARE ================= */
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
 
-/* ===================================================== */
-/* ================= AUTH ============================== */
-/* ===================================================== */
+/* ================= AUTH ================= */
 
 function auth(req,res,next){
 
@@ -88,7 +75,7 @@ email,
 password:hashed
 });
 
-/* 🔥 CREATE STRIPE CUSTOMER */
+/* 🔥 Create Stripe Customer */
 
 const customer = await stripe.customers.create({
 email
@@ -130,7 +117,7 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* =============== BUY CREDIT PACK ===================== */
+/* ============ BUY CREDIT PACK ======================== */
 /* ===================================================== */
 
 app.post("/buy-pack", auth, async(req,res)=>{
@@ -201,23 +188,24 @@ app.post("/search-etsy", auth, async(req,res)=>{
 
 const {keyword,limit} = req.body;
 
-try{
-
 const user = await User.findById(req.user.userId);
 
-/* 🔥 CREDIT CHECK */
-
 if(user.credits <= 0){
-return res.status(400).json({message:"No credits"});
+return res.status(402).json({
+message:"No credits",
+redirect:"/payment.html"
+});
 }
 
-/* 🔥 DECREMENT CREDIT */
+/* 🔥 Decrement credit */
 
 await User.findByIdAndUpdate(user._id,{
 $inc:{credits:-1}
 });
 
-/* 🔥 SCRAPER */
+/* 🔥 Scraping */
+
+try{
 
 const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
@@ -230,7 +218,6 @@ render:true
 });
 
 const $ = cheerio.load(response.data);
-
 const results = [];
 
 $("a").each((i,el)=>{
@@ -259,19 +246,89 @@ link: href.startsWith("http")
 
 });
 
-res.json({results,creditsLeft:user.credits - 1});
+res.json({
+results,
+creditsLeft:user.credits - 1
+});
 
 }catch(err){
 
-console.log("❌ Search error");
-res.status(400).json({message:"Search failed"});
+res.status(500).json({message:"Search failed"});
 
 }
 
 });
 
 /* ===================================================== */
-/* ================= WEBHOOK =========================== */
+/* ============ CHECK CREDITS ========================== */
+/* ===================================================== */
+
+app.get("/check-credits", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+res.json({
+credits:user.credits
+});
+
+});
+
+/* ===================================================== */
+/* ============ TRANSACTIONS =========================== */
+/* ===================================================== */
+
+app.get("/transactions", auth, async(req,res)=>{
+
+const transactions = await Transaction.find({
+userId:req.user.userId
+}).sort({createdAt:-1});
+
+res.json({transactions});
+
+});
+
+/* ===================================================== */
+/* ============ STRIPE CHECKOUT ======================== */
+/* ===================================================== */
+
+app.post("/create-checkout-session", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+const session = await stripe.checkout.sessions.create({
+
+payment_method_types:["card"],
+mode:"payment",
+
+line_items:[{
+price_data:{
+currency:"eur",
+product_data:{
+name:"Activation Premium"
+},
+unit_amount:50
+},
+quantity:1
+}],
+
+customer:user.stripeCustomerId,
+
+metadata:{
+userId:user._id.toString(),
+credits:0
+},
+
+success_url:"https://"+req.headers.host+"/dashboard.html",
+cancel_url:"https://"+req.headers.host+"/payment.html"
+
+});
+
+res.json({url:session.url});
+
+});
+
+/* ===================================================== */
+/* ============ WEBHOOK ================================ */
 /* ===================================================== */
 
 app.post("/webhook",
@@ -301,13 +358,20 @@ const session = event.data.object;
 const userId = session.metadata.userId;
 const credits = parseInt(session.metadata.credits || 0);
 
+/* 🔥 Pack achat */
+
 if(credits > 0){
 
 await User.findByIdAndUpdate(userId,{
 $inc:{credits:credits}
 });
 
-console.log("✅ Credits added");
+await Transaction.create({
+userId,
+type:"pack",
+amount:session.amount_total,
+credits
+});
 
 }else{
 
@@ -315,7 +379,12 @@ await User.findByIdAndUpdate(userId,{
 paid:true
 });
 
-console.log("✅ Payment activated");
+await Transaction.create({
+userId,
+type:"activation",
+amount:session.amount_total,
+credits:0
+});
 
 }
 
