@@ -1,14 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ajouter Carte</title>
+
 <script src="https://js.stripe.com/v3/"></script>
 
 <style>
 
 body{
-font-family:Arial;
+margin:0;
+font-family:Arial, sans-serif;
 background:black;
 color:white;
 display:flex;
@@ -22,16 +25,35 @@ background:rgba(255,255,255,0.1);
 padding:40px;
 border-radius:15px;
 width:400px;
+text-align:center;
+backdrop-filter:blur(10px);
+}
+
+h2{
+margin-bottom:20px;
+}
+
+#card-element{
+background:white;
+padding:15px;
+border-radius:10px;
+color:black;
 }
 
 button{
+margin-top:20px;
 width:100%;
 padding:12px;
 background:#00e676;
 border:none;
 border-radius:8px;
-cursor:pointer;
 font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
 }
 
 </style>
@@ -41,20 +63,22 @@ font-weight:bold;
 
 <div class="box">
 
-<h2>Ajouter votre carte</h2>
+<h2>💳 Ajouter votre carte</h2>
 
 <div id="card-element"></div>
 
-<br>
-
 <button onclick="saveCard()">Enregistrer Carte</button>
+
+<p style="margin-top:15px;">
+<a href="/dashboard" style="color:#00e676;">Retour Dashboard</a>
+</p>
 
 </div>
 
 <script>
 
-/* 🔥 IMPORTANT — METS TA CLÉ PUBLIQUE ICI */
-const stripe = Stripe("YOUR_PUBLIC_KEY");
+/* 🔥 METS TA VRAIE CLÉ PUBLIQUE ICI */
+const stripe = Stripe(pk_live_51T7tExGaaKHR3H6cYk0dqaId2i0ByoKPAAt7gsiosHw7Jg0VoMazHvXFyYo1EmjxsVk8nQ4RWQgdUS7EPvC5UuG700S5aUHblq);
 
 const elements = stripe.elements();
 const cardElement = elements.create("card");
@@ -69,7 +93,7 @@ alert("Connecte-toi d'abord");
 return;
 }
 
-/* 🔥 CREATE PAYMENT METHOD DIRECTEMENT */
+/* 🔥 Création Payment Method */
 
 const result = await stripe.createPaymentMethod({
 type: "card",
@@ -81,9 +105,9 @@ alert(result.error.message);
 return;
 }
 
-/* 🔥 ENVOI AU SERVEUR */
+/* 🔥 Envoi au backend */
 
-const res = await fetch("/attach-card",{
+const response = await fetch("/attach-card",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
@@ -94,13 +118,13 @@ paymentMethodId: result.paymentMethod.id
 })
 });
 
-const data = await res.json();
+const data = await response.json();
 
-if(res.ok){
+if(response.ok){
 alert("Carte enregistrée ✅");
 window.location="/dashboard";
 }else{
-alert("Erreur");
+alert(data.message || "Erreur lors de l'enregistrement");
 }
 
 }
