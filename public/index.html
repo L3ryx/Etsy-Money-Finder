@@ -6,7 +6,7 @@
 
 <title>Niche Finder</title>
 
-<!-- 🔥 CROISSANT ONE -->
+<!-- 🔥 POLICE CROISSANT ONE -->
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="style.css">
@@ -40,6 +40,25 @@
 </div>
 
 </div>
+
+<!-- 🚀 SCRIPT FONCTIONNEL DU BOUTON -->
+<script>
+
+const startBtn = document.querySelector(".start-btn");
+
+startBtn.addEventListener("click", function() {
+
+const keyword = document.querySelector(".input-field").value;
+const limit = document.querySelector(".dropdown").value;
+
+alert("START cliqué ✅");
+
+console.log("Keyword :", keyword);
+console.log("Limit :", limit);
+
+});
+
+</script>
 
 </body>
 </html>
