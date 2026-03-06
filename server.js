@@ -4,233 +4,157 @@ const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Stripe = require("stripe");
 const { Server } = require("socket.io");
 
+/* ===================================================== */
+/* APP SETUP */
+/* ===================================================== */
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const User = require("./models/User");
+
+/* ===================================================== */
+/* DATABASE */
+/* ===================================================== */
+mongoose.connect(
+  `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(
+    process.env.DB_PASS
+  )}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
+)
+.then(() => console.log("✅ Mongo Connected"))
+.catch((err) => console.log("❌ Mongo Error", err));
 
 /* ===================================================== */
 /* MIDDLEWARE */
 /* ===================================================== */
-
-const upload = multer({
-  storage: multer.memoryStorage()
-});
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+const upload = multer({ storage: multer.memoryStorage() });
+
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* AUTH MIDDLEWARE */
 /* ===================================================== */
-
-function sendLog(socket, message) {
-
-  console.log(message);
-
-  if (socket) {
-    socket.emit("log", {
-      message,
-      time: new Date().toISOString()
-    });
+function auth(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "No token" });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
   }
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
+/* REGISTER */
 /* ===================================================== */
-
-app.post("/search-etsy", async (req, res) => {
-
-  console.log("🔥 Search route called");
-
-  const { keyword, limit } = req.body;
-
-  if (!keyword) {
-    return res.status(400).json({ error: "Keyword required" });
-  }
-
-  const maxItems = Math.min(parseInt(limit) || 10, 50);
-
+app.post("/register", async (req, res) => {
   try {
+    const { email, password } = req.body;
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: "User exists" });
 
-    const etsyUrl =
-      `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
-
-    /* ✅ SCRAPERAPI CALL */
-    const scraperResponse = await axios.get(
-      "https://api.scraperapi.com/",
-      {
-        params: {
-          api_key: process.env.SCRAPAPI_KEY,
-          url: etsyUrl,
-          render: true
-        }
-      }
-    );
-
-    const html = scraperResponse.data;
-
-    /* ================================================= */
-    /* EXTRACT IMAGE + LINKS FROM HTML */
-    /* ================================================= */
-
-    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-    const images = [...html.matchAll(imageRegex)];
-    const links = [...html.matchAll(linkRegex)];
-
-    const results = [];
-
-    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
-
-      results.push({
-        image: images[i][0],
-        link: links[i] ? links[i][0] : etsyUrl
-      });
-
-    }
-
-    res.json({ results });
-
-  } catch (err) {
-
-    console.error("ScraperAPI Error:", err.response?.data || err.message);
-
-    res.status(500).json({
-      error: "Scraping failed"
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      email,
+      password: hashed,
+      credits: 0,
+      role: "user",
+      paid: false,
+      purchaseHistory: [],
+      searchHistory: [],
     });
-  }
 
+    const customer = await stripe.customers.create({ email });
+    user.stripeCustomerId = customer.id;
+    await user.save();
+
+    res.json({ message: "User created" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Register failed" });
+  }
 });
 
 /* ===================================================== */
-/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* LOGIN */
 /* ===================================================== */
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid" });
 
-app.post("/analyze-images", upload.array("images"), async (req, res) => {
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ message: "Invalid" });
 
-  const socketId = req.body.socketId;
-  const socket = io.sockets.sockets.get(socketId);
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
-  const results = [];
+    res.json({ token });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Login failed" });
+  }
+});
 
-  for (const file of req.files) {
+/* ===================================================== */
+/* DASHBOARD */
+/* ===================================================== */
+app.get("/me", auth, async (req, res) => {
+  const user = await User.findById(req.user.userId);
+  if (!user) return res.status(404).json({ message: "User not found" });
 
-    sendLog(socket, `Processing ${file.originalname}`);
+  res.json({
+    email: user.email,
+    role: user.role,
+    credits: user.credits,
+    searchesUsed: user.searchesUsed,
+    purchaseHistory: user.purchaseHistory || [],
+    searchHistory: user.searchHistory || [],
+  });
+});
 
-    const base64 = file.buffer.toString("base64");
+/* ===================================================== */
+/* STRIPE CHECKOUT */
+/* ===================================================== */
+app.post("/create-checkout-session", auth, async (req, res) => {
+  const user = await User.findById(req.user.userId);
+  const { amount, plan, searches } = req.body;
 
-    /* ================================================= */
-    /* UPLOAD IMAGE TO IMGBB */
-    /* ================================================= */
-
-    let imageUrl;
-
-    try {
-
-      const uploadRes = await axios.post(
-        "https://api.imgbb.com/1/upload",
-        new URLSearchParams({
-          key: process.env.IMGBB_KEY,
-          image: base64
-        })
-      );
-
-      imageUrl = uploadRes.data.data.url;
-
-      sendLog(socket, "Uploaded to IMGBB");
-
-    } catch (err) {
-
-      sendLog(socket, "IMGBB upload failed");
-      continue;
-    }
-
-    /* ================================================= */
-    /* OPENAI VISION ANALYSIS */
-    /* ================================================= */
-
-    try {
-
-      const vision = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Return similarity score between 0 and 100."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageUrl
-                  }
-                }
-              ]
-            }
-          ]
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    customer: user.stripeCustomerId,
+    metadata: { plan, searches },
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          product_data: { name: `Plan ${plan}` },
+          unit_amount: amount,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      const text = vision.data.choices[0].message.content;
-      const match = text.match(/\d+/);
-      const similarity = match ? parseInt(match[0]) : 0;
-
-      sendLog(socket, `AI Similarity: ${similarity}%`);
-
-      results.push({
-        image: file.originalname,
-        matches: [
-          {
-            url: "AI_ANALYSIS",
-            similarity
-          }
-        ]
-      });
-
-    } catch (err) {
-
-      sendLog(socket, "OpenAI Vision failed");
-    }
-  }
-
-  res.json({ results });
-
-});
-
-/* ===================================================== */
-/* SOCKET CONNECTION */
-/* ===================================================== */
-
-io.on("connection", (socket) => {
-
-  socket.emit("connected", {
-    socketId: socket.id
+        quantity: 1,
+      },
+    ],
+    success_url: "http://localhost:10000/success.html",
+    cancel_url: "http://localhost:10000/payment.html",
   });
 
-  console.log("🟢 Client connected");
+  res.json({ url: session.url });
 });
 
 /* ===================================================== */
-/* SERVER START */
+/* WEBHOOK */
 /* ===================================================== */
-
-const PORT = process.env.PORT || 10000;
-
-server.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
-});
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const endpointSecret = process.env.STRIPE
