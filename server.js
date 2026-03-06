@@ -27,6 +27,7 @@ app.use(express.static("public"));
 /* ===================================================== */
 
 function sendLog(socket, message) {
+
   console.log(message);
 
   if (socket) {
@@ -38,7 +39,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH (IMAGE + LINK ASSOCIATION FIXED) */
+/* 🔎 ETSY SEARCH (IMAGE + LINK STABLE EXTRACTION) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -58,7 +59,10 @@ app.post("/search-etsy", async (req, res) => {
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    /* ✅ SCRAPERAPI CALL */
+    /* ===================================================== */
+    /* CALL SCRAPERAPI */
+    /* ===================================================== */
+
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -73,35 +77,31 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ===================================================== */
-    /* ✅ EXTRACT PRODUCT BLOCKS (IMAGE + LISTING MATCHED) */
+    /* ✅ STABLE EXTRACTION */
     /* ===================================================== */
 
-    const productRegex =
-      /<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="(https:\/\/i\.etsystatic\.com[^"]+)"/g;
+    const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+    const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+
+    const images = [...html.matchAll(imageRegex)].map(m => m[0]);
+    const links = [...html.matchAll(linkRegex)].map(m => m[0]);
 
     const results = [];
 
-    let match;
-    let count = 0;
-
-    while ((match = productRegex.exec(html)) !== null && count < maxItems) {
-
-      const listingLink = match[1]; // ✅ annonce
-      const imageLink = match[2];   // ✅ image
+    for (let i = 0; i < Math.min(maxItems, images.length); i++) {
 
       results.push({
-        image: imageLink,
-        link: listingLink
+        image: images[i],
+        link: links[i] || etsyUrl
       });
 
-      count++;
     }
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.response?.data || err.message);
+    console.error("ScraperAPI Error:", err.message);
 
     res.status(500).json({
       error: "Scraping failed"
