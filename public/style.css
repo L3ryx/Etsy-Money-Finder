@@ -21,7 +21,7 @@ width:100%;
 height:100vh;
 }
 
-/* ================= 4K CANVAS ================= */
+/* ================= CANVAS ================= */
 
 #gameCanvas{
 position:fixed;
@@ -39,6 +39,8 @@ pointer-events:none;
 text-align:center;
 font-size:42px;
 margin-top:30px;
+font-weight:bold;
+letter-spacing:2px;
 position:relative;
 z-index:10;
 }
@@ -62,6 +64,7 @@ padding:12px;
 border-radius:10px;
 border:none;
 outline:none;
+font-size:14px;
 }
 
 .start-btn{
@@ -77,74 +80,4 @@ transition:0.3s;
 .start-btn:hover{
 transform:scale(1.1);
 box-shadow:0 0 20px #00ff66;
-}
-
-/* ================= DOG + TAIL ================= */
-
-.dog{
-position:absolute;
-bottom:150px;
-left:60%;
-width:110px;
-height:80px;
-background:#b87333;
-border-radius:40px;
-animation:dogMove 2s infinite alternate;
-}
-
-.dog::before{
-content:"";
-position:absolute;
-width:60px;
-height:60px;
-background:#b87333;
-border-radius:50%;
-top:-30px;
-left:15px;
-}
-
-/* 🔥 Queue */
-.dog::after{
-content:"";
-position:absolute;
-width:40px;
-height:15px;
-background:#8b5a2b;
-border-radius:50%;
-right:-30px;
-top:30px;
-transform-origin:left center;
-animation:tailMove 0.5s infinite alternate;
-}
-
-@keyframes tailMove{
-from{transform:rotate(-20deg);}
-to{transform:rotate(20deg);}
-}
-
-@keyframes dogMove{
-from{transform:translateX(-10px);}
-to{transform:translateX(10px);}
-}
-
-/* ================= MONEY ================= */
-
-.money{
-position:absolute;
-font-size:28px;
-animation:moneyFly 4s linear forwards;
-}
-
-@keyframes moneyFly{
-
-0%{
-transform:translateY(0) rotate(0deg);
-opacity:1;
-}
-
-100%{
-transform:translateY(-500px) rotate(360deg);
-opacity:0;
-}
-
 }
