@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Niche Game</title>
+<title>Niche 3D Ultra Real</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
 
@@ -11,12 +13,6 @@ body{
   margin:0;
   overflow:hidden;
   background:black;
-  font-family:Arial;
-  color:white;
-}
-
-canvas{
-  display:block;
 }
 
 .ui{
@@ -25,188 +21,185 @@ canvas{
   width:100%;
   text-align:center;
   font-size:40px;
-  color:red;
-  text-shadow:0 0 20px red;
+  color:white;
+  text-shadow:0 0 20px gold;
+  font-family:Arial;
 }
 
 </style>
 </head>
 <body>
 
-<div class="ui">🐕 NICHE GAME 💰</div>
-
-<canvas id="game"></canvas>
+<div class="ui">🐕 Niche finder 💰</div>
 
 <script>
 
-/* ================= SETUP ================= */
+/* ================= SCENE ================= */
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const scene = new THREE.Scene();
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth/window.innerHeight,
+  0.1,
+  1000
+);
 
-window.addEventListener("resize", ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+/* ================= LIGHT ================= */
+
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(10,20,10);
+light.castShadow = true;
+scene.add(light);
+
+const ambient = new THREE.AmbientLight(0xffffff,0.5);
+scene.add(ambient);
+
+/* ================= GROUND (HERBE) ================= */
+
+const groundGeo = new THREE.PlaneGeometry(200,200);
+const groundMat = new THREE.MeshStandardMaterial({
+  color:0x2ecc71
 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
 
-/* ================= WORLD ================= */
+/* ================= SUN ================= */
 
-const groundY = canvas.height - 150;
-const niche = { x: canvas.width/2 - 80, y: groundY - 100, w:160, h:120 };
+const sunGeo = new THREE.SphereGeometry(5,32,32);
+const sunMat = new THREE.MeshStandardMaterial({
+  color:0xffff00,
+  emissive:0xffff00
+});
+const sun = new THREE.Mesh(sunGeo,sunMat);
+sun.position.set(0,50,-50);
+scene.add(sun);
 
-/* ================= DOG CLASS ================= */
+/* ================= NICHE ================= */
 
-class Dog{
+const nicheGeo = new THREE.BoxGeometry(10,8,8);
+const nicheMat = new THREE.MeshStandardMaterial({color:0x8b4513});
+const niche = new THREE.Mesh(nicheGeo,nicheMat);
 
-  constructor(direction){
+niche.position.set(0,4,20);
+niche.castShadow = true;
 
-    this.x = direction === "left" ? -100 : canvas.width + 100;
-    this.y = groundY - 50;
-    this.size = 60;
-    this.speed = direction === "left" ? 3 : -3;
-    this.velocityY = 0;
-    this.gravity = 0.8;
-    this.jumping = false;
-  }
+scene.add(niche);
 
-  update(){
+/* ================= DOGS ================= */
 
-    this.x += this.speed;
+const dogs = [];
 
-    // Jump before niche
-    if(!this.jumping && Math.abs(this.x - niche.x) < 200){
-      this.velocityY = -15;
-      this.jumping = true;
-    }
+function spawnDog(){
 
-    // Gravity
-    this.velocityY += this.gravity;
-    this.y += this.velocityY;
+  const dogGeo = new THREE.SphereGeometry(2,16,16);
+  const dogMat = new THREE.MeshStandardMaterial({
+    color:0x8b5a2b
+  });
 
-    // Ground collision
-    if(this.y >= groundY - 50){
-      this.y = groundY - 50;
-      this.velocityY = 0;
-      this.jumping = false;
-    }
-  }
+  const dog = new THREE.Mesh(dogGeo,dogMat);
+  dog.position.set(-100,2,0);
+  dog.castShadow = true;
 
-  draw(){
-    ctx.font = "60px Arial";
-    ctx.fillText("🐕", this.x, this.y);
-  }
+  dog.velocity = 0.5;
 
-  checkNiche(){
-
-    if(
-      this.x > niche.x &&
-      this.x < niche.x + niche.w &&
-      this.y > niche.y
-    ){
-      spawnMoneyExplosion(this.x, this.y);
-      return true;
-    }
-
-    return false;
-  }
-
+  scene.add(dog);
+  dogs.push(dog);
 }
+
+setInterval(spawnDog,2000);
 
 /* ================= MONEY PARTICLES ================= */
 
-class MoneyParticle{
+const moneyParticles = [];
 
-  constructor(x,y){
+function spawnMoney(x,y,z){
 
-    this.x = x;
-    this.y = y;
-    this.vx = (Math.random()-0.5)*8;
-    this.vy = -Math.random()*10;
-    this.alpha = 1;
-  }
+  const geo = new THREE.TextGeometry("$$$",{
+    size:2,
+    height:0.5
+  });
 
-  update(){
+  const mat = new THREE.MeshStandardMaterial({
+    color:0xffd700
+  });
 
-    this.x += this.vx;
-    this.y += this.vy;
-    this.vy += 0.5;
-    this.alpha -= 0.02;
-  }
+  const money = new THREE.Mesh(
+    new THREE.SphereGeometry(1,8,8),
+    mat
+  );
 
-  draw(){
+  money.position.set(x,y,z);
+  money.velocityY = Math.random()*1 + 0.5;
 
-    ctx.globalAlpha = this.alpha;
-    ctx.font = "30px Arial";
-    ctx.fillText("$", this.x, this.y);
-    ctx.globalAlpha = 1;
-  }
+  scene.add(money);
+  moneyParticles.push(money);
 }
 
-/* ================= SYSTEM ================= */
+/* ================= CAMERA ================= */
 
-let dogs = [];
-let particles = [];
+camera.position.set(0,30,60);
+camera.lookAt(0,0,0);
 
-/* Spawn dogs */
-
-setInterval(()=>{
-  const dir = Math.random() > 0.5 ? "left" : "right";
-  dogs.push(new Dog(dir));
-},2000);
-
-/* Spawn money explosion */
-
-function spawnMoneyExplosion(x,y){
-
-  for(let i=0;i<20;i++){
-    particles.push(new MoneyParticle(x,y));
-  }
-}
-
-/* ================= GAME LOOP ================= */
-
-function drawGround(){
-
-  ctx.fillStyle = "#2ecc71";
-  ctx.fillRect(0,groundY,canvas.width,200);
-
-  // Niche
-  ctx.font = "120px Arial";
-  ctx.fillText("🏠", niche.x, niche.y);
-}
+/* ================= ANIMATION ================= */
 
 function animate(){
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  requestAnimationFrame(animate);
 
-  drawGround();
+  dogs.forEach((dog,index)=>{
 
-  dogs = dogs.filter(dog => {
+    dog.position.x += dog.velocity;
 
-    dog.update();
-    dog.draw();
-
-    if(dog.checkNiche()){
-      return false;
+    // Jump near niche
+    if(dog.position.x > 15 && dog.position.x < 25){
+      dog.position.y = 10;
     }
 
-    return true;
+    // Collision with niche
+    if(dog.position.x > 20){
+
+      spawnMoney(dog.position.x,10,20);
+
+      scene.remove(dog);
+      dogs.splice(index,1);
+    }
 
   });
 
-  particles = particles.filter(p => {
-    p.update();
-    p.draw();
-    return p.alpha > 0;
+  moneyParticles.forEach((money,index)=>{
+
+    money.position.y += money.velocityY;
+    money.velocityY -= 0.02;
+
+    if(money.position.y < 0){
+      scene.remove(money);
+      moneyParticles.splice(index,1);
+    }
+
   });
 
-  requestAnimationFrame(animate);
+  renderer.render(scene,camera);
 }
 
 animate();
+
+/* ================= RESIZE ================= */
+
+window.addEventListener("resize",()=>{
+
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+
+});
 
 </script>
 
