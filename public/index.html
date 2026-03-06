@@ -3,243 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ultra Dog Animation</title>
 
-<style>
+<title>Niche Finder</title>
 
-/* ===================================================== */
-/* GLOBAL */
-/* ===================================================== */
-
-html, body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  font-family:Arial, sans-serif;
-}
-
-/* ===================================================== */
-/* SCENE */
-/* ===================================================== */
-
-.scene{
-  position:fixed;
-  width:100%;
-  height:100%;
-  top:0;
-  left:0;
-  z-index:-1;
-}
-
-/* SKY */
-
-.sky{
-  position:absolute;
-  width:100%;
-  height:65%;
-  background:linear-gradient(to bottom,#4da6ff,#87ceeb);
-}
-
-/* SUN */
-
-.sun{
-  position:absolute;
-  top:40px;
-  right:80px;
-  width:130px;
-  height:130px;
-  background:yellow;
-  border-radius:50%;
-  box-shadow:0 0 120px yellow;
-  animation:sunPulse 3s infinite alternate;
-}
-
-@keyframes sunPulse{
-  from{transform:scale(1);}
-  to{transform:scale(1.15);}
-}
-
-/* GRASS */
-
-.grass{
-  position:absolute;
-  bottom:0;
-  width:100%;
-  height:35%;
-  background:#2ecc71;
-}
-
-/* DOGHOUSE */
-
-.doghouse{
-  position:absolute;
-  bottom:28%;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:140px;
-}
-
-/* ===================================================== */
-/* DOG STYLE */
-/* ===================================================== */
-
-.dog{
-  position:absolute;
-  bottom:15%;
-  font-size:70px;
-  animation:dogMove 8s ease-in-out infinite;
-  filter:drop-shadow(0 20px 15px rgba(0,0,0,0.4));
-}
-
-/* ===================================================== */
-/* DOG MOVEMENT + JUMP */
-/* ===================================================== */
-
-@keyframes dogMove{
-
-  0%{
-    left:-20%;
-    transform:translateY(0) scale(1);
-  }
-
-  30%{
-    left:30%;
-    transform:translateY(0) scale(1);
-  }
-
-  40%{
-    transform:translateY(-120px) scale(1.1);
-  }
-
-  50%{
-    transform:translateY(0) scale(1);
-    left:45%;
-  }
-
-  60%{
-    opacity:0;
-    left:50%;
-  }
-
-  100%{
-    left:120%;
-    opacity:0;
-  }
-}
-
-/* ===================================================== */
-/* DUST EFFECT */
-/* ===================================================== */
-
-.dust{
-  position:absolute;
-  width:25px;
-  height:25px;
-  background:rgba(255,255,255,0.8);
-  border-radius:50%;
-  animation:dustAnim 1s linear infinite;
-  opacity:0;
-}
-
-@keyframes dustAnim{
-
-  0%{
-    transform:scale(0);
-    opacity:0;
-  }
-
-  30%{
-    transform:scale(1);
-    opacity:1;
-  }
-
-  100%{
-    transform:translateY(-40px) scale(0);
-    opacity:0;
-  }
-
-}
-
-/* ===================================================== */
-/* CARTOON EFFECT */
-/* ===================================================== */
-
-.scene{
-  image-rendering:pixelated;
-}
-
-.doghouse,
-.dog{
-  text-shadow:
-  2px 2px 0 black,
-  -2px -2px 0 black,
-  2px -2px 0 black,
-  -2px 2px 0 black;
-}
-
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="scene">
+<!-- ================= BACKGROUND ANIMATION ================= -->
 
-  <div class="sky">
-    <div class="sun"></div>
-  </div>
+<div class="world">
 
+  <div class="sky"></div>
+  <div class="sun"></div>
   <div class="grass"></div>
 
-  <div class="doghouse">
-    🏠
-  </div>
+  <div class="doghouse">🏠</div>
 
-  <div class="dog" id="dog">
-    🐕
-  </div>
+  <div class="dogs"></div>
+
+  <div class="money-rain"></div>
 
 </div>
 
-<script>
+<!-- ================= UI ================= -->
 
-/* ===================================================== */
-/* DUST GENERATION */
-/* ===================================================== */
+<h1 class="title">Niche Finder</h1>
 
-const dog = document.getElementById("dog");
+<div class="main-center">
 
-function createDust(){
+<div class="search-box">
 
-  const dust = document.createElement("div");
-  dust.classList.add("dust");
+<input type="text" id="keyword" placeholder="Keyword">
 
-  document.body.appendChild(dust);
+<select id="limit">
+<option value="1">1</option>
+<option value="10">10</option>
+<option value="50">50</option>
+<option value="100">100</option>
+</select>
 
-  const rect = dog.getBoundingClientRect();
+<button onclick="searchEtsy()" class="start-btn">
+🚨 START
+</button>
 
-  dust.style.left = rect.left + "px";
-  dust.style.top = rect.bottom + "px";
+</div>
 
-  setTimeout(()=>dust.remove(),1000);
-}
+<div id="results"></div>
 
-/* ===================================================== */
-/* DETECT JUMP EVENT */
-/* ===================================================== */
+</div>
 
-setInterval(()=>{
-
-  const style = getComputedStyle(dog);
-  const opacity = style.opacity;
-
-  if(opacity === "1"){
-    createDust();
-  }
-
-},1500);
-
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
