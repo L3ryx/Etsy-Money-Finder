@@ -1,10 +1,19 @@
-require("dotenv").config();
+/* ===================================================== */
+/* ES MODULE VERSION (FIX RENDER ERROR) */
+/* ===================================================== */
 
-const express = require("express");
-const multer = require("multer");
-const axios = require("axios");
-const http = require("http");
-const { Server } = require("socket.io");
+import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
+import multer from "multer";
+import axios from "axios";
+import http from "http";
+import { Server } from "socket.io";
+
+/* ===================================================== */
+/* APP INIT */
+/* ===================================================== */
 
 const app = express();
 const server = http.createServer(app);
@@ -23,11 +32,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* SOCKET SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket, message) {
-
   console.log(message);
 
   if (socket) {
@@ -39,7 +47,7 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH VIA SCRAPERAPI (CORRECT VERSION) */
+/* 🔎 ETSY SEARCH (UNCHANGED LOGIC) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -59,7 +67,6 @@ app.post("/search-etsy", async (req, res) => {
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    /* ✅ SCRAPERAPI CALL */
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
@@ -72,10 +79,6 @@ app.post("/search-etsy", async (req, res) => {
     );
 
     const html = scraperResponse.data;
-
-    /* ================================================= */
-    /* EXTRACT IMAGE + LINKS FROM HTML */
-    /* ================================================= */
 
     const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
     const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
@@ -98,7 +101,7 @@ app.post("/search-etsy", async (req, res) => {
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.response?.data || err.message);
+    console.error("ScraperAPI Error:", err.message);
 
     res.status(500).json({
       error: "Scraping failed"
@@ -108,7 +111,7 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ===================================================== */
-/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* 🧠 IMAGE ANALYSIS (UNCHANGED LOGIC) */
 /* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
@@ -123,10 +126,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
-
-    /* ================================================= */
-    /* UPLOAD IMAGE TO IMGBB */
-    /* ================================================= */
 
     let imageUrl;
 
@@ -149,10 +148,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       sendLog(socket, "IMGBB upload failed");
       continue;
     }
-
-    /* ================================================= */
-    /* OPENAI VISION ANALYSIS */
-    /* ================================================= */
 
     try {
 
