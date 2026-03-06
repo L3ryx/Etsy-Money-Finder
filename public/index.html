@@ -11,17 +11,72 @@
 </head>
 <body>
 
-<!-- ================= USER BUTTON TOP RIGHT ================= -->
+<!-- 🔴 POPUP BLOQUANT OBLIGATOIRE -->
 
-<div style="position:fixed;top:20px;right:20px;z-index:9999;">
-<button onclick="openAuthPopup()"
+<div id="authPopup" style="
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.95);
+backdrop-filter:blur(15px);
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:9999;
+">
+
+<div style="
+background:white;
+padding:40px;
+border-radius:20px;
+width:400px;
+text-align:center;
+">
+
+<h2>Accès obligatoire</h2>
+
+<p style="margin-bottom:15px;">
+Crée un compte pour accéder à l'outil.
+</p>
+
+<input type="email" id="email" placeholder="Email"
+style="width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+
+<input type="password" id="password" placeholder="Mot de passe"
+style="width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+
+<button onclick="registerUser()"
+style="
+width:100%;
+padding:14px;
+background:black;
+color:white;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+margin-top:10px;
+">
+Créer compte
+</button>
+
+</div>
+
+</div>
+
+<!-- ================= USER BUTTON ================= -->
+
+<div style="position:fixed;top:20px;right:20px;z-index:999;">
+<button onclick="openPopup()"
 style="
 background:white;
 border:none;
 width:50px;
 height:50px;
 border-radius:50%;
-font-size:22px;
+font-size:20px;
 cursor:pointer;
 box-shadow:0 5px 15px rgba(0,0,0,0.3);
 ">
@@ -29,7 +84,7 @@ box-shadow:0 5px 15px rgba(0,0,0,0.3);
 </button>
 </div>
 
-<!-- ================= BACKGROUND ================= -->
+<!-- ================= MAIN CONTENT ================= -->
 
 <img src="/background.gif" class="gif-background">
 
@@ -38,8 +93,6 @@ box-shadow:0 5px 15px rgba(0,0,0,0.3);
 <div class="smoke"></div>
 <div class="smoke"></div>
 </div>
-
-<!-- ================= MAIN CONTENT ================= -->
 
 <div class="container">
 
@@ -83,67 +136,17 @@ Les niches n'ont plus de secrets !
 <p>Recherche en cours...</p>
 </div>
 
-<!-- ================= AUTH POPUP ================= -->
-
-<div id="authPopup" style="
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.7);
-backdrop-filter:blur(10px);
-display:none;
-justify-content:center;
-align-items:center;
-z-index:9998;
-">
-
-<div style="
-background:white;
-padding:40px;
-border-radius:20px;
-width:350px;
-text-align:center;
-">
-
-<h2>Créer un compte</h2>
-
-<input type="email" id="email" placeholder="Email"
-style="width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ccc;">
-
-<input type="password" id="password" placeholder="Mot de passe"
-style="width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ccc;">
-
-<button onclick="registerUser()"
-style="
-width:100%;
-padding:12px;
-background:black;
-color:white;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-weight:bold;
-">
-S'inscrire
-</button>
-
-</div>
-
-</div>
-
 <!-- ================= SCRIPT ================= -->
 
 <script>
 
-/* ================= POPUP ================= */
+/* 🔥 OUVRIR POPUP MANUELLEMENT */
 
-function openAuthPopup(){
+function openPopup(){
 document.getElementById("authPopup").style.display="flex";
 }
 
-/* ================= REGISTER ================= */
+/* 🔥 INSCRIPTION */
 
 async function registerUser(){
 
@@ -161,8 +164,12 @@ body:JSON.stringify({email,password})
 const data = await res.json();
 
 if(res.ok){
+
 alert("Compte créé ✅");
-document.getElementById("authPopup").style.display="none";
+
+// 🔥 Redirection vers paiement obligatoire
+window.location="/payment";
+
 }else{
 alert(data.message);
 }
@@ -184,7 +191,7 @@ const token = localStorage.getItem("token");
 
 if(!token){
 alert("Connecte-toi !");
-openAuthPopup();
+openPopup();
 return;
 }
 
@@ -218,6 +225,8 @@ resultsContainer.innerHTML += `
 
 });
 
+}else{
+alert(data.message || "Erreur");
 }
 
 loader.classList.add("hidden");
