@@ -3,104 +3,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Choisir un plan</title>
+
+<title>Paiement</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 
 <style>
 
-body{
+/* ===================================================== */
+/* ===================== GLOBAL ======================== */
+/* ===================================================== */
+
+*{
 margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Croissant One', cursive;
+}
+
+body{
 background:black;
 color:white;
-font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
 }
 
+/* ===================================================== */
+/* ===================== CONTAINER ===================== */
+/* ===================================================== */
+
 .container{
-width:500px;
 background:#111;
-padding:30px;
+padding:50px;
 border-radius:30px;
-box-shadow:0 0 80px rgba(255,255,255,0.08);
+width:400px;
 text-align:center;
+box-shadow:0 0 60px rgba(0,255,102,0.3);
 }
+
+.container h2{
+color:#00ff66;
+margin-bottom:25px;
+}
+
+/* ===================================================== */
+/* ===================== PLAN CARD ===================== */
+/* ===================================================== */
 
 .plan{
 background:#1a1a1a;
-padding:20px;
+padding:15px;
 border-radius:20px;
-margin-bottom:15px;
+margin:15px 0;
+cursor:pointer;
 transition:0.3s;
+border:2px solid transparent;
 }
 
 .plan:hover{
-transform:scale(1.03);
+transform:scale(1.05);
+box-shadow:0 0 20px #00ff66;
 }
 
-.plan h3{
-color:yellow;
+.plan.active{
+border:2px solid #00ff66;
 }
+
+/* ===================================================== */
+/* ===================== BUTTON ======================== */
+/* ===================================================== */
 
 button{
-padding:10px 15px;
+width:100%;
+padding:15px;
 border:none;
-border-radius:10px;
-background:yellow;
+border-radius:20px;
+background:#00ff66;
+color:black;
 font-weight:bold;
 cursor:pointer;
+transition:0.3s;
+margin-top:20px;
 }
 
 button:hover{
-opacity:0.8;
+transform:scale(1.05);
+box-shadow:0 0 20px #00ff66;
 }
 
+button:disabled{
+opacity:0.5;
+cursor:not-allowed;
+}
+
+/* ===================================================== */
+
 </style>
+
 </head>
 <body>
 
 <div class="container">
 
-<h2>Choisir un plan</h2>
+<h2>Choisir un Plan 💳</h2>
 
-<!-- BASIC -->
-<div class="plan">
-<h3>Basic — 9,99€</h3>
-<p>15 recherches</p>
-<button onclick="checkout(999,'Basic',15)">
-Acheter
-</button>
+<div class="plan" data-plan="Basic" data-price="999" data-searches="15">
+Basic — 9,99€ — 15 recherches
 </div>
 
-<!-- PRO -->
-<div class="plan">
-<h3>Pro — 24,99€</h3>
-<p>40 recherches</p>
-<button onclick="checkout(2499,'Pro',40)">
-Acheter
-</button>
+<div class="plan" data-plan="Pro" data-price="2499" data-searches="40">
+Pro — 24,99€ — 40 recherches
 </div>
 
-<!-- ELITE -->
-<div class="plan">
-<h3>Élite — 79,99€</h3>
-<p>130 recherches</p>
-<button onclick="checkout(7999,'Elite',130)">
-Acheter
-</button>
+<div class="plan" data-plan="Elite" data-price="7999" data-searches="130">
+Elite — 79,99€ — 130 recherches
 </div>
+
+<button id="buyBtn">Acheter</button>
 
 </div>
 
 <script>
 
-async function checkout(amount, plan, searches){
+/* ===================================================== */
+/* TOKEN CHECK */
+/* ===================================================== */
 
 const token = localStorage.getItem("token");
 
 if(!token){
-alert("Connecte toi d'abord");
+alert("🔒 Connecte-toi d’abord !");
+window.location.href="/login.html";
+}
+
+/* ===================================================== */
+/* PLAN SELECTION */
+/* ===================================================== */
+
+const plans = document.querySelectorAll(".plan");
+let selectedPlan = null;
+
+plans.forEach(plan => {
+
+plan.addEventListener("click",()=>{
+
+plans.forEach(p=>p.classList.remove("active"));
+plan.classList.add("active");
+
+selectedPlan = {
+plan: plan.dataset.plan,
+amount: parseInt(plan.dataset.price),
+searches: parseInt(plan.dataset.searches)
+};
+
+});
+
+});
+
+/* ===================================================== */
+/* BUY BUTTON */
+/* ===================================================== */
+
+document.getElementById("buyBtn").addEventListener("click", async()=>{
+
+if(!selectedPlan){
+alert("Sélectionne un plan !");
 return;
 }
 
@@ -108,13 +177,9 @@ const res = await fetch("/create-checkout-session",{
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-Authorization:"Bearer "+token
+Authorization:"Bearer " + token
 },
-body:JSON.stringify({
-amount,
-plan,
-searches
-})
+body:JSON.stringify(selectedPlan)
 });
 
 const data = await res.json();
@@ -125,7 +190,7 @@ window.location.href = data.url;
 alert("Erreur paiement");
 }
 
-}
+});
 
 </script>
 
