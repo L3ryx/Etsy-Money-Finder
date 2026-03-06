@@ -5,14 +5,12 @@
 require("dotenv").config();
 
 const express = require("express");
-const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
-const { Server } = require("socket.io");
 const mongoose = require("mongoose");
-const cheerio = require("cheerio");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cheerio = require("cheerio");
 const Stripe = require("stripe");
 
 /* ===================================================== */
@@ -21,10 +19,12 @@ const Stripe = require("stripe");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-const upload = multer({ storage: multer.memoryStorage() });
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
 /* ===================================================== */
 /* ================= MODELS ============================ */
@@ -37,49 +37,21 @@ const SavedProduct = require("./models/SavedProduct");
 /* ================= DATABASE ========================== */
 /* ===================================================== */
 
-const mongoURI = `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(
-  process.env.DB_PASS
-)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
-
 mongoose
-  .connect(mongoURI)
+  .connect(
+    `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(
+      process.env.DB_PASS
+    )}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
+  )
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ Mongo Error:", err));
+  .catch((err) => console.log("❌ Mongo Error", err));
 
 /* ===================================================== */
-/* ================= MIDDLEWARE ======================== */
+/* ================= AUTH ============================== */
 /* ===================================================== */
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+function auth(req, res, next) {
 
-// ⚡ Important : static public
-app.use(express.static("public"));
-
-/* ===================================================== */
-/* ================= ROUTES HTML ======================= */
-/* ===================================================== */
-
-// 🔥 Page principale
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
-});
-
-// 🔥 Page register
-app.get("/register", (req, res) => {
-  res.sendFile(__dirname + "/public/register.html");
-});
-
-// 🔥 Page dashboard
-app.get("/dashboard", (req, res) => {
-  res.sendFile(__dirname + "/public/dashboard.html");
-});
-
-/* ===================================================== */
-/* ================= AUTH MIDDLEWARE =================== */
-/* ===================================================== */
-
-function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
 
   if (!token) return res.status(401).json({ message: "No token" });
@@ -98,6 +70,7 @@ function authMiddleware(req, res, next) {
 /* ===================================================== */
 
 app.post("/register", async (req, res) => {
+
   const { email, password } = req.body;
 
   const exists = await User.findOne({ email });
@@ -106,11 +79,19 @@ app.post("/register", async (req, res) => {
 
   const hashed = await bcrypt.hash(password, 10);
 
-  await User.create({
+  const user = await User.create({
     email,
-    password: hashed,
-    tokens: 0
+    password: hashed
   });
+
+  /* 🔥 Création Stripe Customer automatique */
+
+  const customer = await stripe.customers.create({
+    email: email
+  });
+
+  user.stripeCustomerId = customer.id;
+  await user.save();
 
   res.json({ message: "User created ✅" });
 });
@@ -120,13 +101,16 @@ app.post("/register", async (req, res) => {
 /* ===================================================== */
 
 app.post("/login", async (req, res) => {
+
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
+
   if (!user)
     return res.status(400).json({ message: "Invalid credentials" });
 
   const match = await bcrypt.compare(password, user.password);
+
   if (!match)
     return res.status(400).json({ message: "Invalid credentials" });
 
@@ -140,124 +124,110 @@ app.post("/login", async (req, res) => {
 });
 
 /* ===================================================== */
-/* ============== CREATE PAYMENT (0.50€) =============== */
+/* ================= SAVE CARD ========================= */
 /* ===================================================== */
 
-app.post("/create-payment", authMiddleware, async (req, res) => {
+/*
+Tu dois créer une page payment.html qui crée
+un SetupIntent et enregistre la carte.
+*/
 
-  try {
+app.post("/attach-card", auth, async (req, res) => {
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
+  const { paymentMethodId } = req.body;
 
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: "Image Search"
-            },
-            unit_amount: 50
-          },
-          quantity: 1
-        }
-      ],
+  const user = await User.findById(req.user.userId);
 
-      metadata: {
-        userId: req.user.userId
-      },
+  await stripe.paymentMethods.attach(paymentMethodId, {
+    customer: user.stripeCustomerId
+  });
 
-      success_url: "https://tonsite.com/dashboard",
-      cancel_url: "https://tonsite.com/dashboard"
-    });
+  await stripe.customers.update(user.stripeCustomerId, {
+    invoice_settings: {
+      default_payment_method: paymentMethodId
+    }
+  });
 
-    res.json({ url: session.url });
+  user.defaultPaymentMethod = paymentMethodId;
+  await user.save();
 
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Stripe error" });
-  }
+  res.json({ success: true });
+
 });
 
 /* ===================================================== */
-/* ============== STRIPE WEBHOOK ======================= */
+/* ============== AUTO CHARGE 0.50€ ==================== */
 /* ===================================================== */
 
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
+app.post("/charge-search", auth, async (req, res) => {
 
-    const sig = req.headers["stripe-signature"];
+  try {
 
-    let event;
+    const user = await User.findById(req.user.userId);
 
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.log("Webhook error");
-      return res.status(400).send("Webhook error");
-    }
-
-    if (event.type === "checkout.session.completed") {
-
-      const session = event.data.object;
-      const userId = session.metadata.userId;
-
-      await User.findByIdAndUpdate(userId, {
-        $inc: { tokens: 1 }
+    if (!user.stripeCustomerId || !user.defaultPaymentMethod) {
+      return res.status(400).json({
+        message: "Carte non enregistrée"
       });
-
-      console.log("✅ Token ajouté après paiement");
     }
 
-    res.json({ received: true });
+    await stripe.paymentIntents.create({
+      amount: 50, // 0.50€
+      currency: "eur",
+      customer: user.stripeCustomerId,
+      payment_method: user.defaultPaymentMethod,
+      off_session: true,
+      confirm: true
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+
+    console.log("❌ Payment failed");
+
+    res.status(400).json({
+      message: "Paiement refusé"
+    });
   }
-);
+
+});
 
 /* ===================================================== */
-/* ============== TOKEN DEDUCTION ====================== */
+/* ================= ETSY SEARCH ======================= */
 /* ===================================================== */
 
-async function consumeToken(userId) {
-
-  const user = await User.findById(userId);
-
-  if (!user || user.tokens <= 0) {
-    throw new Error("No tokens left");
-  }
-
-  await User.findByIdAndUpdate(userId, {
-    $inc: { tokens: -1 }
-  });
-}
-
-/* ===================================================== */
-/* ============== ETSY SCRAPER ========================= */
-/* ===================================================== */
-
-app.post("/search-etsy", authMiddleware, async (req, res) => {
+app.post("/search-etsy", auth, async (req, res) => {
 
   const { keyword, limit } = req.body;
 
   try {
 
-    await consumeToken(req.user.userId);
+    /* 🔥 Prélèvement automatique AVANT recherche */
+    await axios.post(
+      "http://localhost:" + process.env.PORT + "/charge-search",
+      {},
+      {
+        headers: {
+          Authorization: req.headers.authorization
+        }
+      }
+    );
+
+    /* 🔎 Recherche Etsy */
 
     const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    const response = await axios.get("https://api.scraperapi.com/", {
-      params: {
-        api_key: process.env.SCRAPAPI_KEY,
-        url,
-        render: true
+    const response = await axios.get(
+      "https://api.scraperapi.com/",
+      {
+        params: {
+          api_key: process.env.SCRAPAPI_KEY,
+          url,
+          render: true
+        }
       }
-    });
+    );
 
     const $ = cheerio.load(response.data);
     const results = [];
@@ -267,7 +237,6 @@ app.post("/search-etsy", authMiddleware, async (req, res) => {
       if (results.length >= limit) return;
 
       const href = $(el).attr("href");
-
       if (!href || !href.includes("/listing/")) return;
 
       let image =
@@ -291,49 +260,8 @@ app.post("/search-etsy", authMiddleware, async (req, res) => {
 
   } catch (err) {
 
-    if (err.message === "No tokens left") {
-      return res.status(403).json({
-        message: "No tokens left, please buy more."
-      });
-    }
-
-    res.status(500).json({ error: "Scraping failed" });
+    res.status(500).json({ message: "Search failed" });
   }
-});
-
-/* ===================================================== */
-/* ============== SAVE PRODUCT ========================= */
-/* ===================================================== */
-
-app.post("/save-product", authMiddleware, async (req, res) => {
-
-  const { image, link } = req.body;
-
-  const product = await SavedProduct.create({
-    userId: req.user.userId,
-    image,
-    link
-  });
-
-  res.json(product);
-});
-
-/* ===================================================== */
-/* ============== DASHBOARD DATA ======================= */
-/* ===================================================== */
-
-app.get("/api/dashboard", authMiddleware, async (req, res) => {
-
-  const products = await SavedProduct.find({
-    userId: req.user.userId
-  });
-
-  const user = await User.findById(req.user.userId);
-
-  res.json({
-    tokens: user.tokens,
-    products
-  });
 
 });
 
