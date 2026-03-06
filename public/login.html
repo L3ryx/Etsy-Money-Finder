@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login</title>
+<title>Connexion</title>
 
 <style>
 
 body{
+margin:0;
 background:black;
 color:white;
 font-family:Arial;
@@ -17,64 +18,83 @@ align-items:center;
 height:100vh;
 }
 
-.box{
-background:rgba(255,255,255,0.1);
+.container{
+background:#111;
 padding:40px;
-border-radius:15px;
+border-radius:25px;
 width:350px;
+box-shadow:0 0 60px rgba(255,255,255,0.1);
 text-align:center;
+}
+
+h2{
+color:yellow;
+margin-bottom:20px;
 }
 
 input{
 width:100%;
 padding:12px;
 margin:10px 0;
+border-radius:10px;
 border:none;
-border-radius:8px;
 outline:none;
+background:#222;
+color:white;
 }
 
 button{
 width:100%;
 padding:12px;
-background:#00e676;
 border:none;
-border-radius:8px;
+border-radius:10px;
+background:yellow;
 font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+.switch{
+margin-top:15px;
+font-size:14px;
+}
+
+.switch a{
+color:#00aaff;
+text-decoration:none;
 cursor:pointer;
 }
 
 </style>
+
 </head>
 <body>
 
-<div class="box">
+<div class="container">
 
-<h2>Login</h2>
+<h2>Connexion</h2>
 
 <input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
+<input type="password" id="password" placeholder="Mot de passe">
 
-<button id="loginBtn">Login</button>
+<button onclick="login()">Se connecter</button>
 
-<p><a href="/register" style="color:#00e676;">Créer un compte</a></p>
+<div class="switch">
+Pas encore inscrit ? <a href="/register.html">Créer un compte</a>
+</div>
 
 </div>
 
 <script>
 
-document.getElementById("loginBtn")
-.addEventListener("click", async ()=>{
+async function login(){
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
-
-if(!email || !password){
-alert("Remplis tous les champs");
-return;
-}
-
-try{
 
 const res = await fetch("/login",{
 method:"POST",
@@ -87,19 +107,20 @@ body:JSON.stringify({email,password})
 const data = await res.json();
 
 if(res.ok){
+
+/* 🔥 STOCK TOKEN */
 localStorage.setItem("token",data.token);
-alert("Login OK ✅");
-window.location="/dashboard";
+
+alert("Connexion réussie ✅");
+
+/* 🔥 REDIRECTION VERS PAIEMENT */
+window.location.href = "/payment.html";
+
 }else{
-alert("Login failed ❌");
+alert("Erreur connexion");
 }
 
-}catch(err){
-alert("Erreur serveur");
-console.log(err);
 }
-
-});
 
 </script>
 
