@@ -10,20 +10,50 @@
 
 <link rel="stylesheet" href="style.css">
 
-<script src="/socket.io/socket.io.js"></script>
-
 </head>
 
 <body>
 
+<div class="sky">
+
 <div class="stars"></div>
+
+<!-- 🔥 TITLE -->
 
 <h1 class="title">Niche Finder</h1>
 
+<!-- 🎯 FORM -->
+
+<div class="form-container">
+
+<input 
+type="text" 
+id="keyword" 
+class="input-field" 
+placeholder="Keyword">
+
+<!-- 🔢 Nombre d'annonces à analyser -->
+
+<select id="limit" class="dropdown">
+<option value="5">Analyser 5 annonces</option>
+<option value="10">Analyser 10 annonces</option>
+<option value="20">Analyser 20 annonces</option>
+<option value="50">Analyser 50 annonces</option>
+</select>
+
+<!-- 🚀 START BUTTON -->
+
+<button class="start-btn" onclick="startSearch()">
+START
+</button>
+
+</div>
+
+<!-- 🌍 SCENE ANIMATION -->
+
 <div class="scene">
 
-<div class="dog-house">🏠</div>
-
+<div class="doghouse">🏠</div>
 <div class="dog">🐕</div>
 
 <div class="money m1">💵</div>
@@ -36,25 +66,76 @@
 
 <div class="grass"></div>
 
-<div class="main-center">
+<!-- 🔎 RESULTS -->
 
-<div class="search-box">
-
-<input id="keyword" placeholder="keyword">
-
-<select id="limit">
-<option value="10">10</option>
-<option value="20">20</option>
-<option value="50">50</option>
-</select>
-
-<button class="start-btn">
-START
-</button>
+<div id="results"></div>
 
 </div>
 
-</div>
+<script>
+
+/* ============================= */
+/* SEARCH FUNCTION */
+/* ============================= */
+
+async function startSearch(){
+
+const keyword = document.getElementById("keyword").value;
+const limit = document.getElementById("limit").value;
+
+if(!keyword){
+alert("Enter a keyword !");
+return;
+}
+
+const res = await fetch("/search-etsy", {
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+keyword: keyword,
+limit: limit
+})
+});
+
+const data = await res.json();
+
+displayResults(data.results);
+
+}
+
+/* ============================= */
+/* DISPLAY RESULTS */
+/* ============================= */
+
+function displayResults(results){
+
+const container = document.getElementById("results");
+container.innerHTML = "";
+
+if(!results) return;
+
+results.forEach(item => {
+
+const card = document.createElement("div");
+card.className = "result-card";
+
+card.innerHTML = `
+<img src="${item.image}" />
+<br>
+<a href="${item.link}" target="_blank">
+Open Listing
+</a>
+`;
+
+container.appendChild(card);
+
+});
+
+}
+
+</script>
 
 </body>
 </html>
