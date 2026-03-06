@@ -99,8 +99,6 @@ return res.status(400).json({message:"User already exists"});
 
 const hashed = await bcrypt.hash(password,10);
 
-/* 🔥 USER NORMAL PAR DEFAULT */
-
 const user = await User.create({
 email,
 password:hashed,
@@ -152,6 +150,61 @@ res.json({token});
 });
 
 /* ===================================================== */
+/* ============== STRIPE CHECKOUT SESSION ============== */
+/* ===================================================== */
+
+app.post("/create-checkout-session", async (req,res)=>{
+
+try{
+
+const token = req.headers.authorization?.split(" ")[1];
+
+if(!token){
+return res.status(401).json({message:"No token"});
+}
+
+const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+const user = await User.findById(decoded.userId);
+
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
+const session = await stripe.checkout.sessions.create({
+
+payment_method_types:["card"],
+mode:"payment",
+customer: user.stripeCustomerId,
+
+line_items:[
+{
+price_data:{
+currency:"eur",
+product_data:{
+name:"Premium Access"
+},
+unit_amount:1000 // 10€
+},
+quantity:1
+}
+],
+
+success_url:"http://localhost:10000/success.html",
+cancel_url:"http://localhost:10000/payment.html"
+
+});
+
+res.json({url:session.url});
+
+}catch(err){
+console.log("Stripe Error :",err);
+res.status(500).json({message:"Stripe error"});
+}
+
+});
+
+/* ===================================================== */
 /* ================= ADMIN ACTIVATE FREE =============== */
 /* ===================================================== */
 
@@ -164,8 +217,6 @@ const user = await User.findById(userId);
 if(!user){
 return res.status(404).json({message:"User not found"});
 }
-
-/* 🔥 Activation sécurisée */
 
 user.freeUnlimited = true;
 user.paid = true;
