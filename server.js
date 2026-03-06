@@ -12,6 +12,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cheerio = require("cheerio");
 const Stripe = require("stripe");
+const rateLimit = require("express-rate-limit");
 
 /* ===================================================== */
 /* ================= CONFIG ============================ */
@@ -19,7 +20,6 @@ const Stripe = require("stripe");
 
 const app = express();
 const server = http.createServer(app);
-
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* ===================================================== */
@@ -37,8 +37,8 @@ mongoose
 .connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
 )
-.then(()=>console.log("✅ MongoDB Connected"))
-.catch(err=>console.log("❌ Mongo Error",err));
+.then(()=>console.log("✅ Mongo Connected"))
+.catch(err=>console.log(err));
 
 /* ===================================================== */
 /* ================= MIDDLEWARE ======================== */
@@ -47,6 +47,24 @@ mongoose
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
+
+/* ===================================================== */
+/* ================= ANTI FRAUDE ======================= */
+/* ===================================================== */
+
+/* 🔥 Limite globale */
+app.use(rateLimit({
+windowMs:60*1000,
+max:200,
+message:"Trop de requêtes"
+}));
+
+/* 🔥 Anti brute force login */
+const loginLimiter = rateLimit({
+windowMs:15*60*1000,
+max:5,
+message:"Trop de tentatives. Attends 15min."
+});
 
 /* ===================================================== */
 /* ================= AUTH ============================== */
@@ -70,16 +88,6 @@ return res.status(401).json({message:"Invalid token"});
 }
 
 /* ===================================================== */
-/* ================= ROUTES HTML ======================= */
-/* ===================================================== */
-
-app.get("/",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/register",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/login",(req,res)=>res.sendFile(__dirname+"/public/index.html"));
-app.get("/dashboard",(req,res)=>res.sendFile(__dirname+"/public/dashboard.html"));
-app.get("/payment",(req,res)=>res.sendFile(__dirname+"/public/payment.html"));
-
-/* ===================================================== */
 /* ================= REGISTER ========================== */
 /* ===================================================== */
 
@@ -89,10 +97,12 @@ const {email,password} = req.body;
 
 const exists = await User.findOne({email});
 if(exists){
-return res.status(400).json({message:"User already exists"});
+return res.status(400).json({message:"User exists"});
 }
 
 const hashed = await bcrypt.hash(password,10);
+
+/* 🔥 CREATE STRIPE CUSTOMER */
 
 const customer = await stripe.customers.create({
 email
@@ -113,15 +123,19 @@ res.json({message:"User created",userId:user._id});
 /* ================= LOGIN ============================= */
 /* ===================================================== */
 
-app.post("/login",async(req,res)=>{
+app.post("/login",loginLimiter,async(req,res)=>{
 
 const {email,password} = req.body;
 
 const user = await User.findOne({email});
-if(!user) return res.status(400).json({message:"Invalid"});
+if(!user){
+return res.status(400).json({message:"Invalid"});
+}
 
 const match = await bcrypt.compare(password,user.password);
-if(!match) return res.status(400).json({message:"Invalid"});
+if(!match){
+return res.status(400).json({message:"Invalid"});
+}
 
 const token = jwt.sign(
 {userId:user._id},
@@ -170,7 +184,7 @@ const {keyword,limit} = req.body;
 
 const user = await User.findById(req.user.userId);
 
-/* 🔴 BLOQUE SI PAS DE CARTE */
+/* 🔴 CARTE OBLIGATOIRE */
 
 if(!user.defaultPaymentMethod){
 return res.status(403).json({
@@ -178,7 +192,20 @@ message:"Carte bancaire obligatoire"
 });
 }
 
-/* 🔥 PRELEVEMENT AUTOMATIQUE 0.50€ */
+/* 🔥 ANTI FRAUDE — INTERVALLE RECHERCHE */
+
+const now = Date.now();
+
+if(user.lastSearch && now - user.lastSearch < 5000){
+return res.status(429).json({
+message:"Attends quelques secondes avant une nouvelle recherche"
+});
+}
+
+user.lastSearch = now;
+await user.save();
+
+/* 🔥 PRELEVEMENT 0.50€ */
 
 try{
 
@@ -197,7 +224,7 @@ message:"Paiement refusé"
 });
 }
 
-/* 🔥 SCRAPING */
+/* 🔥 SCRAP */
 
 const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
@@ -261,8 +288,6 @@ products
 /* ================= SERVER START ====================== */
 /* ===================================================== */
 
-const PORT = process.env.PORT || 10000;
-
-server.listen(PORT,()=>{
-console.log("🚀 Server running on port",PORT);
+server.listen(process.env.PORT || 10000,()=>{
+console.log("🚀 Server Running");
 });
