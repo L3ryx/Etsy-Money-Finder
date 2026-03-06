@@ -6,39 +6,8 @@
 
 <title>Niche Finder</title>
 
-<!-- 🔥 POLICE -->
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="style.css">
-
-<style>
-
-/* ================= BUY BUTTON ================= */
-
-.top-buy{
-position:fixed;
-top:20px;
-left:20px;
-z-index:9999;
-}
-
-.buy-btn{
-background:yellow;
-color:black;
-padding:10px 20px;
-border-radius:8px;
-font-weight:bold;
-text-decoration:none;
-box-shadow:0 4px 10px rgba(0,0,0,0.2);
-transition:0.2s;
-}
-
-.buy-btn:hover{
-transform:scale(1.1);
-background:#ffe600;
-}
-
-</style>
 
 </head>
 <body>
@@ -58,7 +27,7 @@ background:#ffe600;
   <div class="smoke"></div>
 </div>
 
-<!-- ================= MAIN FORM ================= -->
+<!-- ================= MAIN CONTAINER ================= -->
 <div class="container">
 
 <h1 class="title">Niche Finder</h1>
@@ -88,14 +57,37 @@ background:#ffe600;
 <p>Recherche en cours...</p>
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ===================================================== -->
+<!-- ================= SCRIPT ============================ -->
+<!-- ===================================================== -->
+
 <script>
 
 const startBtn = document.querySelector(".start-btn");
 const resultsContainer = document.getElementById("results");
 const loader = document.getElementById("loader");
 
+const token = localStorage.getItem("token");
+
+/* ===================================================== */
+/* ========== BLOQUER START SI PAS LOGIN =============== */
+/* ===================================================== */
+
+if(!token){
+startBtn.disabled = true;
+startBtn.innerText = "Login Required";
+}
+
+/* ===================================================== */
+/* ================= START CLICK ======================= */
+/* ===================================================== */
+
 startBtn.addEventListener("click", async () => {
+
+if(!token){
+alert("Connecte-toi d'abord !");
+return;
+}
 
 const keyword = document.querySelector(".input-field").value;
 const limit = document.querySelector(".dropdown").value;
@@ -107,14 +99,38 @@ return;
 
 loader.classList.remove("hidden");
 startBtn.disabled = true;
-startBtn.innerText = "Loading...";
+startBtn.innerText = "Chargement...";
 
 try {
 
-const response = await fetch("/search-etsy", {
+/* ===================================================== */
+/* 🔥 PRELEVEMENT AUTOMATIQUE 0.50€ AVANT RECHERCHE */
+/* ===================================================== */
+
+const charge = await fetch("/charge-search",{
 method:"POST",
 headers:{
-"Content-Type":"application/json"
+Authorization:"Bearer "+token
+}
+});
+
+if(!charge.ok){
+alert("❌ Paiement refusé");
+loader.classList.add("hidden");
+startBtn.disabled = false;
+startBtn.innerText = "START";
+return;
+}
+
+/* ===================================================== */
+/* 🔎 SI PAIEMENT OK → RECHERCHE */
+/* ===================================================== */
+
+const response = await fetch("/search-etsy",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
 },
 body:JSON.stringify({
 keyword,
@@ -143,12 +159,11 @@ resultsContainer.appendChild(card);
 
 });
 
-} else {
+}else{
 resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
 }
 
 } catch(error){
-console.error(error);
 alert("Erreur serveur ❌");
 }
 
