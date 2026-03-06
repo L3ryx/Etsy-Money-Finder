@@ -6,8 +6,9 @@ const http = require("http");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { GoogleSearch } = require("google-search-results-nodejs");
 const { Server } = require("socket.io");
+const { GoogleSearch } = require("google-search-results-nodejs");
+const crypto = require("crypto");
 
 /* ===================================================== */
 /* APP SETUP */
@@ -28,12 +29,8 @@ app.use(express.static("public"));
 mongoose.connect(
 `mongodb+srv://${process.env.DB_USER}:${encodeURIComponent(process.env.DB_PASS)}@cluster0.bwlimkp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
 )
-.then(()=>console.log("✅ Mongo connected"))
-.catch(err=>console.log("❌ Mongo error",err));
-
-/* ===================================================== */
-/* MODELS */
-/* ===================================================== */
+.then(()=>console.log("✅ Mongo Connected"))
+.catch(err=>console.log("❌ Mongo Error",err));
 
 const User = require("./models/User");
 
@@ -50,7 +47,6 @@ const EtsyCache = mongoose.model("EtsyCache",CacheSchema);
 /* ===================================================== */
 
 function auth(req,res,next){
-
 const token = req.headers.authorization?.split(" ")[1];
 if(!token) return res.status(401).json({message:"No token"});
 
@@ -60,11 +56,18 @@ next();
 }catch(err){
 return res.status(401).json({message:"Invalid token"});
 }
-
 }
 
 /* ===================================================== */
-/* 🔥 SEARCH SYSTEM (TITLE BASED — MUCH MORE STABLE) */
+/* SMART HASH (ANTI OPENAI COST) */
+/* ===================================================== */
+
+function imageHash(url){
+return crypto.createHash("md5").update(url).digest("hex");
+}
+
+/* ===================================================== */
+/* 🔥 SEARCH ENGINE OPTIMIZED */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -88,12 +91,12 @@ if(cache){
 return res.json({results:cache.results,creditsLeft:user.credits});
 }
 
-/* ================= ETSY SCRAPE ================= */
+/* ================= SCRAPE ETSY ================= */
 
 const etsyUrl =
 `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-const scraper = await axios.get(
+const etsyResponse = await axios.get(
 "https://api.scraperapi.com/",
 {
 params:{
@@ -104,9 +107,9 @@ render:true
 }
 );
 
-const html = scraper.data;
+const html = etsyResponse.data;
 
-/* ================= EXTRACT TITLE + IMAGE + LINK ================= */
+/* Extract title + image + link */
 
 const titleRegex = /<h3[^>]*>(.*?)<\/h3>/g;
 const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
@@ -120,65 +123,120 @@ const maxItems = Math.min(parseInt(limit) || 5,10);
 
 let finalResults = [];
 
-/* ================= SERPAPI TEXT SEARCH ================= */
+const serpapi = new GoogleSearch(process.env.SERPAPI_KEY);
 
-const serpapiClient = new GoogleSearch(process.env.SERPAPI_KEY);
+/* ================= LOOP ETSY PRODUCTS ================= */
 
-for(let i=0;i<Math.min(maxItems,images.length,titles.length);i++){
+for(let i=0;i<Math.min(maxItems,titles.length);i++){
 
-const etsyImage = images[i];
-const etsyLink = links[i] || etsyUrl;
 const etsyTitle = titles[i] || keyword;
+const etsyImage = images[i];
+const etsyLink = links[i];
 
-/* 🔥 TEXT SEARCH (NOT IMAGE SEARCH) */
+/* ================= GOOGLE SHOPPING TEXT SEARCH ================= */
 
 const params = {
 engine:"google_shopping",
 q: etsyTitle + " aliexpress",
-google_domain:"google.com",
 hl:"fr",
 gl:"fr"
 };
 
 const serpData = await new Promise(resolve=>{
-serpapiClient.json(params,(data)=>{
-resolve(data || {});
-});
+serpapi.json(params,(data)=>resolve(data || {}));
 });
 
-let aliMatches = [];
+let aliProducts = [];
 
 if(serpData.shopping_results){
 
-for(const product of serpData.shopping_results){
+aliProducts = serpData.shopping_results
+.filter(p => (p.link || "").includes("aliexpress"))
+.slice(0,10);
 
-const productLink =
-product.link ||
-product.product_link ||
-product.url ||
-"";
+}
 
-const isAli =
-productLink.includes("aliexpress") ||
-(product.source || "").toLowerCase().includes("aliexpress");
+let verifiedMatches = [];
 
-if(isAli){
+/* ================= LOOP ALI PRODUCTS ================= */
 
-aliMatches.push({
-image:product.thumbnail || product.image,
-link:productLink,
-similarity:75 // 🔥 Ici tu peux mettre OpenAI plus tard
+for(const ali of aliProducts){
+
+const aliImage = ali.thumbnail || ali.image || "";
+const aliLink = ali.link || "";
+
+/* ================= ANTI COST FILTER ================= */
+
+let similarity = 0;
+
+/* Fast text filter */
+if(ali.title && etsyTitle){
+if(ali.title.toLowerCase().includes(etsyTitle.toLowerCase())){
+similarity += 40;
+}
+}
+
+/* Hash quick filter */
+if(imageHash(etsyImage) === imageHash(aliImage)){
+similarity += 40;
+}
+
+/* ================= CALL OPENAI ONLY IF NECESSARY ================= */
+
+if(similarity < 70 && etsyImage && aliImage){
+
+try{
+
+const vision = await axios.post(
+"https://api.openai.com/v1/chat/completions",
+{
+model:"gpt-4o-mini",
+messages:[
+{
+role:"user",
+content:[
+{type:"text",text:"Return similarity 0-100 between these images"},
+{type:"image_url",image_url:{url:etsyImage}},
+{type:"image_url",image_url:{url:aliImage}}
+]
+}
+]
+},
+{
+headers:{
+Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,
+"Content-Type":"application/json"
+}
+}
+);
+
+const text = vision.data.choices[0].message.content;
+const match = text.match(/\d+/);
+similarity = match ? parseInt(match[0]) : 0;
+
+}catch(err){
+console.log("OpenAI skipped");
+}
+
+}
+
+/* ================= FILTER 70% ================= */
+
+if(similarity >= 70){
+
+verifiedMatches.push({
+aliexpress:{
+image:aliImage,
+link:aliLink
+},
+similarity
 });
 
 }
 
 }
 
-}
-
-/* ================= IF MATCH FOUND ================= */
-
-if(aliMatches.length > 0){
+if(verifiedMatches.length > 0){
 
 finalResults.push({
 etsy:{
@@ -186,7 +244,7 @@ title:etsyTitle,
 image:etsyImage,
 link:etsyLink
 },
-aliexpressMatches:aliMatches
+aliexpressMatches:verifiedMatches
 });
 
 }
