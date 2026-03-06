@@ -3,10 +3,17 @@
 /* ===================================================== */
 
 const socket = io();
-const loader = document.getElementById("loader");
 
 /* ===================================================== */
-/* MATRIX BACKGROUND */
+/* ELEMENTS */
+/* ===================================================== */
+
+const loader = document.getElementById("loader");
+const progressBar = document.getElementById("progressBar");
+const resultsContainer = document.getElementById("results");
+
+/* ===================================================== */
+/* MATRIX SYSTEM */
 /* ===================================================== */
 
 const canvas = document.getElementById("matrix");
@@ -23,22 +30,18 @@ window.addEventListener("resize", resizeCanvas);
 const letters = "010101ETSYMONEYFINDER";
 const fontSize = 16;
 
-let columns = Math.floor(canvas.width / fontSize);
-let drops = [];
+let speed = 40;
+let matrixInterval;
+let columns;
+let drops;
 
-for(let i = 0; i < columns; i++){
-  drops[i] = Math.random() * canvas.height;
+/* INIT MATRIX */
+function initMatrix(){
+  columns = Math.floor(canvas.width / fontSize);
+  drops = new Array(columns).fill(0).map(() => Math.random() * canvas.height);
 }
 
-let matrixSpeed = 40;
-let matrixInterval = setInterval(drawMatrix, matrixSpeed);
-
-function setMatrixSpeed(newSpeed){
-  clearInterval(matrixInterval);
-  matrixSpeed = newSpeed;
-  matrixInterval = setInterval(drawMatrix, matrixSpeed);
-}
-
+/* DRAW MATRIX */
 function drawMatrix(){
 
   ctx.fillStyle = "rgba(0,0,0,0.08)";
@@ -52,7 +55,7 @@ function drawMatrix(){
     const text = letters[Math.floor(Math.random()*letters.length)];
     ctx.fillText(text, i*fontSize, drops[i]*fontSize);
 
-    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
+    if(drops[i]*fontSize > canvas.height && Math.random() > 0.97){
       drops[i] = 0;
     }
 
@@ -60,8 +63,32 @@ function drawMatrix(){
   }
 }
 
+/* START MATRIX */
+function startMatrix(){
+  clearInterval(matrixInterval);
+  initMatrix();
+  matrixInterval = setInterval(drawMatrix, speed);
+}
+
+/* ACCELERATE */
+function accelerateMatrix(){
+  clearInterval(matrixInterval);
+  speed = 15;
+  matrixInterval = setInterval(drawMatrix, speed);
+}
+
+/* SLOW DOWN */
+function slowMatrix(){
+  clearInterval(matrixInterval);
+  speed = 60;
+  matrixInterval = setInterval(drawMatrix, speed);
+}
+
+/* START AUTO */
+startMatrix();
+
 /* ===================================================== */
-/* SEARCH SYSTEM */
+/* SEARCH FUNCTION */
 /* ===================================================== */
 
 async function searchEtsy(){
@@ -69,27 +96,43 @@ async function searchEtsy(){
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
 
-  loader.style.display = "block";
+  if(!keyword) return;
 
-  /* 🔥 Matrix accélère pendant scraping */
-  setMatrixSpeed(5);
+  /* 🔥 Accelerate animation */
+  accelerateMatrix();
 
-  const response = await fetch("/search-etsy",{
+  showLoader();
+
+  const response = await fetch("/search-etsy", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ keyword, limit })
+    body: JSON.stringify({
+      keyword,
+      limit,
+      socketId: socket.id
+    })
   });
 
   const data = await response.json();
 
-  loader.style.display = "none";
+  hideLoader();
 
-  /* 🔥 Matrix ralentit quand terminé */
-  setMatrixSpeed(60);
+  /* 🔥 Ralentir matrix quand fini */
+  slowMatrix();
 
   displayResults(data.results);
+}
 
-  explosionEffect();
+/* ===================================================== */
+/* LOADER CONTROL */
+/* ===================================================== */
+
+function showLoader(){
+  loader.style.display = "flex";
+}
+
+function hideLoader(){
+  loader.style.display = "none";
 }
 
 /* ===================================================== */
@@ -98,11 +141,10 @@ async function searchEtsy(){
 
 function displayResults(results){
 
-  const container = document.getElementById("results");
-  container.innerHTML = "";
+  resultsContainer.innerHTML = "";
 
   if(!results || results.length === 0){
-    container.innerHTML = "<h2>No results found</h2>";
+    resultsContainer.innerHTML = "<h2>No results found</h2>";
     return;
   }
 
@@ -113,55 +155,52 @@ function displayResults(results){
 
     card.innerHTML = `
       <img src="${item.image}" />
-      <br>
-      🔗 <a href="${item.link}" target="_blank">
-        Open Listing
+      <br/>
+      <a href="${item.link}" target="_blank">
+        🔗 Open Listing
       </a>
     `;
 
-    container.appendChild(card);
+    resultsContainer.appendChild(card);
 
   });
+
+  /* 🔥 Explosion effet quand résultats arrivent */
+  explosionEffect();
 }
 
 /* ===================================================== */
-/* EXPLOSION EFFECT WHEN RESULTS ARRIVE */
+/* EXPLOSION EFFECT */
 /* ===================================================== */
 
 function explosionEffect(){
 
-  const boom = document.createElement("div");
+  for(let i=0;i<30;i++){
 
-  boom.innerHTML = "💥";
-  boom.style.position = "fixed";
-  boom.style.top = "50%";
-  boom.style.left = "50%";
-  boom.style.fontSize = "150px";
-  boom.style.transform = "translate(-50%,-50%)";
-  boom.style.transition = "1s";
-  boom.style.opacity = "1";
-  boom.style.zIndex = "9999";
+    const spark = document.createElement("div");
+    spark.style.position = "fixed";
+    spark.style.left = Math.random()*window.innerWidth + "px";
+    spark.style.top = Math.random()*window.innerHeight + "px";
+    spark.style.width = "6px";
+    spark.style.height = "6px";
+    spark.style.background = "#00ff66";
+    spark.style.borderRadius = "50%";
+    spark.style.boxShadow = "0 0 20px #00ff66";
+    spark.style.pointerEvents = "none";
+    document.body.appendChild(spark);
 
-  document.body.appendChild(boom);
-
-  setTimeout(() => {
-    boom.style.transform = "translate(-50%,-50%) scale(3)";
-    boom.style.opacity = "0";
-  },100);
-
-  setTimeout(() => {
-    boom.remove();
-  },1200);
-
+    setTimeout(()=> spark.remove(), 800);
+  }
 }
 
 /* ===================================================== */
-/* LIVE PROGRESS FROM SERVER */
+/* SOCKET LIVE PROGRESS */
 /* ===================================================== */
 
-socket.on("progress", (data) => {
+socket.on("progress", (data)=>{
+  progressBar.style.width = data.percent + "%";
+});
 
-  // Optionnel : tu peux relier ça à une vraie progress bar plus tard
-  console.log("Progress:", data.percent);
-
+socket.on("log", ()=>{
+  progressBar.style.width = "80%";
 });
