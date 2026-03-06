@@ -1,3 +1,7 @@
+/* ===================================================== */
+/* ================== IMPORTS ========================== */
+/* ===================================================== */
+
 require("dotenv").config();
 
 const express = require("express");
@@ -5,14 +9,33 @@ const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
+const mongoose = require("mongoose");
 const cheerio = require("cheerio");
+
+/* ===================================================== */
+/* ================== APP SETUP ======================== */
+/* ===================================================== */
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 /* ===================================================== */
-/* MIDDLEWARE */
+/* ================= DATABASE CONNECTION ================ */
+/* ===================================================== */
+
+const mongoUser = process.env.DB_USER;
+const mongoPass = encodeURIComponent(process.env.DB_PASS);
+const mongoName = process.env.DB_NAME;
+
+const mongoURI = `mongodb+srv://${mongoUser}:${mongoPass}@cluster0.bwlimkp.mongodb.net/${mongoName}?retryWrites=true&w=majority`;
+
+mongoose.connect(mongoURI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
+
+/* ===================================================== */
+/* ================= MIDDLEWARE ======================== */
 /* ===================================================== */
 
 const upload = multer({
@@ -24,11 +47,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* SOCKET LOG SYSTEM */
+/* ================= SOCKET LOGGER ===================== */
 /* ===================================================== */
 
 function sendLog(socket, message) {
-
   console.log(message);
 
   if (socket) {
@@ -40,12 +62,10 @@ function sendLog(socket, message) {
 }
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH — CHEERIO DOM PARSER VERSION */
+/* ================= ETSY SEARCH ======================= */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
-
-  console.log("🔥 Search route called");
 
   const { keyword, limit } = req.body;
 
@@ -53,16 +73,12 @@ app.post("/search-etsy", async (req, res) => {
     return res.status(400).json({ error: "Keyword required" });
   }
 
-  const maxItems = Math.min(parseInt(limit) || 10, 50);
+  const maxItems = Math.min(parseInt(limit) || 10, 100);
 
   try {
 
     const etsyUrl =
       `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
-
-    /* ===================================================== */
-    /* CALL SCRAPERAPI */
-    /* ===================================================== */
 
     const scraperResponse = await axios.get(
       "https://api.scraperapi.com/",
@@ -78,49 +94,35 @@ app.post("/search-etsy", async (req, res) => {
     const html = scraperResponse.data;
 
     /* ===================================================== */
-    /* ✅ PARSE HTML WITH CHEERIO */
+    /* ================= CHEERIO PARSER ==================== */
     /* ===================================================== */
 
     const $ = cheerio.load(html);
-
     const results = [];
 
-    /* ===================================================== */
-    /* FIND LISTING CARDS */
-    /* ===================================================== */
-
-    $("a").each((index, element) => {
+    $("a").each((i, el) => {
 
       if (results.length >= maxItems) return;
 
-      const href = $(element).attr("href");
-      if (!href) return;
+      const href = $(el).attr("href");
+      if (!href || !href.includes("/listing/")) return;
 
-      /* ✅ Only Etsy listing links */
-      if (!href.includes("/listing/")) return;
-
-      const fullLink = href.startsWith("http")
+      const link = href.startsWith("http")
         ? href
         : "https://www.etsy.com" + href;
 
-      /* ✅ Find image inside same anchor */
-      const img = $(element).find("img").first();
+      const img = $(el).find("img").first();
+      let image = img.attr("src") || img.attr("data-src");
 
-      let imageSrc = img.attr("src") || img.attr("data-src");
+      if (!image) return;
 
-      if (!imageSrc) return;
-
-      /* ===================================================== */
-      /* ✅ OPTIONAL: CLEAN IMAGE URL */
-      /* ===================================================== */
-
-      if (imageSrc.startsWith("//")) {
-        imageSrc = "https:" + imageSrc;
+      if (image.startsWith("//")) {
+        image = "https:" + image;
       }
 
       results.push({
-        image: imageSrc,
-        link: fullLink
+        image,
+        link
       });
 
     });
@@ -139,7 +141,7 @@ app.post("/search-etsy", async (req, res) => {
 });
 
 /* ===================================================== */
-/* 🧠 IMAGE ANALYSIS PIPELINE */
+/* ================= IMAGE ANALYSIS ==================== */
 /* ===================================================== */
 
 app.post("/analyze-images", upload.array("images"), async (req, res) => {
@@ -154,10 +156,6 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
     sendLog(socket, `Processing ${file.originalname}`);
 
     const base64 = file.buffer.toString("base64");
-
-    /* ===================================================== */
-    /* UPLOAD IMAGE TO IMGBB */
-    /* ===================================================== */
 
     let imageUrl;
 
@@ -181,9 +179,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
       continue;
     }
 
-    /* ===================================================== */
-    /* OPENAI VISION ANALYSIS */
-    /* ===================================================== */
+    /* ================= OPENAI VISION ================= */
 
     try {
 
@@ -201,9 +197,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
                 },
                 {
                   type: "image_url",
-                  image_url: {
-                    url: imageUrl
-                  }
+                  image_url: { url: imageUrl }
                 }
               ]
             }
@@ -225,12 +219,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 
       results.push({
         image: file.originalname,
-        matches: [
-          {
-            url: "AI_ANALYSIS",
-            similarity
-          }
-        ]
+        similarity
       });
 
     } catch (err) {
@@ -244,7 +233,7 @@ app.post("/analyze-images", upload.array("images"), async (req, res) => {
 });
 
 /* ===================================================== */
-/* SOCKET CONNECTION */
+/* ================= SOCKET CONNECTION ================= */
 /* ===================================================== */
 
 io.on("connection", (socket) => {
@@ -257,7 +246,7 @@ io.on("connection", (socket) => {
 });
 
 /* ===================================================== */
-/* SERVER START */
+/* ================= SERVER START ====================== */
 /* ===================================================== */
 
 const PORT = process.env.PORT || 10000;
