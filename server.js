@@ -75,8 +75,11 @@ purchaseHistory:[],
 searchHistory:[]
 });
 
+/* 🔥 Stripe customer */
+
 const customer = await stripe.customers.create({email});
 user.stripeCustomerId = customer.id;
+
 await user.save();
 
 res.json({message:"User created"});
@@ -107,7 +110,6 @@ process.env.JWT_SECRET,
 );
 
 res.json({token});
-
 });
 
 /* ===================================================== */
@@ -124,12 +126,12 @@ return res.status(404).json({message:"User not found"});
 
 res.json({
 email:user.email,
+role:user.role, // 🔥 IMPORTANT
 credits:user.credits,
 searchesUsed:user.searchesUsed,
 purchaseHistory:user.purchaseHistory || [],
 searchHistory:user.searchHistory || []
 });
-
 });
 
 /* ===================================================== */
@@ -224,8 +226,14 @@ if(user){
 
 const searches = parseInt(session.metadata.searches) || 0;
 
-user.paid = true;
+/* 🔥 Upgrade user to unlimited if needed */
+if(session.metadata.plan === "Unlimited"){
+user.role = "unlimited";
+} else {
 user.credits = searches;
+}
+
+user.paid = true;
 user.searchesUsed = 0;
 
 user.purchaseHistory = user.purchaseHistory || [];
@@ -238,7 +246,7 @@ date: new Date()
 
 await user.save();
 
-console.log("✅ Credits added");
+console.log("✅ Payment processed");
 }
 
 }
@@ -258,17 +266,18 @@ if(!user){
 return res.status(404).json({message:"User not found"});
 }
 
-if(user.credits <= 0){
+/* 🔥 Unlimited access */
+if(user.role !== "unlimited" && user.credits <= 0){
 return res.status(403).json({message:"No credits"});
 }
 
-/* 🔥 Déduction crédit */
-
+/* 🔥 Déduction seulement si pas unlimited */
+if(user.role !== "unlimited"){
 user.credits -= 1;
 user.searchesUsed += 1;
+}
 
-/* 🔥 Sauvegarde historique recherche */
-
+/* 🔥 Save history */
 user.searchHistory = user.searchHistory || [];
 
 user.searchHistory.push({
@@ -281,9 +290,28 @@ await user.save();
 
 res.json({
 message:"Search success",
-creditsLeft:user.credits
+creditsLeft:user.credits,
+role:user.role
+});
 });
 
+/* ===================================================== */
+/* ================= ACCESS CHECK ====================== */
+/* ===================================================== */
+
+app.get("/check-access", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.json({allowed:false});
+}
+
+if(user.role === "unlimited"){
+return res.json({allowed:true});
+}
+
+return res.json({allowed:false});
 });
 
 /* ===================================================== */
