@@ -6,40 +6,13 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family: 'Croissant One', cursive;
+font-family:Arial, Helvetica, sans-serif;
 }
 
 body{
 background:black;
 color:white;
 overflow-x:hidden;
-}
-
-/* ===================================================== */
-/* ================= BUY BUTTON ======================== */
-/* ===================================================== */
-
-.top-buy{
-position:fixed;
-top:20px;
-left:20px;
-z-index:9999;
-}
-
-.buy-btn{
-background:yellow !important;
-color:black !important;
-padding:10px 20px;
-border-radius:8px;
-font-weight:bold;
-text-decoration:none;
-box-shadow:0 4px 15px rgba(0,0,0,0.4);
-transition:0.3s;
-}
-
-.buy-btn:hover{
-transform:scale(1.1);
-background:#ffe600 !important;
 }
 
 /* ===================================================== */
@@ -76,30 +49,16 @@ width:250px;
 height:250px;
 background:rgba(255,255,255,0.05);
 filter:blur(80px);
-animation:float 12s infinite alternate;
+animation:float 15s infinite alternate;
 }
 
-.smoke:nth-child(1){
-top:20%;
-left:10%;
-animation-duration:14s;
-}
-
-.smoke:nth-child(2){
-top:50%;
-left:50%;
-animation-duration:18s;
-}
-
-.smoke:nth-child(3){
-top:70%;
-left:30%;
-animation-duration:22s;
-}
+.smoke:nth-child(1){top:20%;left:10%;}
+.smoke:nth-child(2){top:50%;left:50%;}
+.smoke:nth-child(3){top:70%;left:30%;}
 
 @keyframes float{
 from{transform:translateY(0) scale(1);}
-to{transform:translateY(-100px) scale(1.2);}
+to{transform:translateY(-120px) scale(1.2);}
 }
 
 /* ===================================================== */
@@ -108,12 +67,12 @@ to{transform:translateY(-100px) scale(1.2);}
 
 .container{
 text-align:center;
-padding-top:150px;
+padding-top:120px;
 }
 
 .title{
-font-size:60px;
-text-shadow:0 0 20px white;
+font-size:55px;
+text-shadow:0 0 25px white;
 }
 
 /* ===================================================== */
@@ -128,22 +87,14 @@ align-items:center;
 gap:20px;
 }
 
-.input-field{
-padding:12px;
+.input-field,
+.dropdown{
 width:300px;
-border-radius:8px;
+padding:12px;
 border:none;
+border-radius:8px;
 outline:none;
 font-size:16px;
-}
-
-.dropdown{
-padding:12px;
-width:300px;
-border-radius:8px;
-border:none;
-font-size:16px;
-cursor:pointer;
 }
 
 .start-btn{
@@ -162,7 +113,7 @@ transform:scale(1.1);
 }
 
 /* ===================================================== */
-/* ================= RESULTS GRID ====================== */
+/* ================= RESULTS =========================== */
 /* ===================================================== */
 
 #results{
@@ -235,6 +186,54 @@ to{transform:rotate(360deg);}
 }
 
 /* ===================================================== */
+/* ================= PREMIUM BUY BUTTON ================ */
+/* ===================================================== */
+
+.buy-button{
+width:90%;
+max-width:600px;
+padding:25px;
+border:none;
+border-radius:25px;
+background:#FFD700;
+cursor:pointer;
+box-shadow:0 15px 40px rgba(0,0,0,0.4);
+transition:0.3s ease;
+}
+
+.buy-button:hover{
+transform:scale(1.05);
+background:#ffdf33;
+}
+
+.buy-content{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:20px;
+}
+
+.money-icon{
+font-size:35px;
+}
+
+.text-content{
+text-align:left;
+}
+
+.buy-title{
+font-size:22px;
+font-weight:bold;
+color:black;
+}
+
+.buy-subtitle{
+font-size:14px;
+opacity:0.8;
+color:black;
+}
+
+/* ===================================================== */
 /* ================= RESPONSIVE ======================== */
 /* ===================================================== */
 
@@ -256,6 +255,10 @@ padding:20px;
 
 .result-card{
 width:100%;
+}
+
+.buy-button{
+width:95%;
 }
 
 }
