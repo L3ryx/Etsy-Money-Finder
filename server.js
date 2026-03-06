@@ -6,24 +6,22 @@ const http = require("http");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Server } = require("socket.io");
 const { GoogleSearch } = require("google-search-results-nodejs");
 const crypto = require("crypto");
 
 /* ===================================================== */
-/* APP SETUP */
+/* SETUP */
 /* ===================================================== */
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 /* ===================================================== */
-/* DATABASE */
+/* DB */
 /* ===================================================== */
 
 mongoose.connect(
@@ -47,47 +45,51 @@ const EtsyCache = mongoose.model("EtsyCache",CacheSchema);
 /* ===================================================== */
 
 function auth(req,res,next){
+
 const token = req.headers.authorization?.split(" ")[1];
 if(!token) return res.status(401).json({message:"No token"});
+
 try{
 req.user = jwt.verify(token,process.env.JWT_SECRET);
 next();
 }catch(err){
 return res.status(401).json({message:"Invalid token"});
 }
+
 }
 
 /* ===================================================== */
-/* HASH QUICK FILTER (ANTI OPENAI COST) */
+/* HASH */
 /* ===================================================== */
 
-function imageHash(value){
-return crypto.createHash("md5").update(value).digest("hex");
+function hash(val){
+return crypto.createHash("md5").update(val).digest("hex");
 }
 
 /* ===================================================== */
-/* 🔥 SEARCH ENGINE */
+/* 🔥 SEARCH ROUTE WITH FULL DEBUG */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
+
+console.log("🚀 ROUTE CALLED");
 
 try{
 
 const user = await User.findById(req.user.userId);
 if(!user) return res.status(401).json({message:"User not found"});
 
-if(user.role !== "unlimited" && user.credits <= 0){
-return res.status(403).json({message:"No credits"});
-}
-
 const { keyword, limit } = req.body;
+
+console.log("🔥 KEYWORD:",keyword);
+
 if(!keyword) return res.status(400).json({message:"Keyword required"});
 
 /* ================= CACHE ================= */
 
 const cache = await EtsyCache.findOne({keyword});
 if(cache){
-console.log("✅ Cache used");
+console.log("✅ CACHE HIT");
 return res.json({results:cache.results,creditsLeft:user.credits});
 }
 
@@ -95,6 +97,8 @@ return res.json({results:cache.results,creditsLeft:user.credits});
 
 const etsyUrl =
 `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+console.log("🌍 Scraping Etsy...");
 
 const etsyResponse = await axios.get(
 "https://api.scraperapi.com/",
@@ -109,7 +113,7 @@ render:true
 
 const html = etsyResponse.data;
 
-/* ===== Improved Extraction (More Stable Regex) ===== */
+/* Extract */
 
 const titleRegex = /data-listing-title="([^"]+)"/g;
 const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
@@ -119,24 +123,24 @@ const titles = [...html.matchAll(titleRegex)].map(m=>m[1]);
 const images = [...html.matchAll(imageRegex)].map(m=>m[0]);
 const links = [...html.matchAll(linkRegex)].map(m=>m[0]);
 
-console.log("🔥 Titles:",titles.length);
-console.log("🔥 Images:",images.length);
+console.log("🔥 ETSY TITLES:",titles.length);
+console.log("🔥 ETSY IMAGES:",images.length);
 
-const maxItems = Math.min(parseInt(limit) || 5,10);
-
-let finalResults = [];
+/* ================= SERPAPI ================= */
 
 const serpapi = new GoogleSearch(process.env.SERPAPI_KEY);
 
-/* ================= LOOP ETSY PRODUCTS ================= */
+let finalResults = [];
+
+const maxItems = Math.min(parseInt(limit)||5,10);
 
 for(let i=0;i<Math.min(maxItems,titles.length);i++){
 
-const etsyTitle = titles[i] || keyword;
+const etsyTitle = titles[i];
 const etsyImage = images[i];
 const etsyLink = links[i];
 
-/* ================= GOOGLE SHOPPING TEXT SEARCH ================= */
+console.log("🔎 Searching Google for:",etsyTitle);
 
 const params = {
 engine:"google_shopping",
@@ -149,48 +153,42 @@ const serpData = await new Promise(resolve=>{
 serpapi.json(params,(data)=>resolve(data || {}));
 });
 
+console.log("🔥 SERP RESULTS:",serpData.shopping_results?.length || 0);
+
 let aliProducts = [];
 
 if(serpData.shopping_results){
 
 aliProducts = serpData.shopping_results
-.filter(p => (p.link || "").includes("aliexpress"))
+.filter(p=> (p.link||"").includes("aliexpress"))
 .slice(0,10);
 
 }
 
-console.log("🔥 Ali Products:",aliProducts.length);
+console.log("🔥 ALI PRODUCTS:",aliProducts.length);
 
-let verifiedMatches = [];
-
-/* ================= LOOP ALI PRODUCTS ================= */
+let verified = [];
 
 for(const ali of aliProducts){
 
 const aliImage = ali.thumbnail || ali.image || "";
 const aliLink = ali.link || "";
 
-/* ================= QUICK FILTER ================= */
-
 let similarity = 0;
 
-/* Text quick match */
-if(ali.title && etsyTitle){
-if(ali.title.toLowerCase().includes(etsyTitle.toLowerCase())){
-similarity += 40;
-}
-}
+/* Quick hash */
 
-/* Hash quick match */
 if(etsyImage && aliImage){
-if(imageHash(etsyImage) === imageHash(aliImage)){
+if(hash(etsyImage) === hash(aliImage)){
 similarity += 40;
 }
 }
 
-/* ================= OPENAI ONLY IF NECESSARY ================= */
+/* Call OpenAI ONLY if needed */
 
 if(similarity < 70 && etsyImage && aliImage){
+
+console.log("🤖 Calling OpenAI...");
 
 try{
 
@@ -202,7 +200,7 @@ messages:[
 {
 role:"user",
 content:[
-{type:"text",text:"Return similarity 0-100 between these images"},
+{type:"text",text:"Return similarity 0-100"},
 {type:"image_url",image_url:{url:etsyImage}},
 {type:"image_url",image_url:{url:aliImage}}
 ]
@@ -222,16 +220,16 @@ const match = text.match(/\d+/);
 similarity = match ? parseInt(match[0]) : 0;
 
 }catch(err){
-console.log("OpenAI skipped");
+console.log("❌ OpenAI error");
 }
 
 }
 
-/* ================= FINAL FILTER ================= */
+console.log("⭐ Similarity:",similarity);
 
 if(similarity >= 70){
 
-verifiedMatches.push({
+verified.push({
 aliexpress:{
 image:aliImage,
 link:aliLink
@@ -243,7 +241,7 @@ similarity
 
 }
 
-if(verifiedMatches.length > 0){
+if(verified.length > 0){
 
 finalResults.push({
 etsy:{
@@ -251,7 +249,7 @@ title:etsyTitle,
 image:etsyImage,
 link:etsyLink
 },
-aliexpressMatches:verifiedMatches
+aliexpressMatches:verified
 });
 
 }
@@ -265,25 +263,13 @@ keyword,
 results:finalResults
 });
 
-/* ================= CREDIT DEDUCTION ================= */
-
-if(user.role !== "unlimited"){
-user.credits -= 1;
-user.searchHistory.push({
-query:keyword,
-date:new Date()
-});
-await user.save();
-}
-
 res.json({
-results:finalResults,
-creditsLeft:user.credits
+results:finalResults
 });
 
 }catch(err){
 
-console.error("🔥 SEARCH ERROR:",err);
+console.error("🔥 SERVER ERROR:",err);
 res.status(500).json({message:"Search failed"});
 
 }
@@ -295,5 +281,5 @@ res.status(500).json({message:"Search failed"});
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT,()=>{
-console.log("🚀 Server running on port",PORT);
+console.log("🚀 SERVER RUNNING ON PORT",PORT);
 });
