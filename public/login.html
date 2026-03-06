@@ -45,7 +45,9 @@ const data = await res.json();
 if(res.ok){
 
 alert("Connexion réussie ✅");
-window.location.href="/dashboard.html";
+
+/* redirection */
+window.location.href="/payment.html";
 
 }else{
 alert(data.message || "Erreur");
@@ -55,6 +57,3 @@ alert(data.message || "Erreur");
 }
 
 </script>
-
-</body>
-</html>
