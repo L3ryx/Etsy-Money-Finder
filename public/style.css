@@ -4,16 +4,16 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+font-family:'Croissant One', cursive;
 }
 
 body{
 background:black;
-color:#1d1d1f;
-overflow:hidden;
+color:white;
+overflow-x:hidden;
 }
 
-/* ================= GIF BACKGROUND (NORMAL) ================= */
+/* ================= GIF BACKGROUND ================= */
 
 .gif-background{
 position:fixed;
@@ -36,17 +36,17 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-gap:40px;
+gap:35px;
 text-align:center;
 }
 
 /* ================= TITLE ================= */
 
 .title{
-font-size:52px;
-font-weight:700;
-letter-spacing:-1px;
-color:white; /* 🔥 Blanc pour contraste avec ton GIF */
+font-size:50px;
+font-weight:400;
+letter-spacing:2px;
+color:white;
 }
 
 /* ================= FORM ================= */
@@ -62,9 +62,9 @@ align-items:center;
 
 .input-field,
 .dropdown{
-width:300px;
-padding:16px;
-border-radius:16px;
+width:280px;
+padding:14px;
+border-radius:15px;
 border:none;
 outline:none;
 font-size:15px;
@@ -75,31 +75,117 @@ transition:0.3s ease;
 
 .input-field:focus,
 .dropdown:focus{
-border-color:#0071e3;
-box-shadow:0 0 0 4px rgba(0,113,227,0.15);
+box-shadow:0 0 0 4px rgba(0,113,227,0.3);
 }
 
 /* ================= BUTTON ================= */
 
 .start-btn{
-background:#0071e3;
-color:white;
+background:#00ff66;
+color:black;
 border:none;
-padding:16px 45px;
+padding:14px 40px;
 border-radius:30px;
-font-weight:600;
-font-size:16px;
+font-weight:bold;
+font-size:15px;
 cursor:pointer;
-transition:0.2s ease;
+transition:0.3s ease;
 }
 
 .start-btn:hover{
-background:#005bb5;
-transform:translateY(-2px);
+transform:scale(1.08);
+box-shadow:0 0 20px #00ff66;
 }
 
-.start-btn:active{
-transform:scale(0.98);
+.start-btn:disabled{
+opacity:0.6;
+cursor:not-allowed;
+}
+
+/* ================= RESULTS GRID ================= */
+
+#results{
+margin:60px auto;
+width:90%;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:25px;
+justify-items:center;
+}
+
+/* ================= RESULT CARD ================= */
+
+.result-card{
+background:white;
+color:black;
+width:220px;
+border-radius:20px;
+padding:12px;
+text-align:center;
+box-shadow:0 5px 20px rgba(0,0,0,0.15);
+transition:0.3s ease;
+overflow:hidden;
+}
+
+.result-card:hover{
+transform:translateY(-5px);
+}
+
+/* ================= IMAGE FIX ================= */
+
+.result-card img{
+width:100%;
+height:180px;
+object-fit:cover;
+border-radius:14px;
+display:block;
+}
+
+/* ================= LINK ================= */
+
+.result-card a{
+display:inline-block;
+margin-top:10px;
+text-decoration:none;
+color:#0071e3;
+font-weight:600;
+}
+
+/* ================= LOADER ================= */
+
+.loader{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:9999;
+color:white;
+backdrop-filter:blur(6px);
+}
+
+.loader.hidden{
+display:none;
+}
+
+.spinner{
+width:60px;
+height:60px;
+border:6px solid rgba(255,255,255,0.3);
+border-top:6px solid #00ff66;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin-bottom:15px;
+}
+
+@keyframes spin{
+from{transform:rotate(0deg);}
+to{transform:rotate(360deg);}
 }
 
 /* ================= RESPONSIVE ================= */
@@ -107,16 +193,16 @@ transform:scale(0.98);
 @media(max-width:600px){
 
 .title{
-font-family: 'Croissant One', cursive !important;
-font-size:52px;
-font-weight:400;
-letter-spacing:2px;
-color:white;
+font-size:30px;
 }
 
 .input-field,
 .dropdown{
-width:230px;
+width:220px;
+}
+
+.result-card{
+width:100%;
 }
 
 }
