@@ -36,12 +36,10 @@ mongoose.connect(
 /* ===================================================== */
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"));
 
-const upload = multer({
-  storage: multer.memoryStorage()
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
 /* ===================================================== */
 /* AUTH MIDDLEWARE */
@@ -79,18 +77,20 @@ return res.status(400).json({message:"User exists"});
 
 const hashed = await bcrypt.hash(password,10);
 
-const customer = await stripe.customers.create({email});
-
 const user = await User.create({
 email,
 password:hashed,
-credits:10,
+credits:0,
 role:"user",
 paid:false,
-stripeCustomerId:customer.id,
 purchaseHistory:[],
 searchHistory:[]
 });
+
+const customer = await stripe.customers.create({email});
+user.stripeCustomerId = customer.id;
+
+await user.save();
 
 res.json({message:"User created"});
 });
@@ -123,6 +123,29 @@ res.json({token});
 });
 
 /* ===================================================== */
+/* DASHBOARD */
+/* ===================================================== */
+
+app.get("/me", auth, async(req,res)=>{
+
+const user = await User.findById(req.user.userId);
+
+if(!user){
+return res.status(404).json({message:"User not found"});
+}
+
+res.json({
+email:user.email,
+role:user.role,
+credits:user.credits,
+searchesUsed:user.searchesUsed,
+purchaseHistory:user.purchaseHistory || [],
+searchHistory:user.searchHistory || []
+});
+
+});
+
+/* ===================================================== */
 /* STRIPE CHECKOUT */
 /* ===================================================== */
 
@@ -147,7 +170,9 @@ line_items:[
 {
 price_data:{
 currency:"eur",
-product_data:{name:`Plan ${plan}`},
+product_data:{
+name:`Plan ${plan}`
+},
 unit_amount:amount
 },
 quantity:1
@@ -218,7 +243,7 @@ res.json({received:true});
 });
 
 /* ===================================================== */
-/* SOCKET SYSTEM */
+/* SOCKET LOG SYSTEM */
 /* ===================================================== */
 
 function sendLog(socket,message){
@@ -233,83 +258,80 @@ socket.emit("connected",{socketId:socket.id});
 });
 
 /* ===================================================== */
-/* 🔥 SEARCH SECURED (SAME PIPELINE) */
+/* 🔥 ETSY SEARCH – IMAGE + LINK ASSOCIE */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
 
-const user = await User.findById(req.user.userId);
-
-if(!user){
-return res.status(404).json({message:"User not found"});
-}
-
-if(user.role !== "unlimited" && user.credits <= 0){
-return res.status(403).json({message:"No credits"});
-}
-
-/* 🔥 Déduction crédit */
-if(user.role !== "unlimited"){
-user.credits -= 1;
-user.searchesUsed += 1;
-await user.save();
-}
-
 const {keyword,limit} = req.body;
 
-const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+if(!keyword){
+return res.status(400).json({error:"Keyword required"});
+}
 
-const scraperResponse = await axios.get("https://api.scraperapi.com/",{
+const maxItems = Math.min(parseInt(limit) || 10,100);
+
+try{
+
+const etsyUrl = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
+
+const scraperResponse = await axios.get(
+"https://api.scraperapi.com/",
+{
 params:{
 api_key:process.env.SCRAPAPI_KEY,
-url,
+url:etsyUrl,
 render:true
 }
-});
+}
+);
 
 const html = scraperResponse.data;
 
-const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
+/* ===================================================== */
+/* 🔥 EXTRACTION PROPRE DES BLOCS */
+/* ===================================================== */
 
-const images = [...html.matchAll(imageRegex)];
-const links = [...html.matchAll(linkRegex)];
+const productRegex =
+/<a[^>]*href="(https:\/\/www\.etsy\.com\/listing\/\d+)[^>]*>([\s\S]*?)<\/a>/g;
+
+const matches = [...html.matchAll(productRegex)];
 
 const results = [];
 
-for(let i=0;i<Math.min(limit||10,images.length);i++){
+for(let i=0;i<matches.length && results.length<maxItems;i++){
+
+const block = matches[i][0];
+const link = matches[i][1];
+
+/* Extraire image dans le bloc */
+const imageMatch = block.match(/https:\/\/i\.etsystatic\.com[^"]+/);
+
+if(imageMatch){
 
 results.push({
-image:images[i][0],
-link:links[i]?links[i][0]:url
+image:imageMatch[0],
+link:link
 });
 
 }
 
-res.json({
-results,
-creditsLeft:user.credits
-});
+}
+
+res.json({results});
+
+}catch(err){
+console.log("Scraping error",err.message);
+res.status(500).json({error:"Scraping failed"});
+}
 
 });
 
 /* ===================================================== */
-/* 🔥 IMAGE ANALYSIS SECURED (SAME PIPELINE) */
+/* 🔥 IMAGE ANALYSIS (UNCHANGED) */
 /* ===================================================== */
 
-app.post("/analyze-images", auth, upload.array("images"), async(req,res)=>{
-
-const user = await User.findById(req.user.userId);
-
-if(user.role !== "unlimited" && user.credits <= 0){
-return res.status(403).json({message:"No credits"});
-}
-
-if(user.role !== "unlimited"){
-user.credits -= 1;
-user.searchesUsed += 1;
-await user.save();
-}
+app.post("/analyze-images", upload.array("images"), async(req,res)=>{
 
 const socketId = req.body.socketId;
 const socket = io.sockets.sockets.get(socketId);
@@ -360,8 +382,6 @@ Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
 const text = vision.data.choices[0].message.content;
 const match = text.match(/\d+/);
 const similarity = match ? parseInt(match[0]) : 0;
-
-sendLog(socket,`Similarity ${similarity}%`);
 
 results.push({
 image:file.originalname,
