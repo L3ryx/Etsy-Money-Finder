@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Activation Premium</title>
+<title>Choisir un plan</title>
 
 <style>
 
@@ -11,17 +11,15 @@ body{
 margin:0;
 background:black;
 color:white;
-font-family:Arial, Helvetica, sans-serif;
+font-family:Arial;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
 }
 
-/* ================= CARD ================= */
-
 .container{
-width:450px;
+width:500px;
 background:#111;
 padding:30px;
 border-radius:30px;
@@ -29,99 +27,94 @@ box-shadow:0 0 80px rgba(255,255,255,0.08);
 text-align:center;
 }
 
-/* ================= IMAGE PLUS PETITE ================= */
-
-.payment-image{
-width:60%;              /* 🔥 IMAGE PLUS PETITE */
-height:auto;
+.plan{
+background:#1a1a1a;
+padding:20px;
 border-radius:20px;
-margin:0 auto 20px auto;
-display:block;
-box-shadow:0 0 40px rgba(255,255,255,0.1);
+margin-bottom:15px;
 transition:0.3s;
 }
 
-.payment-image:hover{
-transform:scale(1.05);
+.plan:hover{
+transform:scale(1.03);
 }
 
-/* ================= TEXT ================= */
-
-.highlight{
-margin-top:10px;
+.plan h3{
 color:yellow;
-font-weight:bold;
-font-size:20px;
 }
-
-.badge{
-font-size:14px;
-opacity:0.6;
-margin-bottom:25px;
-}
-
-/* ================= BUTTON ================= */
 
 button{
-width:100%;
-padding:15px;
+padding:10px 15px;
 border:none;
-border-radius:15px;
+border-radius:10px;
 background:yellow;
 font-weight:bold;
-font-size:16px;
 cursor:pointer;
-transition:0.3s;
 }
 
 button:hover{
-transform:scale(1.05);
+opacity:0.8;
 }
 
 </style>
-
 </head>
 <body>
 
 <div class="container">
 
-<!-- 🔥 IMAGE -->
-<img src="/image-payment.png" class="payment-image" alt="Premium">
+<h2>Choisir un plan</h2>
 
-<!-- 💰 TEXTE -->
-<div class="highlight">
-Activer l'accès Premium
-</div>
-
-<div class="badge">
-Paiement sécurisé via Stripe
-</div>
-
-<!-- 🔥 BOUTON -->
-<button onclick="goCheckout()">
-Payer
+<!-- BASIC -->
+<div class="plan">
+<h3>Basic — 9,99€</h3>
+<p>15 recherches</p>
+<button onclick="checkout(999,'Basic',15)">
+Acheter
 </button>
+</div>
+
+<!-- PRO -->
+<div class="plan">
+<h3>Pro — 24,99€</h3>
+<p>40 recherches</p>
+<button onclick="checkout(2499,'Pro',40)">
+Acheter
+</button>
+</div>
+
+<!-- ELITE -->
+<div class="plan">
+<h3>Élite — 79,99€</h3>
+<p>130 recherches</p>
+<button onclick="checkout(7999,'Elite',130)">
+Acheter
+</button>
+</div>
 
 </div>
 
 <script>
 
-/* ================= STRIPE CHECKOUT ================= */
-
-async function goCheckout(){
+async function checkout(amount, plan, searches){
 
 const token = localStorage.getItem("token");
 
 if(!token){
-alert("Vous devez être connecté");
+alert("Connecte toi d'abord");
 return;
 }
 
 const res = await fetch("/create-checkout-session",{
 method:"POST",
 headers:{
+"Content-Type":"application/json",
 Authorization:"Bearer "+token
-}
+},
+body:JSON.stringify({
+amount,
+plan,
+searches
+})
 });
 
 const data = await res.json();
@@ -129,7 +122,7 @@ const data = await res.json();
 if(data.url){
 window.location.href = data.url;
 }else{
-alert("Erreur création session");
+alert("Erreur paiement");
 }
 
 }
