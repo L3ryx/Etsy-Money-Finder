@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ajouter Carte</title>
+<script src="https://js.stripe.com/v3/"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:black;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.box{
+background:rgba(255,255,255,0.1);
+padding:40px;
+border-radius:15px;
+width:400px;
+}
+
+button{
+width:100%;
+padding:12px;
+background:#00e676;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="box">
+
+<h2>Ajouter votre carte</h2>
+
+<div id="card-element"></div>
+
+<br>
+
+<button onclick="saveCard()">Enregistrer Carte</button>
+
+</div>
+
+<script>
+
+const stripe = Stripe("TON_PUBLIC_KEY_ICI");
+
+const elements = stripe.elements();
+const cardElement = elements.create("card");
+cardElement.mount("#card-element");
+
+async function saveCard(){
+
+const { setupIntent, error } = await fetch("/create-setup-intent",{
+method:"POST",
+headers:{
+Authorization:"Bearer "+localStorage.getItem("token")
+}
+}).then(res=>res.json());
+
+if(error){
+alert("Erreur setup");
+return;
+}
+
+const result = await stripe.confirmCardSetup(
+setupIntent.client_secret,
+{
+payment_method: {
+card: cardElement
+}
+}
+);
+
+if(result.error){
+alert(result.error.message);
+return;
+}
+
+await fetch("/attach-card",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+localStorage.getItem("token")
+},
+body:JSON.stringify({
+paymentMethodId: result.setupIntent.payment_method
+})
+});
+
+alert("Carte enregistrée ✅");
+
+window.location="/dashboard";
+
+}
+
+</script>
+
+</body>
+</html>
