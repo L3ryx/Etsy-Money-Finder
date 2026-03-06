@@ -8,41 +8,34 @@
 </head>
 <body>
 
-<!-- 🔴 POPUP INSCRIPTION OBLIGATOIRE -->
-
-<div id="signupPopup" class="popup">
-
-<div class="popup-box">
-
-<h2>Créer un compte</h2>
-
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Mot de passe">
-
-<button onclick="register()">S'inscrire</button>
-
-</div>
-</div>
-
-<!-- 🔥 CONTENU OUTIL -->
+<!-- ================= OUTIL ================= -->
 
 <div class="container">
 
 <h1>Niche Finder</h1>
 
-<div id="lockedArea">
-
-<div class="arrow">⬇</div>
-
-<div class="flames">🔥🔥🔥</div>
-
-<div class="lock">🔒</div>
-
-<button class="unlock-btn" onclick="goPayment()">
-Déverrouillé
-</button>
+<p>Les niches n'ont plus de secrets !</p>
 
 </div>
+
+<!-- ================= BOX INSCRIPTION CENTRE ================= -->
+
+<div id="authBox">
+
+<h2>Inscription</h2>
+
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Mot de passe">
+
+<button onclick="register()">Créer un compte</button>
+
+<p style="margin-top:15px;color:#aaa;">
+Déjà inscrit ?
+</p>
+
+<button class="login-btn" onclick="loginPage()">
+Login
+</button>
 
 </div>
 
@@ -64,17 +57,18 @@ body:JSON.stringify({email,password})
 });
 
 if(res.ok){
-document.getElementById("signupPopup").style.display="none";
+alert("Compte créé ✅");
+document.getElementById("authBox").style.display="none";
 }else{
 alert("Erreur inscription");
 }
 
 }
 
-/* 🔥 PAYMENT */
+/* 🔥 LOGIN */
 
-function goPayment(){
-window.location="/payment";
+function loginPage(){
+window.location="/login";
 }
 
 </script>
