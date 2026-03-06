@@ -1,15 +1,16 @@
 /* ===================================================== */
-/* NICHE FINDER SERVER - ES MODULE VERSION */
+/* NICHE FINDER BACKEND - PRO VERSION */
 /* ===================================================== */
 
 import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
-import multer from "multer";
 import axios from "axios";
 import http from "http";
 import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
 
 /* ===================================================== */
 /* APP INIT */
@@ -19,43 +20,46 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const PORT = process.env.PORT || 10000;
+
+/* ===================================================== */
+/* PATH FIX FOR ES MODULE */
+/* ===================================================== */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /* ===================================================== */
 /* MIDDLEWARE */
 /* ===================================================== */
 
-const upload = multer({
-  storage: multer.memoryStorage()
-});
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
 
 /* ===================================================== */
-/* HOME ROUTE */
+/* SERVE REACT BUILD IN PRODUCTION */
 /* ===================================================== */
 
-app.get("/", (req, res) => {
-  res.send("🚀 Niche Finder API Running");
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
 /* ===================================================== */
 /* SOCKET SYSTEM */
 /* ===================================================== */
 
-function sendLog(socket, message) {
-  console.log(message);
+io.on("connection", (socket) => {
+  console.log("🟢 Client connected");
 
-  if (socket) {
-    socket.emit("log", {
-      message,
-      time: new Date().toISOString()
-    });
-  }
-}
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+});
 
 /* ===================================================== */
-/* 🔎 ETSY SEARCH (TON SYSTEME EXACT) */
+/* SEARCH ROUTE (TON SYSTEME EXACT) */
 /* ===================================================== */
 
 app.post("/search-etsy", async (req, res) => {
@@ -86,10 +90,6 @@ app.post("/search-etsy", async (req, res) => {
 
     const html = scraperResponse.data;
 
-    /* ===================================================== */
-    /* IMAGE + LISTING EXTRACTION */
-    /* ===================================================== */
-
     const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
     const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
@@ -104,141 +104,23 @@ app.post("/search-etsy", async (req, res) => {
         image: images[i][0],
         link: links[i] ? links[i][0] : etsyUrl
       });
-
     }
 
     res.json({ results });
 
   } catch (err) {
 
-    console.error("ScraperAPI Error:", err.message);
+    console.error("Scraper error:", err.message);
 
     res.status(500).json({
       error: "Scraping failed"
     });
   }
-
-});
-
-/* ===================================================== */
-/* 🧠 IMAGE ANALYSIS SYSTEM */
-/* ===================================================== */
-
-app.post("/analyze-images", upload.array("images"), async (req, res) => {
-
-  const socketId = req.body.socketId;
-  const socket = io.sockets.sockets.get(socketId);
-
-  const results = [];
-
-  for (const file of req.files) {
-
-    sendLog(socket, `Processing ${file.originalname}`);
-
-    const base64 = file.buffer.toString("base64");
-
-    let imageUrl;
-
-    /* ================= UPLOAD TO IMGBB ================= */
-
-    try {
-
-      const uploadRes = await axios.post(
-        "https://api.imgbb.com/1/upload",
-        new URLSearchParams({
-          key: process.env.IMGBB_KEY,
-          image: base64
-        })
-      );
-
-      imageUrl = uploadRes.data.data.url;
-
-      sendLog(socket, "Uploaded to IMGBB");
-
-    } catch (err) {
-
-      sendLog(socket, "IMGBB upload failed");
-      continue;
-    }
-
-    /* ================= OPENAI VISION ================= */
-
-    try {
-
-      const vision = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Return similarity score between 0 and 100."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageUrl
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      const text = vision.data.choices[0].message.content;
-      const match = text.match(/\d+/);
-      const similarity = match ? parseInt(match[0]) : 0;
-
-      sendLog(socket, `AI Similarity: ${similarity}%`);
-
-      results.push({
-        image: file.originalname,
-        matches: [
-          {
-            url: "AI_ANALYSIS",
-            similarity
-          }
-        ]
-      });
-
-    } catch (err) {
-
-      sendLog(socket, "OpenAI Vision failed");
-    }
-  }
-
-  res.json({ results });
-
-});
-
-/* ===================================================== */
-/* SOCKET CONNECTION */
-/* ===================================================== */
-
-io.on("connection", (socket) => {
-
-  socket.emit("connected", {
-    socketId: socket.id
-  });
-
-  console.log("🟢 Client connected");
 });
 
 /* ===================================================== */
 /* SERVER START */
 /* ===================================================== */
-
-const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT);
