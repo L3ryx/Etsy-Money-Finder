@@ -131,70 +131,21 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ============= CREATE SETUP INTENT =================== */
+/* ========== SEARCH WITH AUTO PAYMENT ================= */
 /* ===================================================== */
 
-app.post("/create-setup-intent", auth, async(req,res)=>{
+app.post("/search-etsy", auth, async(req,res)=>{
 
-const user = await User.findById(req.user.userId);
-
-if(!user.stripeCustomerId){
-return res.status(400).json({message:"No customer"});
-}
-
-const setupIntent = await stripe.setupIntents.create({
-customer:user.stripeCustomerId,
-payment_method_types:["card"]
-});
-
-res.json({
-clientSecret:setupIntent.client_secret
-});
-
-});
-
-/* ===================================================== */
-/* ============= ATTACH CARD =========================== */
-/* ===================================================== */
-
-app.post("/attach-card", auth, async(req,res)=>{
-
-const {paymentMethodId} = req.body;
-
-const user = await User.findById(req.user.userId);
+const {keyword,limit} = req.body;
 
 try{
 
-await stripe.paymentMethods.attach(paymentMethodId,{
-customer:user.stripeCustomerId
-});
+const user = await User.findById(req.user.userId);
 
-await stripe.customers.update(user.stripeCustomerId,{
-invoice_settings:{
-default_payment_method:paymentMethodId
-}
-});
-
-user.defaultPaymentMethod = paymentMethodId;
-await user.save();
-
-res.json({success:true});
-
-}catch(err){
-console.log("❌ Attach error");
-res.status(400).json({message:"Attach failed"});
-}
-
-});
-
-/* ===================================================== */
-/* ========== AUTO CHARGE 0.50€ ======================= */
-/* ===================================================== */
-
-async function chargeUser(user){
+/* 🔥 PRELEVEMENT 0.50€ */
 
 if(!user.stripeCustomerId || !user.defaultPaymentMethod){
-throw new Error("No card");
+return res.status(400).json({message:"No payment method"});
 }
 
 await stripe.paymentIntents.create({
@@ -206,23 +157,7 @@ off_session:true,
 confirm:true
 });
 
-}
-
-/* ===================================================== */
-/* ========== SEARCH + AUTO PAYMENT ==================== */
-/* ===================================================== */
-
-app.post("/search-etsy", auth, async(req,res)=>{
-
-const {keyword,limit} = req.body;
-
-try{
-
-const user = await User.findById(req.user.userId);
-
-/* 🔥 PRELEVEMENT */
-
-await chargeUser(user);
+/* 🔥 SCRAPER */
 
 const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
@@ -271,7 +206,7 @@ res.json({results});
 console.log("❌ Payment failed");
 
 res.status(400).json({
-message:"Paiement échoué ou carte invalide"
+message:"Paiement échoué"
 });
 
 }
@@ -279,16 +214,43 @@ message:"Paiement échoué ou carte invalide"
 });
 
 /* ===================================================== */
-/* ================= CHECK PAYMENT ===================== */
+/* ========== CREATE STRIPE CHECKOUT =================== */
 /* ===================================================== */
 
-app.get("/check-payment", auth, async(req,res)=>{
+app.post("/create-checkout-session", auth, async(req,res)=>{
 
 const user = await User.findById(req.user.userId);
 
-res.json({
-paid:user.paid
+const session = await stripe.checkout.sessions.create({
+
+payment_method_types:["card"],
+
+mode:"payment",
+
+line_items:[{
+price_data:{
+currency:"eur",
+product_data:{
+name:"Activation Premium",
+description:"Activation système paiement 0.50€ par recherche"
+},
+unit_amount:50
+},
+quantity:1
+}],
+
+customer:user.stripeCustomerId,
+
+metadata:{
+userId:user._id.toString()
+},
+
+success_url:"https://"+req.headers.host+"/dashboard.html",
+cancel_url:"https://"+req.headers.host+"/payment.html"
+
 });
+
+res.json({url:session.url});
 
 });
 
@@ -316,9 +278,15 @@ process.env.STRIPE_WEBHOOK_SECRET
 return res.status(400).send("Webhook error");
 }
 
-if(event.type === "payment_intent.succeeded"){
+if(event.type === "checkout.session.completed"){
 
-console.log("✅ Payment succeeded");
+const session = event.data.object;
+
+await User.findByIdAndUpdate(session.metadata.userId,{
+paid:true
+});
+
+console.log("✅ User activated");
 
 }
 
