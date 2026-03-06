@@ -29,41 +29,25 @@ box-shadow:0 0 80px rgba(255,255,255,0.1);
 text-align:center;
 }
 
-/* ================= IMAGE BOX BLEU ================= */
-
-.image-box{
-background:#0044ff;
-padding:15px;
-border-radius:20px;
-margin-bottom:25px;
-box-shadow:0 0 30px rgba(0,68,255,0.4);
-}
+/* ================= IMAGE (PLUS GRANDE + ARRONDIE) ================= */
 
 .payment-image{
 width:100%;
-max-height:200px;
+height:280px; /* 🔥 Plus grande */
 object-fit:cover;
-border-radius:15px;
+border-radius:25px;
+box-shadow:0 0 40px rgba(255,255,255,0.15);
+transition:0.3s;
 }
 
-/* ================= PRICE ================= */
-
-.highlight{
-color:yellow;
-font-weight:bold;
-font-size:22px;
-margin-bottom:10px;
-}
-
-.badge{
-font-size:14px;
-opacity:0.6;
-margin-bottom:30px;
+.payment-image:hover{
+transform:scale(1.03);
 }
 
 /* ================= BUTTON ================= */
 
 button{
+margin-top:30px;
 width:100%;
 padding:18px;
 border:none;
@@ -86,19 +70,8 @@ transform:scale(1.05);
 
 <div class="container">
 
-<!-- 🔵 IMAGE DANS CADRE BLEU -->
-<div class="image-box">
+<!-- 🔥 IMAGE SEULE -->
 <img src="/image-payment.png" class="payment-image">
-</div>
-
-<!-- 💰 PRICE -->
-<div class="highlight">
-0,50€ par recherche
-</div>
-
-<div class="badge">
-Paiement sécurisé via Stripe
-</div>
 
 <!-- 🔥 BUTTON -->
 <button onclick="goCheckout()">
