@@ -1,5 +1,5 @@
 /* ===================================================== */
-/* ====================== RESET ======================== */
+/* ======================= RESET ======================= */
 /* ===================================================== */
 
 *{
@@ -148,25 +148,27 @@ cursor:not-allowed;
 }
 
 /* ===================================================== */
-/* ================= RESULTS GRID 2 BY 2 ================ */
+/* ================= RESPONSIVE GRID =================== */
 /* ===================================================== */
+
+/* 🔥 GRID AUTO ADAPTATIF */
 
 #results{
 width:100%;
-max-width:1400px;
+max-width:1600px;
 margin:60px auto;
 display:grid;
-grid-template-columns:repeat(2, 1fr); /* 🔥 FORCÉ 2 PAR LIGNE */
+grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
 gap:40px;
 padding:0 40px;
 justify-items:center;
 }
 
-/* 🔥 FORCE LES CARTES À NE PAS ÉCRASER LE GRID */
+/* 🔥 RESULT CARD */
 
-.result-card{
+#results .result-card{
 width:100%;
-max-width:none;
+max-width:400px;
 background:white;
 color:black;
 border-radius:20px;
@@ -176,23 +178,22 @@ box-shadow:0 5px 20px rgba(0,0,0,0.2);
 transition:0.3s ease;
 }
 
-.result-card:hover{
+#results .result-card:hover{
 transform:translateY(-5px);
 }
 
-/* Images fixes */
+/* Images */
 
-.result-card img{
+#results .result-card img{
 width:100%;
 height:220px;
 object-fit:cover;
 border-radius:14px;
-display:block;
 }
 
 /* Links */
 
-.result-card a{
+#results .result-card a{
 display:inline-block;
 margin-top:10px;
 text-decoration:none;
@@ -201,29 +202,40 @@ font-weight:600;
 }
 
 /* ===================================================== */
-/* ================= RESPONSIVE ======================== */
+/* ================= MOBILE = 2 PAR LIGNE ============== */
 /* ===================================================== */
 
-@media(max-width:900px){
+@media(max-width:768px){
+
 #results{
-grid-template-columns:1fr; /* 🔥 Mobile = 1 colonne */
-padding:0 20px;
-}
-}
-
-@media(max-width:600px){
-.title{
-font-size:30px;
+grid-template-columns:repeat(2, 1fr) !important; /* 🔥 2 cartes mobile */
+gap:15px;
+padding:0 10px;
 }
 
-.input-field,
-.dropdown{
-width:220px;
+#results .result-card{
+max-width:none;
 }
+
+#results .result-card img{
+height:150px;
+}
+
+}
+
+/* Petit écran très petit */
+
+@media(max-width:480px){
+
+#results{
+grid-template-columns:repeat(2, 1fr) !important;
+gap:10px;
+}
+
 }
 
 /* ===================================================== */
-/* ====================== LOADER ======================= */
+/* ======================= LOADER ====================== */
 /* ===================================================== */
 
 .loader{
