@@ -23,7 +23,6 @@ padding:40px;
 border-radius:15px;
 text-align:center;
 width:350px;
-backdrop-filter:blur(10px);
 }
 
 input{
@@ -43,16 +42,10 @@ border-radius:8px;
 background:#00e676;
 font-weight:bold;
 cursor:pointer;
-transition:0.3s;
 }
 
 button:hover{
-transform:scale(1.05);
-}
-
-a{
-color:#00e676;
-text-decoration:none;
+opacity:0.8;
 }
 
 </style>
@@ -67,20 +60,25 @@ text-decoration:none;
 <input type="email" id="email" placeholder="Email">
 <input type="password" id="password" placeholder="Password">
 
-<button onclick="register()">S'inscrire</button>
+<button id="registerBtn">S'inscrire</button>
 
-<br><br>
-
-<p>Déjà un compte ? <a href="/login">Login</a></p>
+<p>Déjà un compte ? <a href="/login" style="color:#00e676;">Login</a></p>
 
 </div>
 
 <script>
 
-async function register(){
+document.getElementById("registerBtn").addEventListener("click", async () => {
 
 const email = document.getElementById("email").value;
 const password = document.getElementById("password").value;
+
+if(!email || !password){
+alert("Remplis tous les champs");
+return;
+}
+
+try{
 
 const res = await fetch("/register",{
 method:"POST",
@@ -92,14 +90,18 @@ body:JSON.stringify({email,password})
 
 const data = await res.json();
 
-if(data.message){
+if(res.ok){
 alert("Compte créé ✅");
 window.location="/dashboard";
 }else{
-alert("Erreur");
+alert(data.message || "Erreur");
 }
 
+}catch(err){
+alert("Erreur serveur");
 }
+
+});
 
 </script>
 
