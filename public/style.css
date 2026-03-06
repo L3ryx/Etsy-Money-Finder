@@ -13,23 +13,38 @@ overflow-x:hidden;
 color:white;
 }
 
-/* ================= BACKGROUND IMAGE (RENDER FRIENDLY) ================= */
+/* ================= BACKGROUND IMAGE ANIMATED ================= */
 
 .sky{
 position:relative;
 min-height:100vh;
 
-/* ✅ IMPORTANT : chemin correct pour Express + Render */
+/* ✅ IMAGE */
 background-image:url("/background.jpg");
-background-size:cover;
+background-size:65%;              /* 🔥 IMAGE PLUS PETITE */
 background-position:center;
 background-repeat:no-repeat;
 
-/* 🔥 Assombrit l’image pour voir le texte */
+/* 🔥 Overlay sombre */
 background-color:rgba(0,0,0,0.6);
 background-blend-mode:darken;
 
+/* ✨ Animation */
+animation:backgroundMove 18s infinite alternate ease-in-out;
+
 padding-bottom:180px;
+}
+
+/* 🎬 Animation du fond */
+@keyframes backgroundMove{
+0%{
+background-size:60%;
+transform:translateY(0px);
+}
+100%{
+background-size:75%;
+transform:translateY(-10px);
+}
 }
 
 /* ================= TITLE ================= */
@@ -78,7 +93,7 @@ transform:scale(1.1);
 box-shadow:0 0 20px #00ff66;
 }
 
-/* ================= RESULTS GRID (2 BY 2) ================= */
+/* ================= RESULTS GRID ================= */
 
 #results{
 display:grid;
@@ -88,7 +103,7 @@ padding:40px;
 justify-items:center;
 }
 
-/* Responsive mobile */
+/* 📱 MOBILE */
 @media(max-width:768px){
 #results{
 grid-template-columns:1fr;
@@ -114,7 +129,7 @@ transform:translateY(-5px);
 box-shadow:0 0 25px #00ff66;
 }
 
-/* ================= 🔥 FLAMMES ANIMEES ================= */
+/* ================= 🔥 FLAMES ================= */
 
 .result-card::before,
 .result-card::after{
