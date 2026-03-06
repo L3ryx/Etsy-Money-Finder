@@ -14,14 +14,9 @@
 
 <div class="sky">
 
-<!-- ⭐ STARS -->
-<div class="star" style="width:4px;height:4px;top:60px;left:100px;"></div>
-<div class="star" style="width:3px;height:3px;top:200px;left:300px;"></div>
-<div class="star" style="width:5px;height:5px;top:350px;left:600px;"></div>
-<div class="star" style="width:3px;height:3px;top:150px;left:800px;"></div>
-
-<!-- 🌠 SHOOTING STAR -->
-<div class="shooting-star"></div>
+<!-- 🎮 CANVAS ANIMATION -->
+<canvas id="gameCanvas"></canvas>
+<img id="sourceImage" src="/background.jpg" style="display:none;">
 
 <!-- 🔥 TITLE -->
 <h1 class="title">Niche Finder</h1>
@@ -44,24 +39,117 @@ START
 
 </div>
 
-<!-- 🏠 DOGHOUSE -->
+<!-- 🏠 Niche -->
 <div class="doghouse">
 <div class="roof"></div>
 <div class="door"></div>
 </div>
 
-<!-- 🐕 DOG -->
+<!-- 🐕 Dog -->
 <div class="dog"></div>
 
-<!-- 🌿 GROUND -->
+<!-- 🌿 Ground -->
 <div class="ground"></div>
 
-<!-- 💵 MONEY RAIN -->
+<!-- 💵 Money -->
 <div class="money" style="left:40%">💵</div>
 <div class="money" style="left:50%">💵</div>
 <div class="money" style="left:60%">💵</div>
 
 </div>
+
+<!-- 🚀 SCRIPT CANVAS + PARTICULES -->
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const img = document.getElementById("sourceImage");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+/* ================= PARTICLES ================= */
+
+let particles = [];
+
+function createParticles(x,y){
+
+for(let i=0;i<80;i++){
+
+particles.push({
+x:x,
+y:y,
+vx:(Math.random()-0.5)*8,
+vy:(Math.random()-0.5)*8,
+alpha:1,
+size:Math.random()*4+2
+});
+
+}
+
+}
+
+/* Explosion au clic */
+canvas.addEventListener("click",(e)=>{
+createParticles(e.clientX,e.clientY);
+});
+
+/* ================= ANIMATION LOOP ================= */
+
+let offset = 0;
+
+img.onload = function(){
+loop();
+};
+
+function drawImage(){
+
+offset += 0.3;
+
+ctx.drawImage(
+img,
+Math.sin(offset/40)*30,
+Math.cos(offset/40)*20,
+canvas.width,
+canvas.height
+);
+
+}
+
+function updateParticles(){
+
+particles.forEach((p,index)=>{
+
+p.x += p.vx;
+p.y += p.vy;
+p.alpha -= 0.02;
+
+ctx.beginPath();
+ctx.globalAlpha = p.alpha;
+ctx.fillStyle = "gold";
+ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+ctx.fill();
+
+if(p.alpha <= 0){
+particles.splice(index,1);
+}
+
+});
+
+ctx.globalAlpha = 1;
+}
+
+function loop(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+drawImage();
+updateParticles();
+
+requestAnimationFrame(loop);
+}
+
+</script>
 
 </body>
 </html>
