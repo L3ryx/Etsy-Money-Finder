@@ -85,8 +85,7 @@ const hashed = await bcrypt.hash(password,10);
 
 const user = await User.create({
 email,
-password:hashed,
-paid:false
+password:hashed
 });
 
 /* 🔥 CREATE STRIPE CUSTOMER */
@@ -131,7 +130,71 @@ res.json({token});
 });
 
 /* ===================================================== */
-/* ========== SEARCH WITH AUTO PAYMENT ================= */
+/* =============== BUY CREDIT PACK ===================== */
+/* ===================================================== */
+
+app.post("/buy-pack", auth, async(req,res)=>{
+
+const {pack} = req.body;
+
+let amount = 0;
+let credits = 0;
+
+if(pack === "15"){
+amount = 999;
+credits = 15;
+}
+
+if(pack === "50"){
+amount = 2999;
+credits = 50;
+}
+
+if(pack === "200"){
+amount = 7999;
+credits = 200;
+}
+
+if(amount === 0){
+return res.status(400).json({message:"Invalid pack"});
+}
+
+const user = await User.findById(req.user.userId);
+
+const session = await stripe.checkout.sessions.create({
+
+payment_method_types:["card"],
+mode:"payment",
+
+line_items:[{
+price_data:{
+currency:"eur",
+product_data:{
+name:`Pack ${credits} recherches`
+},
+unit_amount:amount
+},
+quantity:1
+}],
+
+customer:user.stripeCustomerId,
+
+metadata:{
+userId:user._id.toString(),
+credits:credits
+},
+
+success_url:"https://"+req.headers.host+"/dashboard.html",
+cancel_url:"https://"+req.headers.host+"/payment.html"
+
+});
+
+res.json({url:session.url});
+
+});
+
+/* ===================================================== */
+/* ========== SEARCH WITH CREDIT DEDUCTION ============= */
 /* ===================================================== */
 
 app.post("/search-etsy", auth, async(req,res)=>{
@@ -142,19 +205,16 @@ try{
 
 const user = await User.findById(req.user.userId);
 
-/* 🔥 PRELEVEMENT 0.50€ */
+/* 🔥 CREDIT CHECK */
 
-if(!user.stripeCustomerId || !user.defaultPaymentMethod){
-return res.status(400).json({message:"No payment method"});
+if(user.credits <= 0){
+return res.status(400).json({message:"No credits"});
 }
 
-await stripe.paymentIntents.create({
-amount:50,
-currency:"eur",
-customer:user.stripeCustomerId,
-payment_method:user.defaultPaymentMethod,
-off_session:true,
-confirm:true
+/* 🔥 DECREMENT CREDIT */
+
+await User.findByIdAndUpdate(user._id,{
+$inc:{credits:-1}
 });
 
 /* 🔥 SCRAPER */
@@ -199,58 +259,14 @@ link: href.startsWith("http")
 
 });
 
-res.json({results});
+res.json({results,creditsLeft:user.credits - 1});
 
 }catch(err){
 
-console.log("❌ Payment failed");
-
-res.status(400).json({
-message:"Paiement échoué"
-});
+console.log("❌ Search error");
+res.status(400).json({message:"Search failed"});
 
 }
-
-});
-
-/* ===================================================== */
-/* ========== CREATE STRIPE CHECKOUT =================== */
-/* ===================================================== */
-
-app.post("/create-checkout-session", auth, async(req,res)=>{
-
-const user = await User.findById(req.user.userId);
-
-const session = await stripe.checkout.sessions.create({
-
-payment_method_types:["card"],
-
-mode:"payment",
-
-line_items:[{
-price_data:{
-currency:"eur",
-product_data:{
-name:"Activation Premium",
-description:"Activation système paiement 0.50€ par recherche"
-},
-unit_amount:50
-},
-quantity:1
-}],
-
-customer:user.stripeCustomerId,
-
-metadata:{
-userId:user._id.toString()
-},
-
-success_url:"https://"+req.headers.host+"/dashboard.html",
-cancel_url:"https://"+req.headers.host+"/payment.html"
-
-});
-
-res.json({url:session.url});
 
 });
 
@@ -282,11 +298,26 @@ if(event.type === "checkout.session.completed"){
 
 const session = event.data.object;
 
-await User.findByIdAndUpdate(session.metadata.userId,{
+const userId = session.metadata.userId;
+const credits = parseInt(session.metadata.credits || 0);
+
+if(credits > 0){
+
+await User.findByIdAndUpdate(userId,{
+$inc:{credits:credits}
+});
+
+console.log("✅ Credits added");
+
+}else{
+
+await User.findByIdAndUpdate(userId,{
 paid:true
 });
 
-console.log("✅ User activated");
+console.log("✅ Payment activated");
+
+}
 
 }
 
