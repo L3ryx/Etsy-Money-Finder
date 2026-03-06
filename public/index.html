@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<!-- 🔴 POPUP BLOQUANT OBLIGATOIRE -->
+<!-- 🔴 POPUP OBLIGATOIRE -->
 
 <div id="authPopup" style="
 position:fixed;
@@ -19,54 +19,73 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.95);
-backdrop-filter:blur(15px);
 display:flex;
 justify-content:center;
 align-items:center;
 z-index:9999;
+background:#111;
 ">
 
 <div style="
-background:white;
-padding:40px;
-border-radius:20px;
+background:#1e1e1e;
+padding:50px;
+border-radius:25px;
 width:400px;
 text-align:center;
+box-shadow:0 20px 60px rgba(0,0,0,0.6);
 ">
 
-<h2>Accès obligatoire</h2>
+<h1 style="
+color:white;
+font-size:30px;
+margin-bottom:20px;
+">
+Bienvenue dans ma niche
+</h1>
 
-<p style="margin-bottom:15px;">
-Crée un compte pour accéder à l'outil.
+<p style="color:#ccc;margin-bottom:25px;">
+Crée un compte pour accéder à l'outil
 </p>
 
 <input type="email" id="email" placeholder="Email"
-style="width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+style="
+width:100%;
+padding:12px;
+margin:8px 0;
+border-radius:10px;
+border:none;
+outline:none;
+">
 
 <input type="password" id="password" placeholder="Mot de passe"
-style="width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+style="
+width:100%;
+padding:12px;
+margin:8px 0;
+border-radius:10px;
+border:none;
+outline:none;
+">
 
 <button onclick="registerUser()"
 style="
 width:100%;
 padding:14px;
-background:black;
-color:white;
+margin-top:15px;
+background:yellow;
+color:black;
 border:none;
-border-radius:10px;
-cursor:pointer;
+border-radius:12px;
 font-weight:bold;
-margin-top:10px;
+cursor:pointer;
 ">
-Créer compte
+Créer mon compte
 </button>
 
 </div>
-
 </div>
 
-<!-- ================= USER BUTTON ================= -->
+<!-- 🔥 BOUTON USER EN HAUT -->
 
 <div style="position:fixed;top:20px;right:20px;z-index:999;">
 <button onclick="openPopup()"
@@ -84,7 +103,7 @@ box-shadow:0 5px 15px rgba(0,0,0,0.3);
 </button>
 </div>
 
-<!-- ================= MAIN CONTENT ================= -->
+<!-- ================= BACKGROUND ================= -->
 
 <img src="/background.gif" class="gif-background">
 
@@ -93,6 +112,8 @@ box-shadow:0 5px 15px rgba(0,0,0,0.3);
 <div class="smoke"></div>
 <div class="smoke"></div>
 </div>
+
+<!-- ================= MAIN CONTENT ================= -->
 
 <div class="container">
 
@@ -140,7 +161,7 @@ Les niches n'ont plus de secrets !
 
 <script>
 
-/* 🔥 OUVRIR POPUP MANUELLEMENT */
+/* 🔥 OUVRIR POPUP */
 
 function openPopup(){
 document.getElementById("authPopup").style.display="flex";
@@ -167,7 +188,7 @@ if(res.ok){
 
 alert("Compte créé ✅");
 
-// 🔥 Redirection vers paiement obligatoire
+// 🔥 Redirection paiement obligatoire
 window.location="/payment";
 
 }else{
