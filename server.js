@@ -24,7 +24,6 @@ LOG SYSTEM
 */
 
 function sendLog(socket, message, type = "info") {
-
   console.log(`[${type}] ${message}`);
 
   if (socket) {
@@ -38,40 +37,7 @@ function sendLog(socket, message, type = "info") {
 
 /*
 ====================================================
-SCRAPE ETSY VIA ZENROWS
-====================================================
-*/
-
-async function scrapeEtsy(keyword, limit = 10) {
-
-  const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
-
-  const response = await axios.get("https://api.zenrows.com/v1/", {
-    params: {
-      apikey: process.env.ZENROWS_API_KEY,
-      url,
-      js_render: "true",
-      premium_proxy: "true"
-    }
-  });
-
-  const html = response.data;
-
-  const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
-  const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
-
-  const images = [...html.matchAll(imageRegex)].map(m => m[0]);
-  const links = [...html.matchAll(linkRegex)].map(m => m[0]);
-
-  return images.slice(0, limit).map((image, i) => ({
-    image,
-    link: links[i] || url
-  }));
-}
-
-/*
-====================================================
-UPLOAD IMAGE TO IMGBB
+UPLOAD TO IMGBB
 ====================================================
 */
 
@@ -79,105 +45,70 @@ async function uploadToImgBB(buffer) {
 
   const base64 = buffer.toString("base64");
 
-  const res = await axios.post(
+  const response = await axios.post(
     "https://api.imgbb.com/1/upload",
     new URLSearchParams({
       key: process.env.IMGBB_KEY,
       image: base64
     }),
     {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }
-    }
-  );
-
-  return res.data.data.url;
-}
-
-/*
-====================================================
-REVERSE IMAGE SEARCH VIA ZENROWS
-====================================================
-*/
-
-async function reverseSearch(imageUrl) {
-
-  const googleUrl =
-    `https://www.google.com/searchbyimage?image_url=${encodeURIComponent(imageUrl)}`;
-
-  const response = await axios.get("https://api.zenrows.com/v1/", {
-    params: {
-      apikey: process.env.ZENROWS_API_KEY,
-      url: googleUrl,
-      js_render: "true",
-      premium_proxy: "true"
-    }
-  });
-
-  const html = response.data;
-
-  const aliRegex = /https:\/\/[^"]*aliexpress\.com[^"]*/g;
-  const imgRegex = /https:\/\/[^"]*\.(jpg|png|jpeg)/g;
-
-  const aliLinks = [...html.matchAll(aliRegex)].map(m => m[0]);
-  const aliImages = [...html.matchAll(imgRegex)].map(m => m[0]);
-
-  return aliLinks.slice(0, 5).map((link, i) => ({
-    link,
-    image: aliImages[i]
-  }));
-}
-
-/*
-====================================================
-BATCH OPENAI COMPARISON (COST REDUCTION)
-👉 On compare 5 images en UNE seule requête
-====================================================
-*/
-
-async function batchCompare(base64Etsy, aliItems) {
-
-  if (aliItems.length === 0) return [];
-
-  const imageMessages = aliItems.map(item => ({
-    type: "image_url",
-    image_url: { url: item.image }
-  }));
-
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Return similarity 0-100 for each image" },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Etsy}`
-              }
-            },
-            ...imageMessages
-          ]
-        }
-      ]
-    },
-    {
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        "Content-Type": "application/x-www-form-urlencoded"
       }
     }
   );
 
-  const text = response.data.choices[0].message.content;
+  return response.data.data.url;
+}
 
-  const numbers = text.match(/\d+/g) || [];
+/*
+====================================================
+OPENAI SIMILARITY
+====================================================
+*/
 
-  return aliItems.map((item, i) => ({
-    ...item,
-    similarity: parseInt(numbers[i] || 0)
-  }));
+async function calculateSimilarity(base64Image, imageUrl) {
+
+  try {
+
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Return similarity 0 to 100" },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
+              },
+              {
+                type: "image_url",
+                image_url: { url: imageUrl }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        }
+      }
+    );
+
+    const text = response.data.choices[0].message.content;
+    const match = text.match(/\d+/);
+
+    return match ? parseInt(match[0]) : 0;
+
+  } catch (err) {
+    return 0;
+  }
 }
 
 /*
@@ -186,94 +117,176 @@ MAIN ROUTE
 ====================================================
 */
 
-app.post("/analyze", async (req, res) => {
+app.post("/analyze", upload.array("images"), async (req, res) => {
 
   const socket = io.sockets.sockets.get(req.body.socketId);
-
   const keyword = req.body.keyword;
   const limit = parseInt(req.body.limit) || 10;
 
   const finalResults = [];
 
-  try {
+  for (const file of req.files) {
 
-    sendLog(socket, "🔎 Scraping Etsy...");
+    sendLog(socket, `🖼 Processing ${file.originalname}`);
 
-    const etsyItems = await scrapeEtsy(keyword, limit);
+    /*
+    ====================================================
+    STEP 1 — SEARCH ETSY VIA ZENROWS (KEYWORD SEARCH)
+    ====================================================
+    */
 
-    sendLog(socket, `✅ ${etsyItems.length} Etsy items found`);
+    let etsyItems = [];
 
-    for (const item of etsyItems) {
+    try {
 
-      sendLog(socket, "📥 Downloading Etsy image");
+      const etsyUrl =
+        `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-      const imageBuffer = await axios.get(item.image, {
-        responseType: "arraybuffer"
+      const response = await axios.get("https://api.zenrows.com/v1/", {
+        params: {
+          url: etsyUrl,
+          apikey: process.env.ZENROWS_API_KEY,
+          js_render: "true",
+          premium_proxy: "true"
+        }
       });
 
-      const base64 = Buffer.from(imageBuffer.data).toString("base64");
+      const html = response.data;
 
-      /*
-      ============================================
-      UPLOAD IMAGE
-      ============================================
-      */
+      const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
+      const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
-      const publicImage = await uploadToImgBB(
-        Buffer.from(imageBuffer.data)
-      );
+      const images = [...html.matchAll(imageRegex)].map(m => m[0]);
+      const links = [...html.matchAll(linkRegex)].map(m => m[0]);
 
-      sendLog(socket, "☁ Image uploaded");
+      for (let i = 0; i < Math.min(limit, images.length); i++) {
 
-      /*
-      ============================================
-      REVERSE SEARCH
-      ============================================
-      */
+        etsyItems.push({
+          image: images[i],
+          link: links[i] || etsyUrl
+        });
+      }
 
-      const aliCandidates = await reverseSearch(publicImage);
+      sendLog(socket, `📦 ${etsyItems.length} Etsy items extracted`);
 
-      sendLog(socket, `🔍 ${aliCandidates.length} Ali candidates`);
+    } catch (err) {
 
-      /*
-      ============================================
-      BATCH COMPARISON (1 CALL FOR 5 IMAGES)
-      ============================================
-      */
+      sendLog(socket, "❌ Etsy scrape failed", "error");
+      continue;
+    }
 
-      const compared = await batchCompare(base64, aliCandidates);
+    /*
+    ====================================================
+    STEP 2 — UPLOAD ETSY IMAGES TO IMGBB
+    ====================================================
+    */
 
-      for (const result of compared) {
+    for (let item of etsyItems) {
 
-        if (result.similarity >= 70) {
+      try {
 
-          finalResults.push({
-            etsy: {
-              image: item.image,
-              link: item.link
-            },
-            aliexpress: {
-              image: result.image,
-              link: result.link
-            },
-            similarity: result.similarity
-          });
+        const imgRes = await axios.get(item.image, {
+          responseType: "arraybuffer"
+        });
 
-          sendLog(socket, `🔥 MATCH ${result.similarity}%`);
-        }
+        const imgUrl = await uploadToImgBB(imgRes.data);
+
+        item.imgbbUrl = imgUrl;
+
+      } catch (err) {
+        item.imgbbUrl = item.image;
       }
     }
 
-    res.json({ results: finalResults });
+    sendLog(socket, "✅ Etsy images uploaded to ImgBB");
 
-  } catch (err) {
+    /*
+    ====================================================
+    STEP 3 — GOOGLE REVERSE IMAGE VIA ZENROWS
+    ====================================================
+    */
 
-    console.error(err);
+    let aliCandidates = [];
 
-    res.status(500).json({
-      error: "Pipeline failed"
+    try {
+
+      const publicImageUrl = await uploadToImgBB(file.buffer);
+
+      const reverseUrl =
+        `https://www.google.com/searchbyimage?image_url=${encodeURIComponent(publicImageUrl)}&tbm=shop`;
+
+      const response = await axios.get("https://api.zenrows.com/v1/", {
+        params: {
+          url: reverseUrl,
+          apikey: process.env.ZENROWS_API_KEY,
+          js_render: "true",
+          premium_proxy: "true"
+        }
+      });
+
+      const html = response.data;
+
+      const imageRegex = /https?:\/\/[^"]+\.(jpg|png|webp)/g;
+      const linkRegex = /https?:\/\/www\.aliexpress\.com\/item\/\d+\.html/g;
+
+      const images = [...html.matchAll(imageRegex)].map(m => m[0]);
+      const links = [...html.matchAll(linkRegex)].map(m => m[0]);
+
+      for (let i = 0; i < Math.min(5, images.length); i++) {
+
+        if (links[i] && links[i].includes("aliexpress")) {
+
+          aliCandidates.push({
+            image: images[i],
+            link: links[i]
+          });
+        }
+      }
+
+      sendLog(socket, `🔍 ${aliCandidates.length} AliExpress candidates`);
+
+    } catch (err) {
+      sendLog(socket, "❌ Reverse search failed", "error");
+    }
+
+    /*
+    ====================================================
+    STEP 4 — AI COMPARISON
+    ====================================================
+    */
+
+    const matches = [];
+
+    for (const ali of aliCandidates) {
+
+      const similarity = await calculateSimilarity(
+        file.buffer.toString("base64"),
+        ali.image
+      );
+
+      if (similarity >= 70) {
+
+        matches.push({
+          etsy: etsyItems,
+          aliexpress: {
+            image: ali.image,
+            link: ali.link,
+            similarity
+          }
+        });
+
+        sendLog(socket, `🔥 Match ${similarity}%`);
+      }
+    }
+
+    finalResults.push({
+      originalImage: file.originalname,
+      etsyItems,
+      matches
     });
   }
+
+  res.json({ results: finalResults });
 });
 
 /*
@@ -289,7 +302,6 @@ io.on("connection", (socket) => {
   });
 
   console.log("🟢 Client connected");
-
 });
 
 /*
