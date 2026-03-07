@@ -1,29 +1,38 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<meta charset="UTF-8">
-<title>Scraper</title>
-
+<title>Tool</title>
 </head>
-
 <body>
 
-<h1>Etsy → AliExpress Finder</h1>
-
 <input id="keyword" placeholder="Keyword">
+<input id="limit" type="number" value="10">
 
-<select id="limit">
-<option value="5">5</option>
-<option value="10">10</option>
-</select>
-
-<button onclick="search()">Rechercher</button>
+<button onclick="search()">Search</button>
 
 <div id="results"></div>
 
-<script src="/app.js"></script>
+<script>
+
+async function search(){
+
+const keyword = document.getElementById("keyword").value
+const limit = document.getElementById("limit").value
+
+const res = await fetch("/search",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({keyword,limit})
+})
+
+const data = await res.json()
+
+document.getElementById("results").innerHTML =
+JSON.stringify(data,null,2)
+
+}
+
+</script>
 
 </body>
 </html>
