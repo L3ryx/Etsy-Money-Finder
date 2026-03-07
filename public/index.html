@@ -1,52 +1,29 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Etsy → AliExpress Finder</title>
-
-<link rel="stylesheet" href="style.css">
+<title>Scraper</title>
 
 </head>
 
 <body>
 
-<img class="background" src="background.jpg">
+<h1>Etsy → AliExpress Finder</h1>
 
-<div class="container">
-
-<h1>Etsy → AliExpress Product Finder</h1>
-
-<div class="form">
-
-<input
-id="keyword"
-type="text"
-placeholder="Mot clé produit"
-/>
+<input id="keyword" placeholder="Keyword">
 
 <select id="limit">
-
-<option value="5">5 résultats</option>
-<option value="10">10 résultats</option>
-<option value="20">20 résultats</option>
-
+<option value="5">5</option>
+<option value="10">10</option>
 </select>
 
-<button onclick="search()">
-Rechercher
-</button>
-
-</div>
+<button onclick="search()">Rechercher</button>
 
 <div id="results"></div>
 
-</div>
-
-<script src="app.js"></script>
+<script src="/app.js"></script>
 
 </body>
 </html>
