@@ -170,17 +170,6 @@ color:lightgreen;
 <script>
 
 /* ===================================================== */
-/* AUTH TOKEN */
-/* ===================================================== */
-
-const token = localStorage.getItem("token");
-
-if(!token){
-alert("Connecte toi !");
-window.location.href="/login.html";
-}
-
-/* ===================================================== */
 /* SOCKET CONNECTION */
 /* ===================================================== */
 
@@ -198,27 +187,7 @@ logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
 logs.scrollTop = logs.scrollHeight;
 });
 
-/* ===================================================== */
-/* LOAD USER INFO */
-/* ===================================================== */
-
-async function loadUser(){
-
-const res = await fetch("/me",{
-headers:{
-Authorization:"Bearer " + token
-}
-});
-
-if(res.ok){
-const data = await res.json();
-document.getElementById("credits").innerText =
-"Credits: " + data.credits;
-}
-}
-
-loadUser();
-
+  
 /* ===================================================== */
 /* SEARCH FUNCTION */
 /* ===================================================== */
