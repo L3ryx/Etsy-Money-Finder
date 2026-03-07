@@ -163,20 +163,6 @@ color:lightgreen;
 
 <script>
 
-/* ================= SOCKET ================= */
-
-const socket = io();
-let socketId = null;
-
-socket.on("connected",(data)=>{
-socketId = data.socketId;
-});
-
-socket.on("log",(data)=>{
-const logs = document.getElementById("logs");
-logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
-logs.scrollTop = logs.scrollHeight;
-});
 
 /* ================= SEARCH ================= */
 
