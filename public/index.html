@@ -5,41 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Niche Finder</title>
 
-<!-- Police -->
 <link href="https://fonts.googleapis.com/css2?family=Croissant+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 
 </head>
 <body>
 
-<!-- Background -->
+<!-- BACKGROUND -->
 <img src="/background.png" class="background">
 
-<!-- Dashboard bouton -->
-<div class="dashboard" id="dashboardBtn">Dashboard</div>
-
-<!-- Container central -->
+<!-- CONTAINER -->
 <div class="container">
 
   <div class="form">
-    <input type="text" id="keyword" placeholder="Entrez votre mot clé">
+    <input type="text" id="keyword" placeholder="Entrez un mot clé">
+
     <select id="limit">
-      <!-- Options 1 à 100 -->
       <script>
-        for(let i=1;i<=100;i++){
+        for(let i=1;i<=50;i++){
           document.write(`<option value="${i}">${i} résultats</option>`);
         }
       </script>
     </select>
+
     <button id="startBtn">START</button>
   </div>
 
 </div>
 
-<!-- Résultats -->
+<!-- RESULTS -->
 <div id="results"></div>
 
 <script>
+
 const startBtn = document.getElementById("startBtn");
 const resultsContainer = document.getElementById("results");
 
@@ -48,46 +46,48 @@ startBtn.addEventListener("click", async () => {
   const keyword = document.getElementById("keyword").value;
   const limit = document.getElementById("limit").value;
 
-  const token = localStorage.getItem("token");
-  if(!token){
-    alert("⚠️ Vous devez être connecté !");
-    return;
-  }
-
   if(!keyword){
-    alert("⚠️ Entrez un mot clé !");
+    alert("Entrez un mot clé");
     return;
   }
 
   startBtn.disabled = true;
-  startBtn.innerText = "Recherche en cours...";
+  startBtn.innerText = "Recherche...";
 
-  try{
+  try {
+
     const response = await fetch("/search-etsy", {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer " + token
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
       },
-      body:JSON.stringify({keyword, limit})
+      body: JSON.stringify({ keyword, limit })
     });
 
     const data = await response.json();
 
     resultsContainer.innerHTML = "";
 
-    if(data.results && data.results.length>0){
-      data.results.forEach(item=>{
+    if(data.results && data.results.length > 0){
+
+      data.results.forEach(item => {
+
         const card = document.createElement("div");
         card.className = "result-card";
+
         card.innerHTML = `
-          <img src="${item.image}">
-          <a href="${item.link}" target="_blank">Voir l'annonce</a>
+          <img src="${item.image}" loading="lazy"/>
+          <a href="${item.link}" target="_blank">
+            Voir l'annonce
+          </a>
         `;
+
         resultsContainer.appendChild(card);
+
       });
+
     } else {
-      resultsContainer.innerHTML = "<p>Aucun résultat trouvé.</p>";
+      resultsContainer.innerHTML = "<p>Aucun résultat trouvé</p>";
     }
 
   } catch(err){
@@ -98,11 +98,6 @@ startBtn.addEventListener("click", async () => {
   startBtn.disabled = false;
   startBtn.innerText = "START";
 
-});
-
-// Dashboard bouton click
-document.getElementById("dashboardBtn").addEventListener("click", () => {
-  window.location.href="/dashboard.html";
 });
 
 </script>
