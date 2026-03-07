@@ -12,25 +12,7 @@ import imageHash from "image-hash";
 import User from "./models/User.js";
 import ComparisonCache from "./models/ComparisonCache.js";
 
-/* ================= CONFIG CHECK ================= */
-
-const REQUIRED_ENV = [
-  "DB_USER",
-  "DB_PASS",
-  "DB_NAME",
-  "JWT_SECRET",
-  "SCRAPAPI_KEY",
-  "OPENAI_API_KEY",
-  "STRIPE_SECRET_KEY"
-];
-
-REQUIRED_ENV.forEach(key => {
-  if (!process.env[key]) {
-    console.log(`❌ Missing ENV: ${key}`);
-  }
-});
-
-/* ================= APP ================= */
+/* ================= CONFIG ================= */
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +22,24 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+/* ================= ENV CHECK ================= */
+
+const REQUIRED = [
+  "DB_USER",
+  "DB_PASS",
+  "DB_NAME",
+  "JWT_SECRET",
+  "SERPAPI_KEY",
+  "OPENAI_API_KEY",
+  "STRIPE_SECRET_KEY"
+];
+
+REQUIRED.forEach(key => {
+  if (!process.env[key]) {
+    console.log(`❌ Missing ENV: ${key}`);
+  }
+});
 
 /* ================= DATABASE ================= */
 
@@ -52,317 +52,249 @@ mongoose.connect(
 /* ================= AUTH ================= */
 
 function auth(req,res,next){
-
   const token = req.headers.authorization?.split(" ")[1];
-
-  console.log("🔐 Token reçu:", token);
-
-  if(!token){
-    return res.status(401).json({message:"No token"});
-  }
-
+  if(!token) return res.status(401).json({error:"No token"});
   try{
     req.user = jwt.verify(token,process.env.JWT_SECRET);
-    console.log("✅ Token valid");
     next();
-  }catch(err){
-    console.log("❌ Token invalid:", err.message);
-    return res.status(401).json({message:"Invalid token"});
+  }catch{
+    return res.status(401).json({error:"Invalid token"});
+  }
+}
+
+/* ================= SMART HASH ================= */
+
+function getHash(url){
+  return new Promise((resolve,reject)=>{
+    imageHash(url,16,true,(err,data)=>{
+      if(err) return reject(err);
+      resolve(data);
+    });
+  });
+}
+
+function distance(h1,h2){
+  let d=0;
+  for(let i=0;i<h1.length;i++){
+    if(h1[i]!==h2[i]) d++;
+  }
+  return d;
+}
+
+/* ================= SMART COMPARE ================= */
+
+async function smartCompare(imgA,imgB){
+
+  const cached = await ComparisonCache.findOne({
+    imageA:imgA,
+    imageB:imgB
+  });
+
+  if(cached) return cached.similarity;
+
+  try{
+    const h1 = await getHash(imgA);
+    const h2 = await getHash(imgB);
+
+    if(distance(h1,h2) > 15){
+      return 0;
+    }
+  }catch{}
+
+  try{
+    const vision = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model:"gpt-4o-mini",
+        messages:[
+          {
+            role:"user",
+            content:[
+              {type:"text",text:"Return similarity 0-100"},
+              {type:"image_url",image_url:{url:imgA}},
+              {type:"image_url",image_url:{url:imgB}}
+            ]
+          }
+        ]
+      },
+      {
+        headers:{
+          Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
+        }
+      }
+    );
+
+    const match = vision.data.choices[0].message.content.match(/\d+/);
+    const similarity = match ? parseInt(match[0]) : 0;
+
+    await ComparisonCache.create({
+      imageA:imgA,
+      imageB:imgB,
+      similarity
+    });
+
+    return similarity;
+
+  }catch{
+    return 0;
   }
 }
 
 /* ================= REGISTER ================= */
 
 app.post("/register", async(req,res)=>{
+  const {email,password} = req.body;
 
-  try{
+  const exists = await User.findOne({email});
+  if(exists) return res.status(400).json({error:"User exists"});
 
-    const {email,password} = req.body;
+  const hashed = await bcrypt.hash(password,10);
 
-    const exists = await User.findOne({email});
-    if(exists) return res.status(400).json({message:"User exists"});
+  const user = await User.create({
+    email,
+    password:hashed,
+    credits:5
+  });
 
-    const hashed = await bcrypt.hash(password,10);
+  const customer = await stripe.customers.create({email});
+  user.stripeCustomerId = customer.id;
+  await user.save();
 
-    const user = await User.create({
-      email,
-      password:hashed,
-      credits:5,
-      role:"user",
-      searchHistory:[]
-    });
-
-    const customer = await stripe.customers.create({email});
-    user.stripeCustomerId = customer.id;
-    await user.save();
-
-    res.json({message:"User created"});
-
-  }catch(err){
-    console.log("Register error:",err);
-    res.status(500).json({message:"Register failed"});
-  }
+  res.json({message:"User created"});
 });
 
 /* ================= LOGIN ================= */
 
 app.post("/login", async(req,res)=>{
+  const {email,password} = req.body;
 
-  try{
+  const user = await User.findOne({email});
+  if(!user) return res.status(400).json({error:"Invalid"});
 
-    const {email,password} = req.body;
+  const ok = await bcrypt.compare(password,user.password);
+  if(!ok) return res.status(400).json({error:"Invalid"});
 
-    const user = await User.findOne({email});
-    if(!user) return res.status(400).json({message:"Invalid"});
+  const token = jwt.sign(
+    {userId:user._id},
+    process.env.JWT_SECRET,
+    {expiresIn:"7d"}
+  );
 
-    const match = await bcrypt.compare(password,user.password);
-    if(!match) return res.status(400).json({message:"Invalid"});
-
-    const token = jwt.sign(
-      {userId:user._id},
-      process.env.JWT_SECRET,
-      {expiresIn:"7d"}
-    );
-
-    res.json({token});
-
-  }catch(err){
-    console.log("Login error:",err);
-    res.status(500).json({message:"Login failed"});
-  }
-
+  res.json({token});
 });
-
-/* ================= SMART HASH ================= */
-
-function getHash(imageUrl){
-
-  return new Promise((resolve,reject)=>{
-
-    imageHash(imageUrl,16,true,(err,data)=>{
-      if(err) return reject(err);
-      resolve(data);
-    });
-
-  });
-
-}
-
-function calculateDistance(hash1,hash2){
-
-  let distance = 0;
-
-  for(let i=0;i<hash1.length;i++){
-    if(hash1[i] !== hash2[i]) distance++;
-  }
-
-  return distance;
-}
-
-/* ================= SMART COMPARE ================= */
-
-async function smartCompare(etsyImage, aliImage){
-
-  try{
-
-    const cached = await ComparisonCache.findOne({
-      imageA:etsyImage,
-      imageB:aliImage
-    });
-
-    if(cached){
-      console.log("♻️ Cache Hit");
-      return cached.similarity;
-    }
-
-    try{
-      const hash1 = await getHash(etsyImage);
-      const hash2 = await getHash(aliImage);
-      const distance = calculateDistance(hash1,hash2);
-
-      if(distance > 15){
-        return 0;
-      }
-
-    }catch(err){
-      console.log("Hash failed");
-    }
-
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model:"gpt-4o-mini",
-        messages:[{
-          role:"user",
-          content:[
-            {type:"text",text:"Return similarity 0-100"},
-            {type:"image_url",image_url:{url:etsyImage}},
-            {type:"image_url",image_url:{url:aliImage}}
-          ]
-        }]
-      },
-      {
-        headers:{
-          Authorization:`Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        timeout:15000
-      }
-    );
-
-    const text = response.data.choices[0].message.content;
-    const match = text.match(/\d+/);
-    const similarity = match ? parseInt(match[0]) : 0;
-
-    await ComparisonCache.create({
-      imageA:etsyImage,
-      imageB:aliImage,
-      similarity
-    });
-
-    return similarity;
-
-  }catch(err){
-    console.log("OpenAI Error:",err.message);
-    return 0;
-  }
-
-}
 
 /* ================= DEEP SEARCH ================= */
 
 app.post("/deep-search", auth, async(req,res)=>{
 
-  console.log("🚀 ROUTE CALLED");
+  const user = await User.findById(req.user.userId);
+  if(!user) return res.status(401).json({error:"User not found"});
+  if(user.credits <= 0)
+    return res.status(403).json({error:"No credits"});
+
+  const {keyword,limit} = req.body;
+  if(!keyword) return res.status(400).json({error:"Keyword required"});
+
+  const max = Math.min(limit || 5,10);
+
+  let results = [];
 
   try{
 
-    const user = await User.findById(req.user.userId);
+    console.log("🚀 Keyword:",keyword);
 
-    if(!user){
-      return res.status(401).json({message:"User not found"});
-    }
+    /* ===== ETSY SCRAPE ===== */
 
-    if(user.role !== "unlimited" && user.credits <= 0){
-      return res.status(403).json({message:"No credits"});
-    }
+    const etsyUrl =
+      `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
 
-    const {keyword,limit} = req.body;
-
-    console.log("🔥 KEYWORD:", keyword);
-
-    if(!keyword){
-      return res.status(400).json({message:"Keyword required"});
-    }
-
-    const maxItems = Math.min(parseInt(limit)||5,10);
-    let finalResults = [];
-
-    const etsyUrl = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
-
-    const scraperResponse = await axios.get(
+    const etsyResponse = await axios.get(
       "https://api.scraperapi.com/",
       {
         params:{
-          api_key:process.env.SCRAPAPI_KEY,
+          api_key:process.env.SERPAPI_KEY,
           url:etsyUrl,
           render:true
-        },
-        timeout:20000
+        }
       }
     );
 
-    const html = scraperResponse.data;
+    const html = etsyResponse.data;
 
     const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g;
     const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g;
 
-    const etsyImages = [...html.matchAll(imageRegex)].map(m=>m[0]);
-    const etsyLinks = [...html.matchAll(linkRegex)].map(m=>m[0]);
+    const images = [...html.matchAll(imageRegex)].map(m=>m[0]);
+    const links = [...html.matchAll(linkRegex)].map(m=>m[0]);
 
-    console.log("🖼 ETSY IMAGES FOUND:", etsyImages.length);
+    for(let i=0;i<Math.min(max,images.length);i++){
 
-    for(let i=0;i<Math.min(maxItems,etsyImages.length);i++){
+      const etsyImage = images[i];
+      const etsyLink = links[i] || etsyUrl;
 
-      const etsyImage = etsyImages[i];
-      const etsyLink = etsyLinks[i] || etsyUrl;
+      /* ===== GOOGLE LENS VIA SERPAPI ===== */
 
-      const searchUrl =
-        `https://www.google.com/searchbyimage?image_url=${encodeURIComponent(etsyImage)}&tbm=shop&q=site:aliexpress.com`;
-
-      const googleResponse = await axios.get(
-        "https://api.scraperapi.com/",
-        {
-          params:{
-            api_key:process.env.SCRAPAPI_KEY,
-            url:searchUrl,
-            render:true
-          },
-          timeout:20000
+      const serp = await axios.get("https://serpapi.com/search",{
+        params:{
+          engine:"google_lens",
+          api_key:process.env.SERPAPI_KEY,
+          image_url:etsyImage,
+          q:"site:aliexpress.com"
         }
-      );
+      });
 
-      const googleHtml = googleResponse.data;
+      const googleResults = serp.data.visual_matches || [];
 
-      const aliImages = [...googleHtml.matchAll(/https:\/\/[^"]+\.jpg/g)]
-        .slice(0,10)
-        .map(m=>m[0]);
+      let aliMatches = [];
 
-      const aliLinks = [...googleHtml.matchAll(/https:\/\/www\.aliexpress\.com\/item\/\d+\.html/g)]
-        .slice(0,10)
-        .map(m=>m[0]);
+      for(let item of googleResults.slice(0,10)){
 
-      let matches = [];
+        if(!item.link || !item.thumbnail)
+          continue;
 
-      for(let j=0;j<aliImages.length;j++){
-
-        const similarity = await smartCompare(etsyImage,aliImages[j]);
+        const similarity =
+          await smartCompare(etsyImage,item.thumbnail);
 
         if(similarity >= 70){
-
-          matches.push({
-            image:aliImages[j],
-            link:aliLinks[j] || null,
+          aliMatches.push({
+            image:item.thumbnail,
+            link:item.link,
             similarity
           });
-
         }
-
       }
 
-      if(matches.length > 0){
-        finalResults.push({
+      if(aliMatches.length>0){
+        results.push({
           etsy:{
             image:etsyImage,
             link:etsyLink
           },
-          aliexpressMatches:matches
+          aliexpressMatches:aliMatches
         });
       }
-
     }
 
-    if(user.role !== "unlimited"){
-      user.credits -= 1;
-      user.searchHistory.push({query:keyword,date:new Date()});
-      await user.save();
-    }
+    user.credits -= 1;
+    user.searchHistory.push({
+      query:keyword,
+      date:new Date()
+    });
+
+    await user.save();
 
     res.json({
-      results:finalResults,
+      results,
       creditsLeft:user.credits
     });
 
   }catch(err){
-    console.log("Deep search error:",err.message);
-    res.status(500).json({
-      message:"Deep search failed",
-      error:err.message
-    });
+    console.log("❌ Deep search error",err.message);
+    res.status(500).json({error:"Search failed"});
   }
-
 });
 
-/* ================= SERVER START ================= */
+/* ================= SERVER ================= */
 
 const PORT = process.env.PORT || 10000;
 
