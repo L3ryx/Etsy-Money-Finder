@@ -9,9 +9,7 @@
 
 <style>
 
-/* ===================================================== */
-/* GLOBAL */
-/* ===================================================== */
+/* ================= GLOBAL ================= */
 
 body{
 margin:0;
@@ -22,18 +20,14 @@ display:flex;
 justify-content:center;
 }
 
-/* ===================================================== */
-/* CONTAINER */
-/* ===================================================== */
+/* ================= CONTAINER ================= */
 
 .container{
 width:900px;
 padding:40px;
 }
 
-/* ===================================================== */
-/* HEADER */
-/* ===================================================== */
+/* ================= HEADER ================= */
 
 .header{
 display:flex;
@@ -50,13 +44,12 @@ border-radius:20px;
 font-weight:bold;
 }
 
-/* ===================================================== */
-/* SEARCH BOX */
-/* ===================================================== */
+/* ================= INPUTS ================= */
 
 input{
-width:70%;
+width:100%;
 padding:14px;
+margin-bottom:10px;
 border-radius:12px;
 border:none;
 outline:none;
@@ -78,9 +71,7 @@ button:hover{
 opacity:0.8;
 }
 
-/* ===================================================== */
-/* LOADER */
-/* ===================================================== */
+/* ================= LOADER ================= */
 
 .loader{
 margin-top:20px;
@@ -98,9 +89,7 @@ background:linear-gradient(90deg,orange,red);
 transition:width 0.4s;
 }
 
-/* ===================================================== */
-/* RESULTS */
-/* ===================================================== */
+/* ================= RESULTS ================= */
 
 .results{
 margin-top:30px;
@@ -119,6 +108,15 @@ border-radius:15px;
 width:100%;
 border-radius:10px;
 }
+
+.card a{
+display:block;
+margin-top:10px;
+color:gold;
+text-decoration:none;
+}
+
+/* ================= LOGS ================= */
 
 .logs{
 margin-top:20px;
@@ -140,15 +138,13 @@ color:lightgreen;
 
 <div class="container">
 
-<!-- ================= HEADER ================= -->
-
+<!-- HEADER -->
 <div class="header">
 <h2>Niche Finder 🚀</h2>
 <div class="credits" id="credits">Credits: -</div>
 </div>
 
-<!-- ================= SEARCH ================= -->
-
+<!-- SEARCH -->
 <input type="text" id="keyword" placeholder="Mot clé...">
 <input type="number" id="limit" placeholder="Limit" value="10">
 <button onclick="search()">Rechercher</button>
@@ -157,24 +153,19 @@ color:lightgreen;
 <div class="loader-bar" id="loaderBar"></div>
 </div>
 
-<!-- ================= RESULTS ================= -->
-
+<!-- RESULTS -->
 <div class="results" id="results"></div>
 
-<!-- ================= LOGS ================= -->
-
+<!-- LOGS -->
 <div class="logs" id="logs"></div>
 
 </div>
 
 <script>
 
-/* ===================================================== */
-/* SOCKET CONNECTION */
-/* ===================================================== */
+/* ================= SOCKET ================= */
 
 const socket = io();
-
 let socketId = null;
 
 socket.on("connected",(data)=>{
@@ -187,28 +178,30 @@ logs.innerHTML += `<div class="log">${data.time} - ${data.message}</div>`;
 logs.scrollTop = logs.scrollHeight;
 });
 
-  
-/* ===================================================== */
-/* SEARCH FUNCTION */
-/* ===================================================== */
+/* ================= SEARCH ================= */
 
 async function search(){
 
 const keyword = document.getElementById("keyword").value;
 const limit = document.getElementById("limit").value;
 
-if(!keyword) return alert("Keyword obligatoire");
+if(!keyword){
+alert("Keyword obligatoire");
+return;
+}
 
 document.getElementById("loader").style.display="block";
-document.getElementById("loaderBar").style.width="20%";
+document.getElementById("loaderBar").style.width="30%";
 
 const res = await fetch("/search-etsy",{
 method:"POST",
 headers:{
-"Content-Type":"application/json",
-Authorization:"Bearer " + token
+"Content-Type":"application/json"
 },
-body:JSON.stringify({keyword,limit})
+body:JSON.stringify({
+keyword,
+limit
+})
 });
 
 const data = await res.json();
@@ -219,12 +212,10 @@ setTimeout(()=>{
 document.getElementById("loader").style.display="none";
 },500);
 
-displayResults(data.results);
+displayResults(data.results || []);
 }
 
-/* ===================================================== */
-/* DISPLAY RESULTS */
-/* ===================================================== */
+/* ================= DISPLAY RESULTS ================= */
 
 function displayResults(results){
 
@@ -238,39 +229,14 @@ card.className = "card";
 
 card.innerHTML = `
 <img src="${item.image}">
-<a href="${item.link}" target="_blank">Voir Listing</a>
+<a href="${item.link}" target="_blank">
+Voir Listing
+</a>
 `;
 
 container.appendChild(card);
 
 });
-}
-
-/* ===================================================== */
-/* IMAGE ANALYSIS (UPLOAD + SOCKET) */
-/* ===================================================== */
-
-async function analyzeImages(files){
-
-const formData = new FormData();
-
-for(let file of files){
-formData.append("images",file);
-}
-
-formData.append("socketId",socketId);
-
-const res = await fetch("/analyze-images",{
-method:"POST",
-headers:{
-Authorization:"Bearer " + token
-},
-body:formData
-});
-
-const data = await res.json();
-
-console.log(data);
 }
 
 </script>
