@@ -1,21 +1,13 @@
 async function search(){
 
+console.log("click detected")
+
 const keyword = document.getElementById("keyword").value
 const limit = document.getElementById("limit").value
-const resultsDiv = document.getElementById("results")
-
-if(!keyword){
-
-alert("Entrez un mot clé")
-return
-
-}
-
-resultsDiv.innerHTML = "<p>Recherche en cours...</p>"
 
 try{
 
-const response = await fetch("/scrape",{
+const res = await fetch("/scrape",{
 
 method:"POST",
 
@@ -24,69 +16,23 @@ headers:{
 },
 
 body:JSON.stringify({
-
-keyword:keyword,
-limit:limit
-
+keyword,
+limit
 })
 
 })
 
-const data = await response.json()
+const data = await res.json()
 
-resultsDiv.innerHTML = ""
+console.log(data)
 
-if(!data || data.length === 0){
+const results = document.getElementById("results")
 
-resultsDiv.innerHTML = "<p>Aucun produit similaire trouvé</p>"
-return
+results.innerHTML = JSON.stringify(data)
 
-}
+}catch(e){
 
-data.forEach(item=>{
-
-const card = document.createElement("div")
-card.className="result-card"
-
-card.innerHTML=`
-
-<h3>${item.etsy_title}</h3>
-
-<img src="${item.etsy_image}" />
-
-<p>
-<a href="${item.etsy_link}" target="_blank">
-Voir l'annonce Etsy
-</a>
-</p>
-
-<hr>
-
-<h4>Fournisseur AliExpress</h4>
-
-<img src="${item.ali_image}" />
-
-<p>
-<a href="${item.ali_link}" target="_blank">
-Voir l'annonce AliExpress
-</a>
-</p>
-
-<p>
-Similarité : <strong>${item.similarity}%</strong>
-</p>
-
-`
-
-resultsDiv.appendChild(card)
-
-})
-
-}catch(error){
-
-console.error(error)
-
-resultsDiv.innerHTML = "<p>Erreur serveur</p>"
+console.error(e)
 
 }
 
