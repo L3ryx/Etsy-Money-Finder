@@ -12,7 +12,10 @@ body {
   overflow-x: hidden;
 }
 
-/* ================= BACKGROUND ================= */
+* ===================================================== */
+/* BACKGROUND FIXE */
+/* ===================================================== */
+
 .background {
   position: fixed;
   top: 0;
@@ -21,6 +24,8 @@ body {
   height: 100%;
   object-fit: cover;
   z-index: -1;
+  pointer-events: none;
+  filter: brightness(40%);
 }
 
 /* ================= CONTAINER ================= */
