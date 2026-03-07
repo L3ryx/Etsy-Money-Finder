@@ -1,63 +1,62 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema({
 
-/* ================= AUTH ================= */
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
 
-email:{
-type:String,
-required:true,
-unique:true
-},
+  password: {
+    type: String,
+    required: true
+  },
 
-password:{
-type:String,
-required:true
-},
+  credits: {
+    type: Number,
+    default: 5
+  },
 
-/* ================= STRIPE ================= */
+  role: {
+    type: String,
+    default: "user"
+  },
 
-stripeCustomerId:{
-type:String
-},
+  paid: {
+    type: Boolean,
+    default: false
+  },
 
-defaultPaymentMethod:{
-type:String
-},
+  stripeCustomerId: {
+    type: String
+  },
 
-/* ================= ACCESS ================= */
+  searchHistory: [
+    {
+      query: String,
+      date: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
 
-/* 🔥 Activé uniquement par ADMIN */
-freeUnlimited:{
-type:Boolean,
-default:false
-},
+  purchaseHistory: [
+    {
+      productId: String,
+      date: {
+        type: Date,
+        default: Date.now
+      },
+      amount: Number
+    }
+  ]
 
-paid:{
-type:Boolean,
-default:false
-},
-
-/* ================= CREDITS ================= */
-
-credits:{
-type:Number,
-default:0
-},
-
-/* ================= ROLES ================= */
-
-role:{
-type:String,
-enum:["user","admin"],
-default:"user"
-},
-
-createdAt:{
-type:Date,
-default:Date.now
-}
-
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model("User",UserSchema);
+const User = mongoose.model("User", UserSchema);
+
+export default User;
