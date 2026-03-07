@@ -1,19 +1,47 @@
 import mongoose from "mongoose";
 
-const ComparisonCacheSchema = new mongoose.Schema({
-  imageA: { type: String, required: true },
-  imageB: { type: String, required: true },
-  similarity: { type: Number, required: true },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    expires: 60 * 60 * 24 * 7 // auto delete after 7 days
-  }
-});
+/*
+  ComparisonCache
+  ----------------
+  Cache les comparaisons d’images pour éviter :
+  - Appels OpenAI inutiles
+  - Recalcul des hashes
+  - Coûts API élevés
 
-const ComparisonCache = mongoose.model(
-  "ComparisonCache",
-  ComparisonCacheSchema
+  Structure :
+  imageA → Image Etsy
+  imageB → Image AliExpress
+  similarity → Score 0-100
+  createdAt → Timestamp automatique
+*/
+
+const ComparisonSchema = new mongoose.Schema(
+  {
+    imageA: {
+      type: String,
+      required: true
+    },
+    imageB: {
+      type: String,
+      required: true
+    },
+    similarity: {
+      type: Number,
+      required: true
+    }
+  },
+  {
+    timestamps: true
+  }
 );
 
-export default ComparisonCache;
+/*
+  Index important 🚀
+  ------------------
+  Permet de retrouver rapidement un match identique
+  et évite les doublons en base.
+*/
+
+ComparisonSchema.index({ imageA: 1, imageB: 1 }, { unique: true });
+
+export default mongoose.model("ComparisonCache", ComparisonSchema);
