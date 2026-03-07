@@ -1,73 +1,38 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-import os
+async function search(){
 
-# =====================================================
-# APP SETUP
-# =====================================================
+const keyword=document.getElementById("keyword").value
+const limit=document.getElementById("limit").value
 
-app = Flask(__name__,
-            template_folder="templates",
-            static_folder="static")
+const res=await fetch("/scrape",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({keyword,limit})
+})
 
-CORS(app)
+const data=await res.json()
 
-PORT = int(os.environ.get("PORT", 5000))
+const results=document.getElementById("results")
+results.innerHTML=""
 
+data.forEach(item=>{
 
-# =====================================================
-# HOME ROUTE (ÉVITE "Cannot GET /")
-# =====================================================
+const card=document.createElement("div")
+card.className="card"
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+card.innerHTML=`
 
+<img src="${item.etsy.image}">
 
-# =====================================================
-# EXEMPLE API SEARCH
-# =====================================================
+<h3>${item.etsy.title}</h3>
 
-@app.route("/search", methods=["POST"])
-def search():
+<a href="${item.etsy.link}" target="_blank">Etsy</a>
 
-    data = request.json
+`
 
-    keyword = data.get("keyword")
-    limit = data.get("limit", 10)
+results.appendChild(card)
 
-    if not keyword:
-        return jsonify({"error": "Keyword required"}), 400
+})
 
-    # 🔥 Exemple réponse test
-    results = []
-
-    for i in range(limit):
-        results.append({
-            "title": f"{keyword} result {i+1}",
-            "image": "https://via.placeholder.com/300",
-            "link": "https://example.com"
-        })
-
-    return jsonify({
-        "success": True,
-        "results": results
-    })
-
-
-# =====================================================
-# HEALTH CHECK (BON POUR RENDER)
-# =====================================================
-
-@app.route("/health")
-def health():
-    return jsonify({"status": "ok"})
-
-
-# =====================================================
-# START SERVER
-# =====================================================
-
-if __name__ == "__main__":
-    print("🚀 Server running on port", PORT)
-    app.run(host="0.0.0.0", port=PORT, debug=False)
+}
