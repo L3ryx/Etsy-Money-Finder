@@ -1,54 +1,73 @@
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 import os
-import re
-import requests
-from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
+# =====================================================
+# APP SETUP
+# =====================================================
+
+app = Flask(__name__,
+            template_folder="templates",
+            static_folder="static")
+
+CORS(app)
+
+PORT = int(os.environ.get("PORT", 5000))
+
+
+# =====================================================
+# HOME ROUTE (ÉVITE "Cannot GET /")
+# =====================================================
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
+
+# =====================================================
+# EXEMPLE API SEARCH
+# =====================================================
+
 @app.route("/search", methods=["POST"])
 def search():
+
     data = request.json
+
     keyword = data.get("keyword")
-    limit = int(data.get("limit", 10))
+    limit = data.get("limit", 10)
 
     if not keyword:
         return jsonify({"error": "Keyword required"}), 400
 
-    url = f"https://www.etsy.com/search?q={keyword}"
+    # 🔥 Exemple réponse test
+    results = []
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
+    for i in range(limit):
+        results.append({
+            "title": f"{keyword} result {i+1}",
+            "image": "https://via.placeholder.com/300",
+            "link": "https://example.com"
+        })
 
-    try:
-        response = requests.get(url, headers=headers, timeout=20)
-        html = response.text
+    return jsonify({
+        "success": True,
+        "results": results
+    })
 
-        # Extraction image + link
-        images = re.findall(r'https://i\.etsystatic\.com[^"\']+', html)
-        links = re.findall(r'https://www\.etsy\.com/listing/\d+', html)
 
-        results = []
-        for i in range(min(limit, len(images))):
-            results.append({
-                "image": images[i],
-                "link": links[i] if i < len(links) else url
-            })
+# =====================================================
+# HEALTH CHECK (BON POUR RENDER)
+# =====================================================
 
-        if not results:
-            return jsonify({"results": [], "warning": "Aucun résultat trouvé ou bloqué par Etsy"}), 200
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
-        return jsonify({"results": results})
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": "Impossible de joindre Etsy", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+# =====================================================
+# START SERVER
+# =====================================================
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+    print("🚀 Server running on port", PORT)
+    app.run(host="0.0.0.0", port=PORT, debug=False)
