@@ -3,27 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Etsy Scraper ZenRows</title>
+<title>AliExpress Image Finder Pro</title>
 <link rel="stylesheet" href="style.css">
+
+<!-- Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <div class="container">
-  <h1>🛒 Etsy Scraper ZenRows</h1>
 
+  <h1>🖼 AliExpress Image Finder</h1>
+
+  <!-- ========================================= -->
+  <!-- UPLOAD FORM -->
+  <!-- ========================================= -->
   <div class="card">
-    <input type="text" id="keyword" placeholder="Entrez un mot clé">
-    <button id="searchBtn">🔎 Rechercher</button>
+    <h2>📤 Rechercher un mot-clé Etsy</h2>
+
+    <form id="searchForm">
+      <input type="text" id="keyword" placeholder="Mot clé..." required>
+      <button type="submit">🚀 Rechercher</button>
+    </form>
   </div>
 
+  <!-- ========================================= -->
+  <!-- LIVE LOGS -->
+  <!-- ========================================= -->
   <div class="card">
-    <h2>📊 Logs</h2>
+    <h2>📊 Live Logs</h2>
     <div id="logs" class="log-box">
-      <p>En attente...</p>
+      <p>En attente de recherche...</p>
     </div>
   </div>
 
+  <!-- ========================================= -->
+  <!-- RESULTS -->
+  <!-- ========================================= -->
   <div class="card">
     <h2>🎯 Résultats</h2>
     <div id="results"></div>
@@ -31,6 +47,10 @@
 
 </div>
 
+<!-- ========================================= -->
+<!-- SCRIPT -->
+<!-- ========================================= -->
 <script src="script.js"></script>
+
 </body>
 </html>
