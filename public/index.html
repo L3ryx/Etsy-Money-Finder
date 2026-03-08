@@ -1,83 +1,123 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Etsy → AliExpress Finder</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-    h1 { text-align: center; color: #333; }
-    #searchForm { text-align: center; margin-bottom: 20px; }
-    input[type="text"] { width: 300px; padding: 10px; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    .results { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-    .card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 10px; width: 250px; text-align: center; }
-    .card img { width: 100%; border-radius: 8px; }
-    .card a { display: block; margin: 5px 0; color: #1a73e8; text-decoration: none; word-break: break-word; }
-    .card a:hover { text-decoration: underline; }
-  </style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Etsy → AliExpress Finder</title>
+
+<style>
+
+body{
+font-family: Arial, sans-serif;
+background:#f2f2f2;
+margin:0;
+padding:30px;
+}
+
+h1{
+text-align:center;
+}
+
+.search-box{
+text-align:center;
+margin-bottom:30px;
+}
+
+input{
+padding:12px;
+width:320px;
+font-size:16px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+padding:12px 20px;
+font-size:16px;
+border:none;
+background:#ff6600;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#ff4500;
+}
+
+#loader{
+display:none;
+text-align:center;
+margin-top:20px;
+}
+
+.results{
+display:flex;
+flex-wrap:wrap;
+gap:25px;
+justify-content:center;
+margin-top:30px;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:10px;
+width:260px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+.card img{
+width:100%;
+border-radius:8px;
+}
+
+.card h3{
+margin:10px 0 5px 0;
+font-size:16px;
+}
+
+.card a{
+display:block;
+font-size:13px;
+color:#1a73e8;
+word-break:break-all;
+text-decoration:none;
+margin-bottom:10px;
+}
+
+.card a:hover{
+text-decoration:underline;
+}
+
+</style>
+
 </head>
+
 <body>
-  <h1>Etsy → AliExpress Finder</h1>
 
-  <div id="searchForm">
-    <input type="text" id="keyword" placeholder="Mot-clé Etsy..." />
-    <button id="searchBtn">Rechercher</button>
-  </div>
+<h1>Etsy → AliExpress Product Finder</h1>
 
-  <div class="results" id="results"></div>
+<div class="search-box">
 
-  <script>
-    const searchBtn = document.getElementById("searchBtn");
-    const keywordInput = document.getElementById("keyword");
-    const resultsDiv = document.getElementById("results");
+<input id="keyword" placeholder="ex: gold necklace">
 
-    searchBtn.addEventListener("click", async () => {
-      const keyword = keywordInput.value.trim();
-      if (!keyword) return alert("Veuillez entrer un mot-clé");
+<button id="searchBtn">
+Analyser
+</button>
 
-      resultsDiv.innerHTML = "<p>Recherche en cours...</p>";
+</div>
 
-      try {
-        const res = await fetch("/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keyword })
-        });
+<div id="loader">
+Recherche en cours...
+</div>
 
-        if (!res.ok) throw new Error("Erreur serveur");
+<div id="results" class="results"></div>
 
-        const data = await res.json();
+<script src="script.js"></script>
 
-        if (!data.length) {
-          resultsDiv.innerHTML = "<p>Aucun résultat trouvé</p>";
-          return;
-        }
-
-        resultsDiv.innerHTML = "";
-
-        data.forEach(item => {
-          const card = document.createElement("div");
-          card.classList.add("card");
-
-          card.innerHTML = `
-            <h3>Etsy</h3>
-            <img src="${item.etsyImage}" alt="Etsy" />
-            <a href="${item.etsyLink}" target="_blank">${item.etsyLink}</a>
-
-            <h3>AliExpress</h3>
-            <img src="${item.aliImage}" alt="AliExpress" />
-            <a href="${item.aliLink}" target="_blank">${item.aliLink}</a>
-          `;
-
-          resultsDiv.appendChild(card);
-        });
-
-      } catch (err) {
-        console.error(err);
-        resultsDiv.innerHTML = "<p>Erreur lors de la recherche</p>";
-      }
-    });
-  </script>
 </body>
 </html>
