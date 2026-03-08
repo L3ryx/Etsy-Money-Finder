@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>API Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🔐 API Settings</h1>
+
+<input type="password" id="adminPassword" placeholder="Admin Password" />
+
+<div>
+  <label>SerpAPI</label>
+  <input type="text" id="serpapi" />
+</div>
+
+<div>
+  <label>OpenAI</label>
+  <input type="text" id="openai" />
+</div>
+
+<div>
+  <label>ImgBB</label>
+  <input type="text" id="imgbb" />
+</div>
+
+<button onclick="loadConfig()">Load</button>
+<button onclick="saveConfig()">Save</button>
+
+<p id="status"></p>
+
+<script src="admin.js"></script>
+
+</body>
+</html>
