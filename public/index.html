@@ -1,25 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Etsy Scraper Test</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="/socket.io/socket.io.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etsy Scraper ZenRows</title>
+<link rel="stylesheet" href="style.css">
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <div class="container">
+  <h1>🛒 Etsy Scraper ZenRows</h1>
 
-  <h1>🛒 Etsy Scraper Test</h1>
-
-  <!-- Formulaire de recherche -->
   <div class="card">
     <input type="text" id="keyword" placeholder="Entrez un mot clé">
     <button id="searchBtn">🔎 Rechercher</button>
   </div>
 
-  <!-- Logs -->
   <div class="card">
     <h2>📊 Logs</h2>
     <div id="logs" class="log-box">
@@ -27,7 +24,6 @@
     </div>
   </div>
 
-  <!-- Résultats -->
   <div class="card">
     <h2>🎯 Résultats</h2>
     <div id="results"></div>
