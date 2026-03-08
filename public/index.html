@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AliExpress Image Finder Pro</title>
 
-<link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Socket.IO -->
+<title>Etsy → AliExpress Finder</title>
+
+<link rel="stylesheet" href="style.css">
+
 <script src="/socket.io/socket.io.js"></script>
 
 </head>
+
 <body>
 
 <div class="container">
 
-<h1>🖼 AliExpress Image Finder</h1>
+<h1>🛍 Etsy → AliExpress Product Finder</h1>
 
 <!-- ========================================= -->
-<!-- UPLOAD FORM -->
+<!-- SEARCH -->
 <!-- ========================================= -->
 
 <div class="card">
 
-<h2>📤 Upload Image(s)</h2>
+<h2>🔎 Search Etsy Products</h2>
 
-<form id="uploadForm">
+<form id="searchForm">
 
-<input type="file"
-       name="images"
-       multiple
-       accept="image/*" />
+<input
+type="text"
+id="keyword"
+placeholder="Enter product keyword"
+required
+/>
 
 <button type="submit">
 🚀 Analyze
@@ -68,134 +72,164 @@
 
 </div>
 
-<!-- ========================================= -->
-<!-- SCRIPT -->
-<!-- ========================================= -->
-
 <script>
 
 const socket = io();
 let socketId = null;
 
 /*
-====================================================
+============================================
 SOCKET CONNECTION
-====================================================
+============================================
 */
 
 socket.on("connected", (data) => {
-  socketId = data.socketId;
-  console.log("Socket connected:", socketId);
+
+socketId = data.socketId;
+console.log("Socket connected:", socketId);
+
 });
 
 /*
-====================================================
+============================================
 LIVE LOGS
-====================================================
+============================================
 */
 
 socket.on("log", (data) => {
 
-  const logsDiv = document.getElementById("logs");
+const logsDiv = document.getElementById("logs");
 
-  const line = document.createElement("p");
+const line = document.createElement("p");
 
-  line.innerHTML = `
-    <span style="color:#888">
-      [${new Date(data.time).toLocaleTimeString()}]
-    </span>
-    ${data.message}
-  `;
+line.innerHTML = `
+<span style="color:#888">
+[${new Date(data.time).toLocaleTimeString()}]
+</span>
+${data.message}
+`;
 
-  logsDiv.appendChild(line);
-  logsDiv.scrollTop = logsDiv.scrollHeight;
+logsDiv.appendChild(line);
+logsDiv.scrollTop = logsDiv.scrollHeight;
 
 });
 
 /*
-====================================================
+============================================
 FORM SUBMIT
-====================================================
+============================================
 */
 
-const form = document.getElementById("uploadForm");
-const resultsDiv = document.getElementById("results");
+const form = document.getElementById("searchForm");
 
 form.addEventListener("submit", async (e) => {
 
-  e.preventDefault();
+e.preventDefault();
 
-  resultsDiv.innerHTML = "";
-  document.getElementById("logs").innerHTML =
-    "<p>🚀 Starting analysis...</p>";
+const keyword = document.getElementById("keyword").value;
 
-  const formData = new FormData(form);
-  formData.append("socketId", socketId);
+document.getElementById("logs").innerHTML =
+"<p>🚀 Starting analysis...</p>";
 
-  try {
+document.getElementById("results").innerHTML = "";
 
-    const response = await fetch("/analyze", {
-      method: "POST",
-      body: formData
-    });
+try{
 
-    const data = await response.json();
+const response = await fetch("/analyze",{
 
-    displayResults(data.results);
+method:"POST",
 
-  } catch (err) {
+headers:{
+"Content-Type":"application/json"
+},
 
-    console.error("Request failed", err);
+body:JSON.stringify({
+keyword,
+socketId
+})
 
-  }
+});
+
+const data = await response.json();
+
+displayResults(data.results);
+
+}catch(err){
+
+console.error("Request failed",err);
+
+}
 
 });
 
 /*
-====================================================
+============================================
 DISPLAY RESULTS
-====================================================
+============================================
 */
 
-function displayResults(results) {
+function displayResults(results){
 
-  const resultsDiv = document.getElementById("results");
+const resultsDiv = document.getElementById("results");
 
-  results.forEach(result => {
+if(!results || results.length === 0){
 
-    const card = document.createElement("div");
-    card.className = "result-card";
+resultsDiv.innerHTML = `
+<p class="no-match">
+❌ No AliExpress supplier found
+</p>
+`;
 
-    let html = `
-      <h3>📷 ${result.image}</h3>
-    `;
+return;
 
-    if (!result.matches || result.matches.length === 0) {
+}
 
-      html += `<p class="no-match">
-        ❌ No matches found (≥60%)
-      </p>`;
+results.forEach(item=>{
 
-    } else {
+const card = document.createElement("div");
 
-      result.matches.forEach(product => {
+card.className="result-card";
 
-        html += `
-          <div class="product">
-            <p>🔥 Similarity: ${product.similarity}%</p>
-            <a href="${product.url}" target="_blank">
-              🔗 Open Product
-            </a>
-          </div>
-        `;
-      });
+card.innerHTML = `
 
-    }
+<div class="etsy">
 
-    card.innerHTML = html;
-    resultsDiv.appendChild(card);
+<h3>🛍 Etsy Product</h3>
 
-  });
+<img src="${item.etsy.image}" />
+
+<p>
+<a href="${item.etsy.link}" target="_blank">
+Open Etsy Listing
+</a>
+</p>
+
+</div>
+
+<div class="ali">
+
+<h3>🏭 AliExpress Supplier</h3>
+
+<img src="${item.aliexpress.image}" />
+
+<p>
+<a href="${item.aliexpress.link}" target="_blank">
+Open AliExpress Product
+</a>
+</p>
+
+</div>
+
+<p class="similarity">
+🔥 Similarity: ${item.similarity}%
+</p>
+
+`;
+
+resultsDiv.appendChild(card);
+
+});
+
 }
 
 </script>
