@@ -1,6 +1,3 @@
-// ========================================
-// SOCKET.IO
-// ========================================
 const socket = io();
 let socketId = null;
 
@@ -12,18 +9,13 @@ socket.on("connected", (data) => {
 socket.on("log", (data) => {
   const logsDiv = document.getElementById("logs");
   const line = document.createElement("div");
-  line.className = `log-${data.type}`;
   line.innerHTML = `<span style="color:#888">[${new Date(data.time).toLocaleTimeString()}]</span> ${data.message}`;
   logsDiv.appendChild(line);
   logsDiv.scrollTop = logsDiv.scrollHeight;
 });
 
-// ========================================
-// RECHERCHE ETSY
-// ========================================
 const searchBtn = document.getElementById("searchBtn");
 searchBtn.addEventListener("click", async () => {
-
   const keyword = document.getElementById("keyword").value.trim();
   if (!keyword) return alert("Veuillez entrer un mot clé");
 
@@ -33,9 +25,7 @@ searchBtn.addEventListener("click", async () => {
   try {
     const response = await fetch("/analyze", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keyword, socketId })
     });
 
@@ -46,12 +36,8 @@ searchBtn.addEventListener("click", async () => {
     console.error("Erreur serveur:", err);
     alert("Erreur serveur ❌");
   }
-
 });
 
-// ========================================
-// AFFICHAGE DES RESULTATS
-// ========================================
 function displayResults(results) {
   const resultsDiv = document.getElementById("results");
   resultsDiv.innerHTML = "";
@@ -61,16 +47,13 @@ function displayResults(results) {
     return;
   }
 
-  results.forEach(result => {
+  results.forEach(product => {
     const card = document.createElement("div");
     card.className = "result-card";
-
     card.innerHTML = `
-      <h3>📷 Etsy Listing</h3>
-      <img src="${result.etsy.image}" alt="Etsy produit" style="width:100%; max-width:300px; border-radius:10px;">
-      <p><a href="${result.etsy.link}" target="_blank">🔗 Voir l'annonce</a></p>
+      <img src="${product.image}" alt="Produit" style="width:100%; max-width:300px; border-radius:10px;">
+      <p><a href="${product.link}" target="_blank">🔗 Voir l'annonce</a></p>
     `;
-
     resultsDiv.appendChild(card);
   });
 }
