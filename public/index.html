@@ -1,238 +1,40 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Etsy → AliExpress Finder</title>
-
-<link rel="stylesheet" href="style.css">
-
-<script src="/socket.io/socket.io.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etsy Scraper Test</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
 </head>
-
 <body>
 
 <div class="container">
 
-<h1>🛍 Etsy → AliExpress Product Finder</h1>
+  <h1>🛒 Etsy Scraper Test</h1>
 
-<!-- ========================================= -->
-<!-- SEARCH -->
-<!-- ========================================= -->
+  <!-- Formulaire de recherche -->
+  <div class="card">
+    <input type="text" id="keyword" placeholder="Entrez un mot clé">
+    <button id="searchBtn">🔎 Rechercher</button>
+  </div>
 
-<div class="card">
+  <!-- Logs -->
+  <div class="card">
+    <h2>📊 Logs</h2>
+    <div id="logs" class="log-box">
+      <p>En attente...</p>
+    </div>
+  </div>
 
-<h2>🔎 Search Etsy Products</h2>
-
-<form id="searchForm">
-
-<input
-type="text"
-id="keyword"
-placeholder="Enter product keyword"
-required
-/>
-
-<button type="submit">
-🚀 Analyze
-</button>
-
-</form>
+  <!-- Résultats -->
+  <div class="card">
+    <h2>🎯 Résultats</h2>
+    <div id="results"></div>
+  </div>
 
 </div>
 
-<!-- ========================================= -->
-<!-- LIVE LOGS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>📊 Live Logs</h2>
-
-<div id="logs" class="log-box">
-<p>Waiting for analysis...</p>
-</div>
-
-</div>
-
-<!-- ========================================= -->
-<!-- RESULTS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>🎯 Results</h2>
-
-<div id="results"></div>
-
-</div>
-
-</div>
-
-<script>
-
-const socket = io();
-let socketId = null;
-
-/*
-============================================
-SOCKET CONNECTION
-============================================
-*/
-
-socket.on("connected", (data) => {
-
-socketId = data.socketId;
-console.log("Socket connected:", socketId);
-
-});
-
-/*
-============================================
-LIVE LOGS
-============================================
-*/
-
-socket.on("log", (data) => {
-
-const logsDiv = document.getElementById("logs");
-
-const line = document.createElement("p");
-
-line.innerHTML = `
-<span style="color:#888">
-[${new Date(data.time).toLocaleTimeString()}]
-</span>
-${data.message}
-`;
-
-logsDiv.appendChild(line);
-logsDiv.scrollTop = logsDiv.scrollHeight;
-
-});
-
-/*
-============================================
-FORM SUBMIT
-============================================
-*/
-
-const form = document.getElementById("searchForm");
-
-form.addEventListener("submit", async (e) => {
-
-e.preventDefault();
-
-const keyword = document.getElementById("keyword").value;
-
-document.getElementById("logs").innerHTML =
-"<p>🚀 Starting analysis...</p>";
-
-document.getElementById("results").innerHTML = "";
-
-try{
-
-const response = await fetch("/analyze",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-keyword,
-socketId
-})
-
-});
-
-const data = await response.json();
-
-displayResults(data.results);
-
-}catch(err){
-
-console.error("Request failed",err);
-
-}
-
-});
-
-/*
-============================================
-DISPLAY RESULTS
-============================================
-*/
-
-function displayResults(results){
-
-const resultsDiv = document.getElementById("results");
-
-if(!results || results.length === 0){
-
-resultsDiv.innerHTML = `
-<p class="no-match">
-❌ No AliExpress supplier found
-</p>
-`;
-
-return;
-
-}
-
-results.forEach(item=>{
-
-const card = document.createElement("div");
-
-card.className="result-card";
-
-card.innerHTML = `
-
-<div class="etsy">
-
-<h3>🛍 Etsy Product</h3>
-
-<img src="${item.etsy.image}" />
-
-<p>
-<a href="${item.etsy.link}" target="_blank">
-Open Etsy Listing
-</a>
-</p>
-
-</div>
-
-<div class="ali">
-
-<h3>🏭 AliExpress Supplier</h3>
-
-<img src="${item.aliexpress.image}" />
-
-<p>
-<a href="${item.aliexpress.link}" target="_blank">
-Open AliExpress Product
-</a>
-</p>
-
-</div>
-
-<p class="similarity">
-🔥 Similarity: ${item.similarity}%
-</p>
-
-`;
-
-resultsDiv.appendChild(card);
-
-});
-
-}
-
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
