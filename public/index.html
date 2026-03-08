@@ -1,123 +1,116 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etsy → AliExpress Finder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    h1 {
+      text-align: center;
+      color: #333;
+    }
 
-<title>Etsy → AliExpress Finder</title>
+    form {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
 
-<style>
+    input[type="text"] {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px 0 0 5px;
+      outline: none;
+    }
 
-body{
-font-family: Arial, sans-serif;
-background:#f2f2f2;
-margin:0;
-padding:30px;
-}
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      border-radius: 0 5px 5px 0;
+    }
 
-h1{
-text-align:center;
-}
+    button:hover {
+      background-color: #45a049;
+    }
 
-.search-box{
-text-align:center;
-margin-bottom:30px;
-}
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
 
-input{
-padding:12px;
-width:320px;
-font-size:16px;
-border-radius:6px;
-border:1px solid #ccc;
-}
+    .etsy-item {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
 
-button{
-padding:12px 20px;
-font-size:16px;
-border:none;
-background:#ff6600;
-color:white;
-border-radius:6px;
-cursor:pointer;
-}
+    .etsy-item img {
+      max-width: 200px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
 
-button:hover{
-background:#ff4500;
-}
+    .aliexpress-results {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
 
-#loader{
-display:none;
-text-align:center;
-margin-top:20px;
-}
+    .ali-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 5px;
+      width: 120px;
+    }
 
-.results{
-display:flex;
-flex-wrap:wrap;
-gap:25px;
-justify-content:center;
-margin-top:30px;
-}
+    .ali-item img {
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
 
-.card{
-background:white;
-padding:15px;
-border-radius:10px;
-width:260px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
-}
+    .ali-item p {
+      font-size: 12px;
+      color: #555;
+      margin: 0;
+      text-align: center;
+    }
 
-.card img{
-width:100%;
-border-radius:8px;
-}
-
-.card h3{
-margin:10px 0 5px 0;
-font-size:16px;
-}
-
-.card a{
-display:block;
-font-size:13px;
-color:#1a73e8;
-word-break:break-all;
-text-decoration:none;
-margin-bottom:10px;
-}
-
-.card a:hover{
-text-decoration:underline;
-}
-
-</style>
-
+    a {
+      text-decoration: none;
+    }
+  </style>
 </head>
-
 <body>
+  <h1>Etsy → AliExpress Finder</h1>
 
-<h1>Etsy → AliExpress Product Finder</h1>
+  <form id="searchForm">
+    <input type="text" id="query" placeholder="Rechercher un produit sur Etsy..." required>
+    <button type="submit">Chercher</button>
+  </form>
 
-<div class="search-box">
+  <div id="results">
+    <!-- Les résultats s'afficheront ici -->
+  </div>
 
-<input id="keyword" placeholder="ex: gold necklace">
-
-<button id="searchBtn">
-Analyser
-</button>
-
-</div>
-
-<div id="loader">
-Recherche en cours...
-</div>
-
-<div id="results" class="results"></div>
-
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
 </body>
 </html>
