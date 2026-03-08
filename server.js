@@ -4,17 +4,31 @@ const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const uploadDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
 const upload = multer({
-  storage: multer.memoryStorage()
+  storage: multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + "-" + file.originalname);
+    }
+  })
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(uploadDir));
 app.use(express.static("public"));
 
 /*
@@ -38,78 +52,6 @@ function sendLog(socket, message, type = "info") {
 
 /*
 ====================================================
-UPLOAD IMAGE TO IMGBB (TO FIX 414)
-====================================================
-*/
-
-async function uploadToImgBB(imageBuffer) {
-
-  const base64 = imageBuffer.toString("base64");
-
-  const response = await axios.post(
-    "https://api.imgbb.com/1/upload",
-    new URLSearchParams({
-      key: process.env.IMGBB_KEY,
-      image: base64
-    }),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
-    }
-  );
-
-  return response.data.data.url;
-}
-
-/*
-====================================================
-SIMILARITY
-====================================================
-*/
-
-async function calculateSimilarity(base64A, base64B) {
-
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Return only similarity 0 to 1." },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64A}`
-              }
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64B}`
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    }
-  );
-
-  const text = response.data.choices[0].message.content;
-  const match = text.match(/0\.\d+|1(\.0+)?/);
-
-  return match ? parseFloat(match[0]) : 0;
-}
-
-/*
-====================================================
 ANALYZE ROUTE
 ====================================================
 */
@@ -123,34 +65,22 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
   for (const file of req.files) {
 
-    sendLog(socket, `🖼 Processing ${file.originalname}`);
+    sendLog(socket, `🖼 Processing ${file.filename}`);
 
     /*
     ============================================
-    STEP 1 — UPLOAD IMAGE TO GET PUBLIC URL
+    STEP 1 — CREATE PUBLIC LOCAL URL
     ============================================
     */
 
-    let publicImageUrl;
+    const publicUrl =
+      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
 
-    try {
-
-      sendLog(socket, "📤 Uploading image to ImgBB");
-
-      publicImageUrl = await uploadToImgBB(file.buffer);
-
-      sendLog(socket, "✅ Image uploaded successfully");
-
-    } catch (err) {
-
-      sendLog(socket, "❌ Image upload failed", "error");
-
-      continue;
-    }
+    sendLog(socket, `🌍 Public URL created: ${publicUrl}`);
 
     /*
     ============================================
-    STEP 2 — CALL SERPAPI WITH IMAGE URL
+    STEP 2 — CALL SERPAPI
     ============================================
     */
 
@@ -165,7 +95,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
         {
           params: {
             engine: "google_reverse_image",
-            image_url: publicImageUrl,
+            image_url: publicUrl,
             api_key: process.env.SERPAPI_KEY
           }
         }
@@ -179,7 +109,7 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
       sendLog(
         socket,
-        `❌ SerpAPI error | ${err.response?.status}`,
+        `❌ SerpAPI error | ${err.response?.status || "No Status"} | ${err.message}`,
         "error"
       );
 
@@ -192,23 +122,17 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
     ============================================
     */
 
-    const aliexpressLinks = serpResults
+    const matches = serpResults
       .filter(r => r.link?.includes("aliexpress.com"))
-      .slice(0, 10);
-
-    const matches = [];
-
-    for (const item of aliexpressLinks) {
-
-      matches.push({
-        url: item.link,
-        similarity: 70 // placeholder (tu peux remettre ton IA ici)
-      });
-
-    }
+      .slice(0, 10)
+      .map(r => ({
+        url: r.link,
+        similarity: 70
+      }));
 
     results.push({
-      image: file.originalname,
+      image: file.filename,
+      publicUrl,
       matches
     });
   }
