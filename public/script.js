@@ -1,147 +1,76 @@
 // ========================================
-// SOCKET CONNECTION
+// SOCKET.IO
 // ========================================
-
 const socket = io();
 let socketId = null;
 
 socket.on("connected", (data) => {
-
   socketId = data.socketId;
   console.log("🟢 Socket connected:", socketId);
-
 });
-
-// ========================================
-// LIVE LOGS
-// ========================================
 
 socket.on("log", (data) => {
-
   const logsDiv = document.getElementById("logs");
-
   const line = document.createElement("div");
-
   line.className = `log-${data.type}`;
-
-  line.innerHTML = `
-    <span style="color:#888">
-      [${new Date(data.time).toLocaleTimeString()}]
-    </span>
-    ${data.message}
-  `;
-
+  line.innerHTML = `<span style="color:#888">[${new Date(data.time).toLocaleTimeString()}]</span> ${data.message}`;
   logsDiv.appendChild(line);
   logsDiv.scrollTop = logsDiv.scrollHeight;
-
 });
 
 // ========================================
-// FORM SUBMISSION (KEYWORD SEARCH)
+// RECHERCHE ETSY
 // ========================================
+const searchBtn = document.getElementById("searchBtn");
+searchBtn.addEventListener("click", async () => {
 
-const form = document.getElementById("searchForm");
-const resultsContainer = document.getElementById("results");
+  const keyword = document.getElementById("keyword").value.trim();
+  if (!keyword) return alert("Veuillez entrer un mot clé");
 
-form.addEventListener("submit", async (e) => {
-
-  e.preventDefault();
-
-  const keyword = document.getElementById("keyword").value;
-
-  resultsContainer.innerHTML = "";
-
-  document.getElementById("logs").innerHTML =
-    "<p>🚀 Starting analysis...</p>";
-
-  if (!keyword) {
-
-    alert("Please enter a keyword");
-    return;
-
-  }
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("logs").innerHTML = "<p>🚀 Recherche en cours...</p>";
 
   try {
-
     const response = await fetch("/analyze", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
-      body: JSON.stringify({
-        keyword,
-        socketId
-      })
-
+      body: JSON.stringify({ keyword, socketId })
     });
 
     const data = await response.json();
-
     displayResults(data.results);
 
   } catch (err) {
-
-    console.error("❌ Request failed:", err);
-
+    console.error("Erreur serveur:", err);
+    alert("Erreur serveur ❌");
   }
 
 });
 
 // ========================================
-// DISPLAY RESULTS
+// AFFICHAGE DES RESULTATS
 // ========================================
-
 function displayResults(results) {
-
-  const resultsContainer = document.getElementById("results");
+  const resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = "";
 
   if (!results || results.length === 0) {
-
-    resultsContainer.innerHTML =
-      "<p style='color:red'>❌ No suppliers found</p>";
-
+    resultsDiv.innerHTML = "<p style='color:red'>❌ Aucun résultat trouvé</p>";
     return;
-
   }
 
   results.forEach(result => {
-
     const card = document.createElement("div");
     card.className = "result-card";
 
     card.innerHTML = `
-
-      <div class="product-container">
-
-        <div class="etsy-product">
-          <h3>🛍 Etsy Product</h3>
-          <img src="${result.etsy.image}" class="product-img">
-          <a href="${result.etsy.link}" target="_blank">
-            Open Etsy Listing
-          </a>
-        </div>
-
-        <div class="ali-product">
-          <h3>🏭 AliExpress Supplier</h3>
-          <img src="${result.aliexpress.image}" class="product-img">
-          <a href="${result.aliexpress.link}" target="_blank">
-            Open AliExpress Product
-          </a>
-        </div>
-
-      </div>
-
-      <p class="similarity">
-        🔥 Similarity: ${result.similarity}%
-      </p>
-
+      <h3>📷 Etsy Listing</h3>
+      <img src="${result.etsy.image}" alt="Etsy produit" style="width:100%; max-width:300px; border-radius:10px;">
+      <p><a href="${result.etsy.link}" target="_blank">🔗 Voir l'annonce</a></p>
     `;
 
-    resultsContainer.appendChild(card);
-
+    resultsDiv.appendChild(card);
   });
-
 }
