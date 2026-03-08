@@ -1,72 +1,76 @@
 // script.js
-
-const searchBtn = document.getElementById("searchBtn");
-const keywordInput = document.getElementById("keyword");
+const form = document.getElementById("searchForm");
+const queryInput = document.getElementById("query");
 const resultsDiv = document.getElementById("results");
 
-/**
- * Fonction principale pour lancer la recherche
- */
-async function searchEtsyAli(keyword) {
-  if (!keyword) return alert("Veuillez entrer un mot-clé");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const query = queryInput.value.trim();
+  if (!query) return alert("Veuillez entrer un terme de recherche.");
 
-  resultsDiv.innerHTML = "<p>Recherche en cours...</p>";
+  resultsDiv.innerHTML = "<p>Recherche en cours…</p>";
 
   try {
-    // Envoi du mot-clé au serveur pour obtenir les 10 premiers résultats Etsy
-    const etsyRes = await fetch("/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword })
-    });
+    // Appel à notre serveur Node.js
+    const res = await fetch(`http://localhost:3000/search?query=${encodeURIComponent(query)}`);
+    const data = await res.json();
 
-    if (!etsyRes.ok) throw new Error("Erreur serveur lors de la recherche Etsy");
-
-    const etsyData = await etsyRes.json(); // [{ etsyImage, etsyLink }, ...]
-    if (!etsyData.length) {
-      resultsDiv.innerHTML = "<p>Aucun résultat Etsy trouvé</p>";
+    if (!data.etsyResults || data.etsyResults.length === 0) {
+      resultsDiv.innerHTML = "<p>Aucun résultat trouvé.</p>";
       return;
     }
 
+    // Générer HTML pour les résultats
     resultsDiv.innerHTML = "";
+    data.etsyResults.forEach((etsyItem, idx) => {
+      const etsySection = document.createElement("div");
+      etsySection.classList.add("etsy-item");
 
-    // Pour chaque produit Etsy, faire le reverse image + AliExpress
-    for (const item of etsyData) {
-      // Appel serveur pour reverse image + filtrage AliExpress
-      const aliRes = await fetch("/reverse-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: item.etsyImage })
+      // Etsy image + lien
+      const etsyLink = document.createElement("a");
+      etsyLink.href = etsyItem.link;
+      etsyLink.target = "_blank";
+      const etsyImg = document.createElement("img");
+      etsyImg.src = etsyItem.image;
+      etsyImg.alt = `Etsy image ${idx + 1}`;
+      etsyLink.appendChild(etsyImg);
+
+      etsySection.appendChild(etsyLink);
+
+      // AliExpress results
+      const aliDiv = document.createElement("div");
+      aliDiv.classList.add("aliexpress-results");
+
+      etsyItem.aliexpressResults.forEach((aliItem) => {
+        const aliLink = document.createElement("a");
+        aliLink.href = aliItem.link;
+        aliLink.target = "_blank";
+
+        const aliImg = document.createElement("img");
+        aliImg.src = aliItem.image;
+        aliImg.alt = "AliExpress image";
+        aliImg.style.width = "100px";
+        aliImg.style.height = "100px";
+
+        aliLink.appendChild(aliImg);
+
+        // Similarity score
+        const score = document.createElement("p");
+        score.textContent = `Similarity: ${aliItem.similarity}%`;
+
+        const aliContainer = document.createElement("div");
+        aliContainer.classList.add("ali-item");
+        aliContainer.appendChild(aliLink);
+        aliContainer.appendChild(score);
+
+        aliDiv.appendChild(aliContainer);
       });
 
-      if (!aliRes.ok) throw new Error("Erreur serveur lors du reverse image");
-
-      const aliData = await aliRes.json(); // { aliImage, aliLink }
-
-      // Création de la card produit
-      const card = document.createElement("div");
-      card.classList.add("card");
-
-      card.innerHTML = `
-        <h3>Etsy</h3>
-        <img src="${item.etsyImage}" alt="Etsy" />
-        <a href="${item.etsyLink}" target="_blank">${item.etsyLink}</a>
-
-        <h3>AliExpress</h3>
-        <img src="${aliData.aliImage}" alt="AliExpress" />
-        <a href="${aliData.aliLink}" target="_blank">${aliData.aliLink}</a>
-      `;
-
-      resultsDiv.appendChild(card);
-    }
+      etsySection.appendChild(aliDiv);
+      resultsDiv.appendChild(etsySection);
+    });
   } catch (err) {
     console.error(err);
-    resultsDiv.innerHTML = "<p>Erreur lors de la recherche</p>";
+    resultsDiv.innerHTML = "<p>Erreur lors de la récupération des résultats.</p>";
   }
-}
-
-// Event listener du bouton
-searchBtn.addEventListener("click", () => {
-  const keyword = keywordInput.value.trim();
-  searchEtsyAli(keyword);
 });
