@@ -1,7 +1,8 @@
-const express = require("express");
-const axios = require("axios");
-const cors = require("cors");
-require("dotenv").config();
+// server.js
+import express from "express";
+import axios from "axios";
+import cors from "cors";
+import FormData from "form-data";
 
 const app = express();
 app.use(cors());
@@ -9,186 +10,100 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-const ZENROWS_KEY = process.env.ZENROWS_KEY;
-const SERPER_KEY = process.env.SERPER_KEY;
-const IMGBB_KEY = process.env.IMGBB_KEY;
-
-function extractImageUrl(srcset) {
-  if (!srcset) return null;
-  const urls = srcset.split(",").map(u => u.trim().split(" ")[0]);
-  return urls[urls.length - 1];
-}
-
-async function scrapeEtsy(keyword) {
-
-  const url = `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`;
-
-  const response = await axios.get("https://api.zenrows.com/v1/", {
-    params: {
-      url: url,
-      apikey: ZENROWS_KEY,
-      js_render: "true"
-    }
-  });
-
-  const html = response.data;
-
-  const imageRegex = /<img [^>]*srcset="([^"]+)"/g;
-  const linkRegex = /href="(\/listing\/\d+)"/g;
-
-  const images = [...html.matchAll(imageRegex)]
-    .map(m => extractImageUrl(m[1]))
-    .filter(Boolean);
-
-  const links = [...html.matchAll(linkRegex)]
-    .map(m => "https://www.etsy.com" + m[1]);
-
-  const results = [];
-
-  for (let i = 0; i < Math.min(10, images.length); i++) {
-
-    results.push({
-      image: images[i],
-      link: links[i]
-    });
-
-  }
-
-  return results;
-}
-
-async function uploadToImgbb(imageUrl) {
-
-  const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
-
-  const base64 = Buffer.from(response.data).toString("base64");
-
-  const upload = await axios.post(
-    "https://api.imgbb.com/1/upload",
-    new URLSearchParams({
-      key: IMGBB_KEY,
-      image: base64
-    }),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
-    }
-  );
-
-  return upload.data.data.url;
-}
-
-async function reverseImageSearch(imageUrl) {
-
-  const response = await axios.post(
-    "https://google.serper.dev/images",
-    { imageUrl: imageUrl },
-    {
-      headers: {
-        "X-API-KEY": SERPER_KEY,
-        "Content-Type": "application/json"
-      }
-    }
-  );
-
-  return response.data.images || [];
-}
-
-async function scrapeAliExpressResults(queryUrl) {
-
-  const response = await axios.get("https://api.zenrows.com/v1/", {
-    params: {
-      url: queryUrl,
-      apikey: ZENROWS_KEY,
-      js_render: "true"
-    }
-  });
-
-  const html = response.data;
-
-  const imageRegex = /<img[^>]+src="([^"]+)"/g;
-  const linkRegex = /href="(https:\/\/www\.aliexpress\.com\/item\/[^"]+)"/g;
-
-  const images = [...html.matchAll(imageRegex)].map(m => m[1]);
-  const links = [...html.matchAll(linkRegex)].map(m => m[1]);
-
-  const results = [];
-
-  for (let i = 0; i < Math.min(10, images.length); i++) {
-
-    results.push({
-      image: images[i],
-      link: links[i]
-    });
-
-  }
-
-  return results;
-}
-
+// Endpoint principal
 app.post("/search", async (req, res) => {
-
   try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Missing query" });
 
-    const { keyword } = req.body;
+    // 1️⃣ Scraping Etsy - top 10 résultats
+    const etsyResponse = await axios.get(
+      `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(
+        `https://www.etsy.com/search?q=${query}`
+      )}&render_js=false`,
+      { timeout: 30000 }
+    );
+    // Extraction des images + liens
+    const etsyData = etsyResponse.data.match(
+      /"listingPageUrl":"(.*?)".*?"url":"(.*?)"/g
+    )?.slice(0, 10) || [];
+    const etsyResults = etsyData.map((item) => {
+      const urlMatch = item.match(/"listingPageUrl":"(.*?)"/);
+      const imgMatch = item.match(/"url":"(.*?)"/);
+      return {
+        link: urlMatch ? urlMatch[1].replace(/\\/g, "") : "",
+        image: imgMatch ? imgMatch[1].replace(/\\/g, "") : "",
+      };
+    });
 
-    const etsyProducts = await scrapeEtsy(keyword);
-
+    // 2️⃣ Reverse image search + filtrage AliExpress - top 5
     const finalResults = [];
+    for (const etsyItem of etsyResults) {
+      if (!etsyItem.image) continue;
 
-    for (const product of etsyProducts) {
+      const aliResponse = await axios.get(
+        `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(
+          `https://www.aliexpress.com/wholesale?SearchText=${etsyItem.image}`
+        )}&render_js=false`,
+        { timeout: 30000 }
+      );
 
-      const imgbbUrl = await uploadToImgbb(product.image);
+      const aliData = aliResponse.data.match(
+        /"productUrl":"(.*?)".*?"imageUrl":"(.*?)"/g
+      )?.slice(0, 5) || [];
 
-      const reverseResults = await reverseImageSearch(imgbbUrl);
+      const aliResults = aliData.map((item) => {
+        const linkMatch = item.match(/"productUrl":"(.*?)"/);
+        const imgMatch = item.match(/"imageUrl":"(.*?)"/);
+        return {
+          link: linkMatch ? linkMatch[1].replace(/\\/g, "") : "",
+          image: imgMatch ? imgMatch[1].replace(/\\/g, "") : "",
+          similarity: 0, // placeholder OpenAI similarity
+        };
+      });
 
-      const aliResults = reverseResults
-        .filter(r => r.link && r.link.includes("aliexpress.com"))
-        .slice(0, 10);
+      // 3️⃣ Comparaison d’images OpenAI
+      for (const aliItem of aliResults) {
+        try {
+          // Upload image Etsy sur Imgbb
+          const form = new FormData();
+          form.append("image", etsyItem.image);
+          const imgbbRes = await axios.post(
+            `https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`,
+            form,
+            { headers: form.getHeaders() }
+          );
+          const etsyImgUrl = imgbbRes.data.data.url;
 
-      for (const ali of aliResults) {
-
-        const aliProducts = await scrapeAliExpressResults(ali.link);
-
-        for (const item of aliProducts) {
-
-          finalResults.push({
-
-            etsyImage: product.image,
-            etsyLink: product.link,
-
-            aliImage: item.image,
-            aliLink: item.link
-
-          });
-
+          // Comparaison OpenAI
+          const openaiRes = await axios.post(
+            "https://api.openai.com/v1/images/compare",
+            {
+              image_1: etsyImgUrl,
+              image_2: aliItem.image,
+            },
+            { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
+          );
+          aliItem.similarity = openaiRes.data.similarity || 0;
+        } catch (err) {
+          console.log("OpenAI/Imgbb error:", err.message);
+          aliItem.similarity = 0;
         }
-
       }
 
+      finalResults.push({
+        etsy: etsyItem,
+        aliexpress: aliResults,
+      });
     }
 
     res.json(finalResults);
-
-  } catch (error) {
-
-    console.error(error);
-
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
-
   }
-
-});
-
-app.get("/", (req, res) => {
-
-  res.send("Server running");
-
 });
 
 app.listen(PORT, () => {
-
-  console.log("Server started on port " + PORT);
-
+  console.log(`Server running on port ${PORT}`);
 });
