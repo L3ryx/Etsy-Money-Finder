@@ -6,8 +6,10 @@ const socket = io();
 let socketId = null;
 
 socket.on("connected", (data) => {
+
   socketId = data.socketId;
   console.log("🟢 Socket connected:", socketId);
+
 });
 
 // ========================================
@@ -30,46 +32,50 @@ socket.on("log", (data) => {
   `;
 
   logsDiv.appendChild(line);
-
   logsDiv.scrollTop = logsDiv.scrollHeight;
+
 });
 
 // ========================================
-// FORM SUBMISSION
+// FORM SUBMISSION (KEYWORD SEARCH)
 // ========================================
 
-const form = document.getElementById("uploadForm");
+const form = document.getElementById("searchForm");
 const resultsContainer = document.getElementById("results");
 
 form.addEventListener("submit", async (e) => {
 
   e.preventDefault();
 
+  const keyword = document.getElementById("keyword").value;
+
   resultsContainer.innerHTML = "";
+
   document.getElementById("logs").innerHTML =
     "<p>🚀 Starting analysis...</p>";
 
-  const filesInput = document.querySelector("input[type='file']");
-  const files = filesInput.files;
+  if (!keyword) {
 
-  if (!files || files.length === 0) {
-    alert("Please upload at least one image");
+    alert("Please enter a keyword");
     return;
+
   }
-
-  const formData = new FormData();
-
-  for (const file of files) {
-    formData.append("images", file);
-  }
-
-  formData.append("socketId", socketId);
 
   try {
 
     const response = await fetch("/analyze", {
+
       method: "POST",
-      body: formData
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        keyword,
+        socketId
+      })
+
     });
 
     const data = await response.json();
@@ -95,9 +101,10 @@ function displayResults(results) {
   if (!results || results.length === 0) {
 
     resultsContainer.innerHTML =
-      "<p style='color:red'>❌ No results returned</p>";
+      "<p style='color:red'>❌ No suppliers found</p>";
 
     return;
+
   }
 
   results.forEach(result => {
@@ -105,37 +112,36 @@ function displayResults(results) {
     const card = document.createElement("div");
     card.className = "result-card";
 
-    let html = `
-      <h3>📷 ${result.image}</h3>
+    card.innerHTML = `
+
+      <div class="product-container">
+
+        <div class="etsy-product">
+          <h3>🛍 Etsy Product</h3>
+          <img src="${result.etsy.image}" class="product-img">
+          <a href="${result.etsy.link}" target="_blank">
+            Open Etsy Listing
+          </a>
+        </div>
+
+        <div class="ali-product">
+          <h3>🏭 AliExpress Supplier</h3>
+          <img src="${result.aliexpress.image}" class="product-img">
+          <a href="${result.aliexpress.link}" target="_blank">
+            Open AliExpress Product
+          </a>
+        </div>
+
+      </div>
+
+      <p class="similarity">
+        🔥 Similarity: ${result.similarity}%
+      </p>
+
     `;
 
-    if (!result.matches || result.matches.length === 0) {
-
-      html += `
-        <p style="color:red">
-          ❌ No match found (≥60%)
-        </p>
-      `;
-
-    } else {
-
-      result.matches.forEach(match => {
-
-        html += `
-          <div class="product">
-            <p>🔥 Similarity: ${match.similarity}%</p>
-            <a href="${match.url}" target="_blank">
-              🔗 Open Product
-            </a>
-          </div>
-        `;
-
-      });
-
-    }
-
-    card.innerHTML = html;
     resultsContainer.appendChild(card);
 
   });
+
 }
