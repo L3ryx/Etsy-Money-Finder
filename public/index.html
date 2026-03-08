@@ -1,56 +1,83 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AliExpress Image Finder Pro</title>
-<link rel="stylesheet" href="style.css">
-
-<!-- Socket.IO -->
-<script src="/socket.io/socket.io.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etsy → AliExpress Finder</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    #searchForm { text-align: center; margin-bottom: 20px; }
+    input[type="text"] { width: 300px; padding: 10px; font-size: 16px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    .results { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    .card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 10px; width: 250px; text-align: center; }
+    .card img { width: 100%; border-radius: 8px; }
+    .card a { display: block; margin: 5px 0; color: #1a73e8; text-decoration: none; word-break: break-word; }
+    .card a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
+  <h1>Etsy → AliExpress Finder</h1>
 
-<div class="container">
-
-  <h1>🖼 AliExpress Image Finder</h1>
-
-  <!-- ========================================= -->
-  <!-- UPLOAD FORM -->
-  <!-- ========================================= -->
-  <div class="card">
-    <h2>📤 Rechercher un mot-clé Etsy</h2>
-
-    <form id="searchForm">
-      <input type="text" id="keyword" placeholder="Mot clé..." required>
-      <button type="submit">🚀 Rechercher</button>
-    </form>
+  <div id="searchForm">
+    <input type="text" id="keyword" placeholder="Mot-clé Etsy..." />
+    <button id="searchBtn">Rechercher</button>
   </div>
 
-  <!-- ========================================= -->
-  <!-- LIVE LOGS -->
-  <!-- ========================================= -->
-  <div class="card">
-    <h2>📊 Live Logs</h2>
-    <div id="logs" class="log-box">
-      <p>En attente de recherche...</p>
-    </div>
-  </div>
+  <div class="results" id="results"></div>
 
-  <!-- ========================================= -->
-  <!-- RESULTS -->
-  <!-- ========================================= -->
-  <div class="card">
-    <h2>🎯 Résultats</h2>
-    <div id="results"></div>
-  </div>
+  <script>
+    const searchBtn = document.getElementById("searchBtn");
+    const keywordInput = document.getElementById("keyword");
+    const resultsDiv = document.getElementById("results");
 
-</div>
+    searchBtn.addEventListener("click", async () => {
+      const keyword = keywordInput.value.trim();
+      if (!keyword) return alert("Veuillez entrer un mot-clé");
 
-<!-- ========================================= -->
-<!-- SCRIPT -->
-<!-- ========================================= -->
-<script src="script.js"></script>
+      resultsDiv.innerHTML = "<p>Recherche en cours...</p>";
 
+      try {
+        const res = await fetch("/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword })
+        });
+
+        if (!res.ok) throw new Error("Erreur serveur");
+
+        const data = await res.json();
+
+        if (!data.length) {
+          resultsDiv.innerHTML = "<p>Aucun résultat trouvé</p>";
+          return;
+        }
+
+        resultsDiv.innerHTML = "";
+
+        data.forEach(item => {
+          const card = document.createElement("div");
+          card.classList.add("card");
+
+          card.innerHTML = `
+            <h3>Etsy</h3>
+            <img src="${item.etsyImage}" alt="Etsy" />
+            <a href="${item.etsyLink}" target="_blank">${item.etsyLink}</a>
+
+            <h3>AliExpress</h3>
+            <img src="${item.aliImage}" alt="AliExpress" />
+            <a href="${item.aliLink}" target="_blank">${item.aliLink}</a>
+          `;
+
+          resultsDiv.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = "<p>Erreur lors de la recherche</p>";
+      }
+    });
+  </script>
 </body>
 </html>
