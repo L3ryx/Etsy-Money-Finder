@@ -1,204 +1,29 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AliExpress Image Finder Pro</title>
-
-<link rel="stylesheet" href="style.css" />
-
-<!-- Socket.IO -->
-<script src="/socket.io/socket.io.js"></script>
-
+<title>Ali Search AI</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<h1 class="neon-title">Ali Search AI</h1>
+
 <div class="container">
 
-<h1>🖼 AliExpress Image Finder</h1>
-
-<!-- ========================================= -->
-<!-- UPLOAD FORM -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>📤 Upload Image(s)</h2>
-
 <form id="uploadForm">
-
-<input type="file"
-       name="images"
-       multiple
-       accept="image/*" />
-
-<button type="submit">
-🚀 Analyze
-</button>
-
+<input type="file" multiple />
+<button class="btn-green" type="submit">Analyze</button>
 </form>
 
-</div>
+<div class="loading-bar"></div>
 
-<!-- ========================================= -->
-<!-- LIVE LOGS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>📊 Live Logs</h2>
-
-<div id="logs" class="log-box">
-<p>Waiting for analysis...</p>
-</div>
-
-</div>
-
-<!-- ========================================= -->
-<!-- RESULTS -->
-<!-- ========================================= -->
-
-<div class="card">
-
-<h2>🎯 Results</h2>
-
+<div id="logs"></div>
 <div id="results"></div>
 
 </div>
 
-</div>
-
-<!-- ========================================= -->
-<!-- SCRIPT -->
-<!-- ========================================= -->
-
-<script>
-
-const socket = io();
-let socketId = null;
-
-/*
-====================================================
-SOCKET CONNECTION
-====================================================
-*/
-
-socket.on("connected", (data) => {
-  socketId = data.socketId;
-  console.log("Socket connected:", socketId);
-});
-
-/*
-====================================================
-LIVE LOGS
-====================================================
-*/
-
-socket.on("log", (data) => {
-
-  const logsDiv = document.getElementById("logs");
-
-  const line = document.createElement("p");
-
-  line.innerHTML = `
-    <span style="color:#888">
-      [${new Date(data.time).toLocaleTimeString()}]
-    </span>
-    ${data.message}
-  `;
-
-  logsDiv.appendChild(line);
-  logsDiv.scrollTop = logsDiv.scrollHeight;
-
-});
-
-/*
-====================================================
-FORM SUBMIT
-====================================================
-*/
-
-const form = document.getElementById("uploadForm");
-const resultsDiv = document.getElementById("results");
-
-form.addEventListener("submit", async (e) => {
-
-  e.preventDefault();
-
-  resultsDiv.innerHTML = "";
-  document.getElementById("logs").innerHTML =
-    "<p>🚀 Starting analysis...</p>";
-
-  const formData = new FormData(form);
-  formData.append("socketId", socketId);
-
-  try {
-
-    const response = await fetch("/analyze", {
-      method: "POST",
-      body: formData
-    });
-
-    const data = await response.json();
-
-    displayResults(data.results);
-
-  } catch (err) {
-
-    console.error("Request failed", err);
-
-  }
-
-});
-
-/*
-====================================================
-DISPLAY RESULTS
-====================================================
-*/
-
-function displayResults(results) {
-
-  const resultsDiv = document.getElementById("results");
-
-  results.forEach(result => {
-
-    const card = document.createElement("div");
-    card.className = "result-card";
-
-    let html = `
-      <h3>📷 ${result.image}</h3>
-    `;
-
-    if (!result.matches || result.matches.length === 0) {
-
-      html += `<p class="no-match">
-        ❌ No matches found (≥60%)
-      </p>`;
-
-    } else {
-
-      result.matches.forEach(product => {
-
-        html += `
-          <div class="product">
-            <p>🔥 Similarity: ${product.similarity}%</p>
-            <a href="${product.url}" target="_blank">
-              🔗 Open Product
-            </a>
-          </div>
-        `;
-      });
-
-    }
-
-    card.innerHTML = html;
-    resultsDiv.appendChild(card);
-
-  });
-}
-
-</script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
