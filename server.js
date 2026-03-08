@@ -1,6 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -8,10 +7,6 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
-const upload = multer({
-  storage: multer.memoryStorage()
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,33 +33,7 @@ function sendLog(socket, message, type = "info") {
 
 /*
 ====================================================
-UPLOAD IMAGE → IMGBB
-====================================================
-*/
-
-async function uploadToImgBB(imageBuffer) {
-
-  const base64 = imageBuffer.toString("base64");
-
-  const response = await axios.post(
-    "https://api.imgbb.com/1/upload",
-    new URLSearchParams({
-      key: process.env.IMGBB_KEY,
-      image: base64
-    }),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
-    }
-  );
-
-  return response.data.data.url;
-}
-
-/*
-====================================================
-SCRAPE ETSY WITH ZENROWS
+SCRAPE ETSY
 ====================================================
 */
 
@@ -74,7 +43,7 @@ async function scrapeEtsy(keyword) {
     "https://api.zenrows.com/v1/",
     {
       params: {
-        url: `https://www.etsy.com/search?q=${keyword}`,
+        url: `https://www.etsy.com/search?q=${encodeURIComponent(keyword)}`,
         apikey: process.env.ZENROWS_KEY,
         js_render: "true"
       }
@@ -91,7 +60,7 @@ async function scrapeEtsy(keyword) {
 
   const products = [];
 
-  for (let i = 0; i < Math.min(10, images.length); i++) {
+  for (let i = 0; i < Math.min(12, images.length); i++) {
 
     products.push({
       image: images[i],
@@ -101,66 +70,6 @@ async function scrapeEtsy(keyword) {
   }
 
   return products;
-}
-
-/*
-====================================================
-SERPER REVERSE IMAGE
-====================================================
-*/
-
-async function reverseImageSearch(imageUrl) {
-
-  const response = await axios.post(
-    "https://google.serper.dev/images",
-    {
-      imageUrl: imageUrl
-    },
-    {
-      headers: {
-        "X-API-KEY": process.env.SERPER_KEY,
-        "Content-Type": "application/json"
-      }
-    }
-  );
-
-  return response.data.images || [];
-}
-
-/*
-====================================================
-OPENAI IMAGE SIMILARITY
-====================================================
-*/
-
-async function calculateSimilarity(imgA, imgB) {
-
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Return similarity percentage between these images." },
-            { type: "image_url", image_url: { url: imgA } },
-            { type: "image_url", image_url: { url: imgB } }
-          ]
-        }
-      ]
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    }
-  );
-
-  const text = response.data.choices[0].message.content;
-  const number = text.match(/\d+/);
-
-  return number ? parseInt(number[0]) : 0;
 }
 
 /*
@@ -175,60 +84,24 @@ app.post("/analyze", async (req, res) => {
 
   const socket = io.sockets.sockets.get(socketId);
 
-  const results = [];
-
   try {
 
-    sendLog(socket, `🔎 Scraping Etsy for "${keyword}"`);
+    sendLog(socket, `🔎 Searching Etsy for "${keyword}"`);
 
-    const etsyProducts = await scrapeEtsy(keyword);
+    const products = await scrapeEtsy(keyword);
 
-    sendLog(socket, `📦 ${etsyProducts.length} Etsy products found`);
+    sendLog(socket, `📦 ${products.length} Etsy listings found`);
 
-    for (const product of etsyProducts) {
+    const results = products.map(product => ({
 
-      sendLog(socket, `🖼 Processing Etsy image`);
-
-      const reverseResults = await reverseImageSearch(product.image);
-
-      const ali = reverseResults
-        .filter(r => r.link?.includes("aliexpress.com"))
-        .slice(0, 5);
-
-      for (const item of ali) {
-
-        sendLog(socket, `🤖 Comparing with AI`);
-
-        const similarity = await calculateSimilarity(
-          product.image,
-          item.imageUrl || item.thumbnail
-        );
-
-        if (similarity >= 70) {
-
-          results.push({
-
-            etsy: {
-              image: product.image,
-              link: product.link
-            },
-
-            aliexpress: {
-              image: item.imageUrl || item.thumbnail,
-              link: item.link
-            },
-
-            similarity
-
-          });
-
-        }
-
+      etsy: {
+        image: product.image,
+        link: product.link
       }
 
-    }
+    }));
 
-    sendLog(socket, "✅ Analysis complete");
+    sendLog(socket, "✅ Etsy search complete");
 
     res.json({ results });
 
@@ -236,7 +109,7 @@ app.post("/analyze", async (req, res) => {
 
     console.error(err);
 
-    sendLog(socket, "❌ Analysis failed", "error");
+    sendLog(socket, "❌ Etsy scraping failed", "error");
 
     res.status(500).json({
       error: "Server error"
