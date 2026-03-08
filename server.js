@@ -1,67 +1,32 @@
-// ===============================
-// SERVER.JS — FULL VERSION
-// API KEYS STORED IN CONFIG.JSON
-// ADMIN PROTECTED
-// ===============================
-
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
-const fs = require("fs");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const CONFIG_PATH = "./config.json";
-const ADMIN_PASSWORD = "123456"; // 🔐 CHANGE THIS
-
-/* ===============================
-   CONFIG SYSTEM
-================================*/
-
-function getConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) return {};
-  return JSON.parse(fs.readFileSync(CONFIG_PATH));
-}
-
-function saveConfig(data) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2));
-}
-
-/* ===============================
-   FILE UPLOAD
-================================*/
-
-const uploadDir = path.join(__dirname, "uploads");
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-      cb(null, Date.now() + "-" + file.originalname);
-    }
-  })
+  storage: multer.memoryStorage()
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(uploadDir));
 app.use(express.static("public"));
 
-/* ===============================
-   LOG SYSTEM
-================================*/
+/*
+====================================================
+LOG SYSTEM
+====================================================
+*/
 
 function sendLog(socket, message, type = "info") {
+
   console.log(`[${type}] ${message}`);
+
   if (socket) {
     socket.emit("log", {
       message,
@@ -71,68 +36,123 @@ function sendLog(socket, message, type = "info") {
   }
 }
 
-/* ===============================
-   ADMIN ROUTES (PROTECTED)
-================================*/
+/*
+====================================================
+UPLOAD IMAGE TO IMGBB (TO FIX 414)
+====================================================
+*/
 
-app.get("/admin", (req, res) => {
+async function uploadToImgBB(imageBuffer) {
 
-  const password = req.query.password;
+  const base64 = imageBuffer.toString("base64");
 
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(403).send("Unauthorized");
-  }
+  const response = await axios.post(
+    "https://api.imgbb.com/1/upload",
+    new URLSearchParams({
+      key: process.env.IMGBB_KEY,
+      image: base64
+    }),
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    }
+  );
 
-  res.sendFile(path.join(__dirname, "public/admin.html"));
-});
+  return response.data.data.url;
+}
 
-app.get("/api/config", (req, res) => {
+/*
+====================================================
+SIMILARITY
+====================================================
+*/
 
-  const password = req.query.password;
+async function calculateSimilarity(base64A, base64B) {
 
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Return only similarity 0 to 1." },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64A}`
+              }
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64B}`
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      }
+    }
+  );
 
-  res.json(getConfig());
-});
+  const text = response.data.choices[0].message.content;
+  const match = text.match(/0\.\d+|1(\.0+)?/);
 
-app.post("/api/config", (req, res) => {
+  return match ? parseFloat(match[0]) : 0;
+}
 
-  const { password, config } = req.body;
-
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
-  saveConfig(config);
-
-  res.json({ success: true });
-});
-
-/* ===============================
-   ANALYZE ROUTE
-================================*/
+/*
+====================================================
+ANALYZE ROUTE
+====================================================
+*/
 
 app.post("/analyze", upload.array("images"), async (req, res) => {
 
-  const socket = io.sockets.sockets.get(req.body.socketId);
-  const config = getConfig();
+  const socketId = req.body.socketId;
+  const socket = io.sockets.sockets.get(socketId);
 
   const results = [];
 
   for (const file of req.files) {
 
-    sendLog(socket, `🖼 Processing ${file.filename}`);
+    sendLog(socket, `🖼 Processing ${file.originalname}`);
 
-    const publicUrl =
-      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+    /*
+    ============================================
+    STEP 1 — UPLOAD IMAGE TO GET PUBLIC URL
+    ============================================
+    */
 
-    sendLog(socket, `🌍 Image URL: ${publicUrl}`);
+    let publicImageUrl;
 
-    /* ============================
-       SERPAPI CALL
-    ============================*/
+    try {
+
+      sendLog(socket, "📤 Uploading image to ImgBB");
+
+      publicImageUrl = await uploadToImgBB(file.buffer);
+
+      sendLog(socket, "✅ Image uploaded successfully");
+
+    } catch (err) {
+
+      sendLog(socket, "❌ Image upload failed", "error");
+
+      continue;
+    }
+
+    /*
+    ============================================
+    STEP 2 — CALL SERPAPI WITH IMAGE URL
+    ============================================
+    */
 
     sendLog(socket, "🔎 Calling SerpAPI");
 
@@ -145,8 +165,8 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
         {
           params: {
             engine: "google_reverse_image",
-            image_url: publicUrl,
-            api_key: config.SERPAPI_KEY
+            image_url: publicImageUrl,
+            api_key: process.env.SERPAPI_KEY
           }
         }
       );
@@ -157,24 +177,38 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
 
     } catch (err) {
 
-      sendLog(socket,
-        `❌ SerpAPI error | ${err.response?.status || ""}`,
+      sendLog(
+        socket,
+        `❌ SerpAPI error | ${err.response?.status}`,
         "error"
       );
 
+      serpResults = [];
     }
 
-    const matches = serpResults
+    /*
+    ============================================
+    STEP 3 — FILTER ALIEXPRESS
+    ============================================
+    */
+
+    const aliexpressLinks = serpResults
       .filter(r => r.link?.includes("aliexpress.com"))
-      .slice(0, 10)
-      .map(r => ({
-        url: r.link,
-        similarity: 70
-      }));
+      .slice(0, 10);
+
+    const matches = [];
+
+    for (const item of aliexpressLinks) {
+
+      matches.push({
+        url: item.link,
+        similarity: 70 // placeholder (tu peux remettre ton IA ici)
+      });
+
+    }
 
     results.push({
-      image: file.filename,
-      publicUrl,
+      image: file.originalname,
       matches
     });
   }
@@ -182,19 +216,28 @@ app.post("/analyze", upload.array("images"), async (req, res) => {
   res.json({ results });
 });
 
-/* ===============================
-   SOCKET
-================================*/
+/*
+====================================================
+SOCKET
+====================================================
+*/
 
 io.on("connection", (socket) => {
+
+  socket.emit("connected", {
+    socketId: socket.id
+  });
+
   console.log("🟢 Client connected");
-  socket.emit("connected", { socketId: socket.id });
+
 });
 
-/* ===============================
-   START SERVER
-================================*/
+/*
+====================================================
+START
+====================================================
+*/
 
-server.listen(3000, () => {
-  console.log("🚀 Server running on port 3000");
+server.listen(process.env.PORT || 3000, () => {
+  console.log("🚀 Server running");
 });
