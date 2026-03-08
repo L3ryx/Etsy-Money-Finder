@@ -1,50 +1,52 @@
-require("dotenv").config();
-const express = require("express");
-const multer = require("multer");
-const axios = require("axios");
-const http = require("http");
-const { Server } = require("socket.io");
+require("dotenv").config()
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const express = require("express")
+const multer = require("multer")
+const axios = require("axios")
+const http = require("http")
+const { Server } = require("socket.io")
+
+const app = express()
+const server = http.createServer(app)
+const io = new Server(server)
 
 const upload = multer({
   storage: multer.memoryStorage()
-});
+})
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(express.static("public"))
 
 /*
-====================================================
+====================================
 LOG SYSTEM
-====================================================
+====================================
 */
 
 function sendLog(socket, message, type = "info") {
 
-  console.log(`[${type}] ${message}`);
+  console.log(`[${type}] ${message}`)
 
   if (socket) {
     socket.emit("log", {
       message,
       type,
       time: new Date().toISOString()
-    });
+    })
   }
+
 }
 
 /*
-====================================================
-UPLOAD IMAGE TO IMGBB (TO FIX 414)
-====================================================
+====================================
+UPLOAD IMAGE → IMGBB
+====================================
 */
 
-async function uploadToImgBB(imageBuffer) {
+async function uploadToImgBB(buffer) {
 
-  const base64 = imageBuffer.toString("base64");
+  const base64 = buffer.toString("base64")
 
   const response = await axios.post(
     "https://api.imgbb.com/1/upload",
@@ -57,18 +59,86 @@ async function uploadToImgBB(imageBuffer) {
         "Content-Type": "application/x-www-form-urlencoded"
       }
     }
-  );
+  )
 
-  return response.data.data.url;
+  return response.data.data.url
+
 }
 
 /*
-====================================================
-SIMILARITY
-====================================================
+====================================
+SCRAPE ETSY (ZENROWS)
+====================================
 */
 
-async function calculateSimilarity(base64A, base64B) {
+async function scrapeEtsy(keyword) {
+
+  const response = await axios.get(
+    "https://api.zenrows.com/v1/",
+    {
+      params: {
+        url: `https://www.etsy.com/search?q=${keyword}`,
+        apikey: process.env.ZENROWS_KEY,
+        js_render: "true"
+      }
+    }
+  )
+
+  const html = response.data
+
+  const imageRegex = /https:\/\/i\.etsystatic\.com[^"]+/g
+  const linkRegex = /https:\/\/www\.etsy\.com\/listing\/\d+/g
+
+  const images = [...html.matchAll(imageRegex)].map(m => m[0])
+  const links = [...html.matchAll(linkRegex)].map(m => m[0])
+
+  const products = []
+
+  for (let i = 0; i < Math.min(images.length, 10); i++) {
+
+    products.push({
+      image: images[i],
+      link: links[i] || null
+    })
+
+  }
+
+  return products
+
+}
+
+/*
+====================================
+SERPER REVERSE IMAGE
+====================================
+*/
+
+async function reverseImageSearch(imageUrl) {
+
+  const response = await axios.post(
+    "https://google.serper.dev/images",
+    {
+      imageUrl
+    },
+    {
+      headers: {
+        "X-API-KEY": process.env.SERPER_KEY,
+        "Content-Type": "application/json"
+      }
+    }
+  )
+
+  return response.data.images || []
+
+}
+
+/*
+====================================
+OPENAI SIMILARITY
+====================================
+*/
+
+async function calculateSimilarity(imgA, imgB) {
 
   const response = await axios.post(
     "https://api.openai.com/v1/chat/completions",
@@ -78,19 +148,9 @@ async function calculateSimilarity(base64A, base64B) {
         {
           role: "user",
           content: [
-            { type: "text", text: "Return only similarity 0 to 1." },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64A}`
-              }
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64B}`
-              }
-            }
+            { type: "text", text: "Return similarity percentage between these images." },
+            { type: "image_url", image_url: { url: imgA } },
+            { type: "image_url", image_url: { url: imgB } }
           ]
         }
       ]
@@ -100,144 +160,120 @@ async function calculateSimilarity(base64A, base64B) {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       }
     }
-  );
+  )
 
-  const text = response.data.choices[0].message.content;
-  const match = text.match(/0\.\d+|1(\.0+)?/);
+  const text = response.data.choices[0].message.content
+  const match = text.match(/\d+/)
 
-  return match ? parseFloat(match[0]) : 0;
+  return match ? parseInt(match[0]) : 0
+
 }
 
 /*
-====================================================
+====================================
 ANALYZE ROUTE
-====================================================
+====================================
 */
 
-app.post("/analyze", upload.array("images"), async (req, res) => {
+app.post("/analyze", async (req, res) => {
 
-  const socketId = req.body.socketId;
-  const socket = io.sockets.sockets.get(socketId);
+  const { keyword, socketId } = req.body
 
-  const results = [];
+  const socket = io.sockets.sockets.get(socketId)
 
-  for (const file of req.files) {
+  const results = []
 
-    sendLog(socket, `🖼 Processing ${file.originalname}`);
+  try {
 
-    /*
-    ============================================
-    STEP 1 — UPLOAD IMAGE TO GET PUBLIC URL
-    ============================================
-    */
+    sendLog(socket, `🔎 Searching Etsy for "${keyword}"`)
 
-    let publicImageUrl;
+    const etsyProducts = await scrapeEtsy(keyword)
 
-    try {
+    sendLog(socket, `📦 ${etsyProducts.length} Etsy products found`)
 
-      sendLog(socket, "📤 Uploading image to ImgBB");
+    for (const product of etsyProducts) {
 
-      publicImageUrl = await uploadToImgBB(file.buffer);
+      sendLog(socket, "🔍 Reverse image search")
 
-      sendLog(socket, "✅ Image uploaded successfully");
+      const reverseResults = await reverseImageSearch(product.image)
 
-    } catch (err) {
+      const ali = reverseResults
+        .filter(r => r.link?.includes("aliexpress.com"))
+        .slice(0, 5)
 
-      sendLog(socket, "❌ Image upload failed", "error");
+      for (const item of ali) {
 
-      continue;
-    }
+        sendLog(socket, "🤖 AI similarity check")
 
-    /*
-    ============================================
-    STEP 2 — CALL SERPAPI WITH IMAGE URL
-    ============================================
-    */
+        const similarity = await calculateSimilarity(
+          product.image,
+          item.imageUrl || item.thumbnail
+        )
 
-    sendLog(socket, "🔎 Calling SerpAPI");
+        if (similarity >= 70) {
 
-    let serpResults = [];
+          results.push({
 
-    try {
+            etsy: {
+              image: product.image,
+              link: product.link
+            },
 
-      const response = await axios.get(
-        "https://serpapi.com/search",
-        {
-          params: {
-            engine: "google_reverse_image",
-            image_url: publicImageUrl,
-            api_key: process.env.SERPAPI_KEY
-          }
+            aliexpress: {
+              image: item.imageUrl || item.thumbnail,
+              link: item.link
+            },
+
+            similarity
+
+          })
+
         }
-      );
 
-      serpResults = response.data?.image_results || [];
-
-      sendLog(socket, `📦 ${serpResults.length} results found`);
-
-    } catch (err) {
-
-      sendLog(
-        socket,
-        `❌ SerpAPI error | ${err.response?.status}`,
-        "error"
-      );
-
-      serpResults = [];
-    }
-
-    /*
-    ============================================
-    STEP 3 — FILTER ALIEXPRESS
-    ============================================
-    */
-
-    const aliexpressLinks = serpResults
-      .filter(r => r.link?.includes("aliexpress.com"))
-      .slice(0, 10);
-
-    const matches = [];
-
-    for (const item of aliexpressLinks) {
-
-      matches.push({
-        url: item.link,
-        similarity: 70 // placeholder (tu peux remettre ton IA ici)
-      });
+      }
 
     }
 
-    results.push({
-      image: file.originalname,
-      matches
-    });
+    sendLog(socket, "✅ Analysis complete")
+
+    res.json({ results })
+
+  } catch (err) {
+
+    console.error(err)
+
+    sendLog(socket, "❌ Server error", "error")
+
+    res.status(500).json({ error: "Server error" })
+
   }
 
-  res.json({ results });
-});
+})
 
 /*
-====================================================
+====================================
 SOCKET
-====================================================
+====================================
 */
 
 io.on("connection", (socket) => {
 
   socket.emit("connected", {
     socketId: socket.id
-  });
+  })
 
-  console.log("🟢 Client connected");
+  console.log("🟢 Client connected")
 
-});
+})
 
 /*
-====================================================
-START
-====================================================
+====================================
+START SERVER
+====================================
 */
 
 server.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Server running");
-});
+
+  console.log("🚀 Server running")
+
+})
